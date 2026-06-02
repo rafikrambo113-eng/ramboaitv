@@ -43,7 +43,7 @@ UI = {
         'col_action':      "إجراء",
         'btn_add_to_order': "➕ زرع",
         'auto_features_title': "⚙️ خيارات الفحص الذكي والصيانة الفورية للملف",
-        'chk_scan_inject': "📡 تفعيل الفحص التلقائي وزرع القنوات الجديدة المتاحة على القمر فوراً",
+        'chk_scan_inject': "📡 تفعيل الفحص التلقائي وزرع القنوات الجديدة المتاحة على القمر (تنزل أسفل الترتيب فوراً)",
         'chk_modern_maint': "🔧 تفعيل الصيانة الحديثة وتحديث الترددات الميتة والقديمة تلقائياً",
         'preview_title':   "🏁 استخراج وتنزيل الملفات النهائية",
         'btn_finish':      "🔒 إنهاء التعديل وتجهيز ملفات التحميل",
@@ -63,7 +63,7 @@ UI = {
         'col_action':      "Action",
         'btn_add_to_order': "➕ Inject",
         'auto_features_title': "⚙️ Smart Auto-Maintenance & Scanning Options",
-        'chk_scan_inject': "📡 Enable Auto-Scan & Inject newly available Satellite Channels",
+        'chk_scan_inject': "📡 Enable Auto-Scan & Inject newly available Satellite Channels (Appends to bottom)",
         'chk_modern_maint': "🔧 Enable Modern Maintenance & Auto-Update dead frequencies",
         'preview_title':   "🏁 Export & Download Final Files",
         'btn_finish':      "🔒 Finish Editing & Generate Download Links",
@@ -190,7 +190,7 @@ if not st.session_state.channels:
 st.success(f"{t['success_read']} **{st.session_state.model_name}** | 📡 {'Modern JSON' if st.session_state.is_modern else 'Legacy XML'} | الإجمالي: {len(st.session_state.channels)} قناة.")
 
 # ─────────────────────────────────────────────
-# 6. خيارات الفحص والصيانة التلقائية (مؤمنة بالكامل لحل الـ TypeError)
+# 6. خيارات الفحص والصيانة التلقائية (تعديل موضع الزرع ليكون في أسفل القائمة)
 # ─────────────────────────────────────────────
 st.write(f"### {t['auto_features_title']}")
 col_chk1, col_chk2 = st.columns(2)
@@ -205,21 +205,30 @@ with col_chk1:
             {"name": "FOOTBALL LIVE", "freq": "11054", "pol": "Horizontal"}
         ]
         current_names = [c.get('name', '').upper() for c in st.session_state.channels]
+        
         for nc in simulated_new_channels:
             if nc['name'] not in current_names:
                 new_idx = len(st.session_state.channels)
+                
+                # هنا التعديل: القنوات المزروعة الجديدة تأخذ ترتيب مسلسل يبدأ من نهاية لستة الترتيب الحالي
+                target_position = len(st.session_state.ordered_channels) + 1
+                
                 if st.session_state.is_modern:
-                    node = {"channelName": nc['name'], "frequency": int(nc['freq']), "polarization": nc['pol'], "majorNumber": new_idx+1, "serviceType":"1"}
+                    node = {"channelName": nc['name'], "frequency": int(nc['freq']), "polarization": nc['pol'], "majorNumber": target_position, "serviceType":"1"}
                     nc['raw_node'] = node
                 else:
-                    nc['raw_str'] = f"<ITEM>\r\n<prNum>{new_idx+1}</prNum>\r\n<vchName>{nc['name']}</vchName>\r\n<frequency>{nc['freq']}</frequency>\r\n</ITEM>"
+                    nc['raw_str'] = f"<ITEM>\r\n<prNum>{target_position}</prNum>\r\n<vchName>{nc['name']}</vchName>\r\n<frequency>{nc['freq']}</frequency>\r\n</ITEM>"
+                
                 nc['id'] = new_idx
                 st.session_state.channels.append(nc)
+                
+                # إدراج القناة مباشرة في نهاية لستة الترتيب النهائي (تحت القنوات المرتبة يدوياً)
                 st.session_state.ordered_channels.append(nc) 
                 added_count += 1
+                
         st.session_state.scan_done_p2 = True
         if added_count > 0:
-            st.success(f"📡 تم الفحص والزرع التلقائي لـ {added_count} قنوات جديدة بالملف!")
+            st.success(f"📡 تم الفحص والزرع التلقائي لـ {added_count} قنوات جديدة في أسفل قائمة الترتيب!")
             st.session_state.edit_finished = False 
             st.rerun()
 
@@ -229,7 +238,6 @@ with col_chk2:
         updated_count = 0
         freq_updates = {"11747": "12054", "11137": "11785", "12015": "11678"}
         
-        # استخدام .get() الآمن لمنع الـ TypeError تماماً
         for ch in st.session_state.channels:
             current_freq = ch.get('freq', 'N/A')
             if current_freq in freq_updates:
@@ -331,7 +339,7 @@ with col_table2:
                 
             st.session_state.ordered_channels = new_ordered
             st.session_state.edit_finished = False
-            st.toast("🎯 تم تحديث وفرز جدول الترتيب بنجاح!")
+            st.toast("🎯 تم تحديث وفرز جدول الترتيب بنجاح وحفظ القنوات المزروعة بالأسفل!")
             st.rerun()
     else:
         st.info("💡 اضغط على زر [➕ زرع] من الجدول الأيمن لتصنع قائمة الترتيب المخصصة هنا.")
