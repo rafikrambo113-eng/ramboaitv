@@ -107,7 +107,7 @@ st.markdown(f"""
     h3, p, label, .stMarkdown, .stInfo, div[data-testid="stMarkdownContainer"] p {{ color: {text_color} !important; text-shadow: {text_shadow_glow}; }}
     .stTextInput>div>div>input {{ background-color: {box_bg} !important; color: {text_color} !important; border: 2px solid {box_border} !important; border-radius: 10px !important; }}
     .stCheckbox, .stMultiSelect, div[data-testid="stExpander"], div[data-testid="stFileUploader"], .lg-trick-box {{ background: {box_bg} !important; border: 2px solid {box_border} !important; box-shadow: 0px 5px 15px {box_shadow} !important; border-radius: 14px !important; padding: 18px !important; margin-bottom: 20px !important; }}
-    .lg-trick-box {{ border-color: #ff007f !important; box-shadow: 0px 5px 15px rgba(255, 0, 127, 0.25) !important; }}
+    .lg-trick-box {{ border-color: #ff007f !important; box-shadow: 0px 5px 15px rgba(255, 0, 127, 0.25) !important; margin-top: 25px !important; }}
     .stButton>button {{ background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important; color: #ffffff !important; border: 2px solid #ff007f !important; border-radius: 12px !important; font-weight: bold; }}
     .futuristic-cyber-footer {{ background: {footer_bg}; border: 2px solid #00f0ff; color: {footer_text} !important; padding: 35px; text-align: center; border-radius: 20px; margin-top: 65px; font-family: 'Orbitron', sans-serif; }}
     .footer-dev {{ color: #ff007f; font-size: 26px; font-weight: bold; }}
@@ -204,13 +204,6 @@ if uploaded_file is not None:
 
     st.info(f"{t['success_read']} **{model_name}**")
 
-    st.markdown(f"""
-        <div class="lg-trick-box">
-            <h4 style="color: #ff007f; margin-top:0;">{t['lg_trick_title']}</h4>
-            <p style="white-space: pre-line; margin-bottom:0; font-size:14px;">{t['lg_trick_text']}</p>
-        </div>
-    """, unsafe_allow_html=True)
-
     # خانات التحكم المفعلة برمجياً
     update_freq = st.checkbox(t['update_freq_label'], value=True)
     add_new_ch = st.checkbox(t['add_new_ch_label'], value=True)
@@ -243,9 +236,9 @@ if uploaded_file is not None:
 
                 channels_to_sort.append({"name": ch_name, "freq": old_freq, "node_data": ch, "is_injected": False})
 
-            # 🔥 عملية زرع وفحص القنوات الجديدة المفقودة للشاشات الحديثة 🔥
+            # عملية زرع وفحص القنوات الجديدة المفقودة للشاشات الحديثة
             if add_new_ch and channels_list:
-                sample_node = channels_list[0] # نسخ قالب البنية الهيكلية لقنوات شاشتك لعدم ضرب الفك والتركيب
+                sample_node = channels_list[0]
                 for db_name, db_info in NILESAT_LIVE_DB.items():
                     if db_name not in existing_names_upper:
                         new_node = sample_node.copy()
@@ -291,7 +284,7 @@ if uploaded_file is not None:
 
             channels_to_sort.append({"name": ch_name, "freq": old_freq, "raw_str": item_str, "is_injected": False})
 
-        # 🔥 زرع القنوات الجديدة للأنظمة القديمة <ITEM> 🔥
+        # زرع القنوات الجديدة للأنظمة القديمة <ITEM>
         if add_new_ch and item_blocks:
             sample_item = item_blocks[0]
             for db_name, db_info in NILESAT_LIVE_DB.items():
@@ -360,7 +353,7 @@ if uploaded_file is not None:
         st.write("### 🔁 سجل التعديلات والزرع والصيانة الذكية:")
         st.table(report_changes)
 
-    # ── التصدير وبناء الـ TXT والـ TLL بأمان تام ──
+    # ── التصدير وبناء الـ TXT والـ TLL ──
     text_report = f"{t['txt_header']} ({model_name})\n" + "="*50 + "\n"
     text_report += f"{t['txt_order']} " + " -> ".join(final_priority) + "\n" + "="*50 + "\n\n"
 
@@ -370,7 +363,6 @@ if uploaded_file is not None:
             node = ch["node_data"]
             node["majorNumber"] = index
             final_list_modern.append(node)
-            # ملء تقرير الـ TXT خطوة بخطوة لمنع خروجه فارغاً
             tag_status = " [NEW] " if ch["is_injected"] else ""
             text_report += f"No. {index:03d} : {ch['name']:<25} | Freq: {ch['freq']}{tag_status}\n"
         
@@ -411,6 +403,14 @@ if uploaded_file is not None:
     with col_btn2:
         st.download_button(label=t['btn_download_txt'], data=text_report,
                            file_name="Channels_List.txt", mime="text/plain; charset=utf-8")
+
+    # ⭐ هنا تم نقل البوكس الخاص بالملحوظة الفنية ليظهر مباشرةً بعد التحميل ⭐
+    st.markdown(f"""
+        <div class="lg-trick-box">
+            <h4 style="color: #ff007f; margin-top:0;">{t['lg_trick_title']}</h4>
+            <p style="white-space: pre-line; margin-bottom:0; font-size:15px; line-height: 1.6;">{t['lg_trick_text']}</p>
+        </div>
+    """, unsafe_allow_html=True)
 
 # ── الفوتر الفني ──
 whatsapp_url = ("https://api.whatsapp.com/send?phone=201280339779"
