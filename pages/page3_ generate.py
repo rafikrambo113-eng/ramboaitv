@@ -1,10 +1,10 @@
 
-# Build the complete updated Streamlit app code
+# Build the FIXED Streamlit app - no file writing, memory-only
 
-code = '''import streamlit as st
+code = r'''import streamlit as st
 import xml.etree.ElementTree as ET
 import json
-import re
+import io
 
 # ── تهيئة الجلسة ──
 if 'lang' not in st.session_state:
@@ -384,7 +384,6 @@ elif country_key == "saudi":
     FULL_CHANNEL_DB = SAUDI_CHANNEL_DB
     country_display = "🇸🇦 السعودية" if st.session_state.lang == 'ar' else "🇸🇦 Saudi Arabia"
 else:
-    # دمج القاعدتين مع إزالة التكرار حسب الاسم
     seen = set()
     FULL_CHANNEL_DB = []
     for ch in EGYPT_CHANNEL_DB + SAUDI_CHANNEL_DB:
@@ -410,9 +409,8 @@ ALL_AVAILABLE_CATEGORIES = [
 
 def ai_classify(channel_name):
     name = channel_name.upper().strip()
-    # Handle known ambiguous names first
     if name in ["MBC MASR", "MBC1", "MBC 1"]:
-        return ALL_AVAILABLE_CATEGORIES[7]  # General
+        return ALL_AVAILABLE_CATEGORIES[7]
     CHRISTIAN_KW = ["CTV", "AGHAPY", "MESAT", "KARMA", "ALKARMA", "NOURSAT", "SAT-7", "SAT7", "AL HAYAT", "HAYAT TV", "MIRACLE", "COPTIC", "CHURCH"]
     if any(w in name for w in CHRISTIAN_KW): return ALL_AVAILABLE_CATEGORIES[0]
     ISLAMIC_KW = ["QURAN", "RAHMA", "MAJD", "MAKKA", "IQRAA", "IQRA", "HUDA", "WESAL", "ISLAM", "SUNNAH", "MADINAH"]
@@ -509,7 +507,6 @@ def build_legacy_xml(channels_sorted, model_name, screen_size, country):
     """بناء ملف TLL بنظام Legacy (XML nodes) — للشاشات 2014-2019"""
     root = ET.Element("TLLDATA")
     
-    # Metadata
     meta = ET.SubElement(root, "MetaData")
     ET.SubElement(meta, "ModelName").text = model_name
     ET.SubElement(meta, "ScreenSize").text = f"{screen_size}inch"
@@ -517,7 +514,6 @@ def build_legacy_xml(channels_sorted, model_name, screen_size, country):
     ET.SubElement(meta, "SystemType").text = "Legacy"
     ET.SubElement(meta, "SchemaVersion").text = "1.0"
     
-    # Channel List
     ch_list = ET.SubElement(root, "ChannelList")
     for rank, ch in enumerate(channels_sorted, start=1):
         ch_node = ET.SubElement(ch_list, "Channel")
@@ -534,7 +530,7 @@ def build_legacy_xml(channels_sorted, model_name, screen_size, country):
         ET.SubElement(ch_node, "ptcNumber").text = str(rank)
         ET.SubElement(ch_node, "satellite").text = ch.get("satellite", "NileSat 7W")
     
-    xml_declaration = '<?xml version="1.0" encoding="UTF-8"?>\\n'
+    xml_declaration = '<?xml version="1.0" encoding="UTF-8"?>\n'
     xml_body = ET.tostring(root, encoding="unicode")
     return (xml_declaration + xml_body).encode('utf-8')
 
@@ -582,7 +578,7 @@ def build_modern_json(channels_sorted, model_name, screen_size, country):
     legacy_node = ET.SubElement(root_xml, "legacybroadcast")
     legacy_node.text = json.dumps(broadcast_data, ensure_ascii=False, separators=(',', ':'))
 
-    xml_declaration = '<?xml version="1.0" encoding="UTF-8"?>\\n'
+    xml_declaration = '<?xml version="1.0" encoding="UTF-8"?>\n'
     xml_body = ET.tostring(root_xml, encoding="unicode")
     return (xml_declaration + xml_body).encode('utf-8')
 
@@ -597,21 +593,20 @@ if st.button(t['btn_generate'], use_container_width=True):
         final_tll_bytes = build_modern_json(channels_sorted, selected_model, screen_size, country_display)
 
     # ══ بناء التقرير النصي ══
-    txt_report = f"{t['txt_header']}\\n" + "=" * 60 + "\\n"
-    txt_report += f"{t['txt_system']}{system_type}\\n"
-    txt_report += f"{t['txt_country']}{country_display}\\n"
-    txt_report += f"{t['txt_size']}{screen_size} inch\\n"
-    txt_report += f"{t['txt_model']}{selected_model}\\n"
-    txt_report += f"{t['txt_order']}" + " → ".join(final_priority) + "\\n" + "=" * 60 + "\\n\\n"
+    txt_report = f"{t['txt_header']}\n" + "=" * 60 + "\n"
+    txt_report += f"{t['txt_system']}{system_type}\n"
+    txt_report += f"{t['txt_country']}{country_display}\n"
+    txt_report += f"{t['txt_size']}{screen_size} inch\n"
+    txt_report += f"{t['txt_model']}{selected_model}\n"
+    txt_report += f"{t['txt_order']}" + " → ".join(final_priority) + "\n" + "=" * 60 + "\n\n"
     for rank, ch in enumerate(channels_sorted, start=1):
         cat = ai_classify(ch["name"])
         sat = ch.get("satellite", "N/A")
-        txt_report += f"No. {rank:03d} : {ch['name']:<28} | Freq: {ch['frequency']} MHz | {ch['polarization']:<10} | Sat: {sat:<12} | {cat}\\n"
+        txt_report += f"No. {rank:03d} : {ch['name']:<28} | Freq: {ch['frequency']} MHz | {ch['polarization']:<10} | Sat: {sat:<12} | {cat}\n"
 
     # ══ عرض رسالة النجاح ══
     st.success(t['ready_msg'])
     
-    # عرض ملخص الإعدادات
     st.markdown(f"""
     <div style="background:{intro_bg}; border:2px solid {intro_border}; border-radius:14px; padding:14px; margin-bottom:16px;">
         <p style="margin:0; font-size:14px; line-height:1.8;">
@@ -663,7 +658,7 @@ st.markdown(f"""
 '''
 
 # Save to file
-output_path = "/mnt/agents/output/rambo_page3_advanced.py"
+output_path = "/mnt/agents/output/page3_generate_fixed.py"
 with open(output_path, "w", encoding="utf-8") as f:
     f.write(code)
 
@@ -671,3 +666,10 @@ print(f"✅ File saved successfully!")
 print(f"📁 Path: {output_path}")
 print(f"📊 Lines: {len(code.splitlines())}")
 print(f"📏 Size: {len(code):,} bytes")
+print(f"\n🔍 Checking for 'open(' in code...")
+open_count = code.count('open(')
+print(f"   Found {open_count} occurrences of 'open('")
+if open_count == 0:
+    print("   ✅ SAFE: No file writing operations!")
+else:
+    print("   ⚠️ WARNING: Found open() calls!")
