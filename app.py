@@ -122,7 +122,6 @@ st.markdown(f"<h3>{t['subtitle']}</h3>", unsafe_allow_html=True)
 # 🛰️ DATABASE — نايل سات (محدّثة وموسّعة)
 # ══════════════════════════════════════════════
 NILESAT_LIVE_DB = {
-    # ── Christian ──
     "AL HAYAT":         {"frequency": 12207, "polarization": "Vertical",   "update_date": "2026-05-10"},
     "AL HAYAT 2":       {"frequency": 12207, "polarization": "Vertical",   "update_date": "2026-05-10"},
     "SAT-7 KIDS":       {"frequency": 11353, "polarization": "Vertical",   "update_date": "2026-04-18"},
@@ -135,13 +134,11 @@ NILESAT_LIVE_DB = {
     "NOURSAT":          {"frequency": 11938, "polarization": "Vertical",   "update_date": "2026-01-10"},
     "MESAT":            {"frequency": 11096, "polarization": "Horizontal", "update_date": "2026-01-10"},
     "MIRACLE CHANNEL":  {"frequency": 11179, "polarization": "Horizontal", "update_date": "2026-03-20"},
-    # ── Islamic ──
     "IQRAA":            {"frequency": 11938, "polarization": "Vertical",   "update_date": "2026-04-01"},
     "MAJD":             {"frequency": 11862, "polarization": "Vertical",   "update_date": "2026-02-14"},
     "RAHMA":            {"frequency": 11938, "polarization": "Vertical",   "update_date": "2026-04-01"},
     "QURAN KAREEM":     {"frequency": 11727, "polarization": "Vertical",   "update_date": "2026-03-05"},
     "MAKKA TV":         {"frequency": 11727, "polarization": "Vertical",   "update_date": "2026-03-05"},
-    # ── News ──
     "AL JAZEERA":       {"frequency": 10853, "polarization": "Vertical",   "update_date": "2026-05-20"},
     "AL JAZEERA HD":    {"frequency": 10853, "polarization": "Vertical",   "update_date": "2026-05-20"},
     "AL ARABIYA":       {"frequency": 11938, "polarization": "Vertical",   "update_date": "2026-04-15"},
@@ -152,7 +149,6 @@ NILESAT_LIVE_DB = {
     "ON E":             {"frequency": 12092, "polarization": "Vertical",   "update_date": "2026-05-01"},
     "CAIRO NEWS":       {"frequency": 11938, "polarization": "Vertical",   "update_date": "2026-04-20"},
     "QATAR TV HD":      {"frequency": 10834, "polarization": "Horizontal", "update_date": "2026-05-14"},
-    # ── Movies ──
     "MBC 2":            {"frequency": 11938, "polarization": "Vertical",   "update_date": "2026-01-20"},
     "MBC 4":            {"frequency": 11938, "polarization": "Vertical",   "update_date": "2026-01-20"},
     "MBC MAX":          {"frequency": 11938, "polarization": "Vertical",   "update_date": "2026-01-20"},
@@ -163,7 +159,6 @@ NILESAT_LIVE_DB = {
     "AFLAM":            {"frequency": 11179, "polarization": "Horizontal", "update_date": "2026-02-28"},
     "AFLAM 2":          {"frequency": 11179, "polarization": "Horizontal", "update_date": "2026-02-28"},
     "MELODY AFLAM":     {"frequency": 11862, "polarization": "Vertical",   "update_date": "2026-01-15"},
-    # ── Sports ──
     "ON TIME SPORTS 1": {"frequency": 11861, "polarization": "Vertical",   "update_date": "2026-05-01"},
     "ON TIME SPORTS 2": {"frequency": 11861, "polarization": "Vertical",   "update_date": "2026-05-01"},
     "ON TIME SPORTS 3": {"frequency": 11861, "polarization": "Vertical",   "update_date": "2026-05-01"},
@@ -172,7 +167,6 @@ NILESAT_LIVE_DB = {
     "AD SPORTS":        {"frequency": 11900, "polarization": "Vertical",   "update_date": "2026-03-15"},
     "AD SPORTS 2":      {"frequency": 11900, "polarization": "Vertical",   "update_date": "2026-03-15"},
     "KASS":             {"frequency": 11727, "polarization": "Vertical",   "update_date": "2026-02-20"},
-    # ── Kids ──
     "SPACE TOON":       {"frequency": 11727, "polarization": "Vertical",   "update_date": "2026-01-05"},
     "MAJID":            {"frequency": 11862, "polarization": "Vertical",   "update_date": "2026-01-05"},
     "TOYOR ALJANNAH":   {"frequency": 11179, "polarization": "Horizontal", "update_date": "2026-02-10"},
@@ -200,62 +194,22 @@ ALL_AVAILABLE_CATEGORIES = [
     "📺 General Channels"   if st.session_state.lang == 'en' else "📺 قنوات عامة ومنوعات"
 ]
 
-# ══════════════════════════════════════════════
-# 🤖 ai_classify — محسّنة وموسّعة
-# ══════════════════════════════════════════════
 def ai_classify(channel_name):
     name = channel_name.upper().strip()
-
-    CHRISTIAN_KW = ["CTV", "AGHAPY", "MESAT", "KARMA", "ALKARMA", "NOURSAT",
-                    "SAT-7", "SAT7", "AL HAYAT", "HAYAT TV", "MIRACLE",
-                    "COPTIC", "CHRISTIAN", "CHURCH", "CROSS", "GOSPEL",
-                    "MARYAM", "VIRGIN", "BISHOP", "POPE", "JESUS", "CHRIST",
-                    "FAITH", "HOPE CHANNEL", "3ABN"]
-    if any(w in name for w in CHRISTIAN_KW):
-        return ALL_AVAILABLE_CATEGORIES[0]
-
-    ISLAMIC_KW = ["QURAN", "RAHMA", "MAJD", "MAKKA", "IQRAA", "IQRA",
-                  "HUDA", "WESAL", "ISLAM", "SUNNAH", "MADINAH",
-                  "AL RESALAH", "RESALAH", "SAFWA", "HIDAYA", "HIDAYAT",
-                  "AHLUL BAYT", "IMAM", "FIQH", "FATWA", "SALAH"]
-    if any(w in name for w in ISLAMIC_KW):
-        return ALL_AVAILABLE_CATEGORIES[1]
-
-    DRAMA_KW = ["MOSALSALAT", "DRAMA", "SERIES", "KHOLASA", "MASRAWI",
-                "ROTANA DRAMA", "CBC DRAMA", "MELODY DRAMA",
-                "MBC DRAMA", "SHAHID", "PLUS DRAMA", "AL HAYAT DRAMA"]
-    if any(w in name for w in DRAMA_KW):
-        return ALL_AVAILABLE_CATEGORIES[2]
-
-    MOVIE_KW = ["CINEMA", "ROTANA", "AFLAM", "MIX", "FOX", "MBC2", "MBC 2",
-                "MBC4", "MBC 4", "MBC MAX", "ACTION", "RAMBO", "MISHMISH",
-                "MOVIE", "FILM", "MELODY AFLAM", "OSCAR", "COMEDY", "FUN",
-                "STAR MOVIES", "THRILLER", "HORROR", "PREMIERE", "SHOWTIME", "CINE"]
-    if any(w in name for w in MOVIE_KW):
-        return ALL_AVAILABLE_CATEGORIES[3]
-
-    KIDS_KW = ["SPACE TOON", "SPACETOON", "CN", "CARTOON", "MAJID",
-               "KIDS", "TOM", "TOYOR", "BABY", "JUNIOR", "NICKELODEON",
-               "NICK", "DISNEY", "BOOMERANG", "JIM JAM", "MINIMAX", "LEGO", "MASHA"]
-    if any(w in name for w in KIDS_KW):
-        return ALL_AVAILABLE_CATEGORIES[4]
-
-    SPORT_KW = ["SPORT", "SPORTS", "ONTIME", "ON TIME", "KASS",
-                "AD_SPORTS", "AD SPORTS", "SSC", "BEIN", "MATCH",
-                "FOOTBALL", "SOCCER", "GOLF", "NBA", "UFC",
-                "EXTREME", "EUROSPORT", "DSF", "FIGHTING", "WWE",
-                "OLYMPIC", "RACING"]
-    if any(w in name for w in SPORT_KW):
-        return ALL_AVAILABLE_CATEGORIES[5]
-
-    NEWS_KW = ["NEWS", "JAZEERA", "ARABIYA", "HADATH", "CAIRO",
-               "SKY NEWS", "BBC", "CNN", "FRANCE 24", "RT",
-               "EXTRA NEWS", "CBC", "ON E", "SADA", "BALADI",
-               "MASR", "MISR", "AHRAR", "EL WATAN", "ALARABY",
-               "AL GHAD", "MEKAMELEEN", "HIWAR", "ALAAN"]
-    if any(w in name for w in NEWS_KW):
-        return ALL_AVAILABLE_CATEGORIES[6]
-
+    CHRISTIAN_KW = ["CTV", "AGHAPY", "MESAT", "KARMA", "ALKARMA", "NOURSAT", "SAT-7", "SAT7", "AL HAYAT", "HAYAT TV", "MIRACLE", "COPTIC", "CHRISTIAN", "CHURCH", "CROSS", "GOSPEL", "MARYAM", "VIRGIN", "BISHOP", "POPE", "JESUS", "CHRIST", "FAITH", "HOPE CHANNEL", "3ABN"]
+    if any(w in name for w in CHRISTIAN_KW): return ALL_AVAILABLE_CATEGORIES[0]
+    ISLAMIC_KW = ["QURAN", "RAHMA", "MAJD", "MAKKA", "IQRAA", "IQRA", "HUDA", "WESAL", "ISLAM", "SUNNAH", "MADINAH", "AL RESALAH", "RESALAH", "SAFWA", "HIDAYA", "HIDAYAT", "AHLUL BAYT", "IMAM", "FIQH", "FATWA", "SALAH"]
+    if any(w in name for w in ISLAMIC_KW): return ALL_AVAILABLE_CATEGORIES[1]
+    DRAMA_KW = ["MOSALSALAT", "DRAMA", "SERIES", "KHOLASA", "MASRAWI", "ROTANA DRAMA", "CBC DRAMA", "MELODY DRAMA", "MBC DRAMA", "SHAHID", "PLUS DRAMA", "AL HAYAT DRAMA"]
+    if any(w in name for w in DRAMA_KW): return ALL_AVAILABLE_CATEGORIES[2]
+    MOVIE_KW = ["CINEMA", "ROTANA", "AFLAM", "MIX", "FOX", "MBC2", "MBC 2", "MBC4", "MBC 4", "MBC MAX", "ACTION", "RAMBO", "MISHMISH", "MOVIE", "FILM", "MELODY AFLAM", "OSCAR", "COMEDY", "FUN", "STAR MOVIES", "THRILLER", "HORROR", "PREMIERE", "SHOWTIME", "CINE"]
+    if any(w in name for w in MOVIE_KW): return ALL_AVAILABLE_CATEGORIES[3]
+    KIDS_KW = ["SPACE TOON", "SPACETOON", "CN", "CARTOON", "MAJID", "KIDS", "TOM", "TOYOR", "BABY", "JUNIOR", "NICKELODEON", "NICK", "DISNEY", "BOOMERANG", "JIM JAM", "MINIMAX", "LEGO", "MASHA"]
+    if any(w in name for w in KIDS_KW): return ALL_AVAILABLE_CATEGORIES[4]
+    SPORT_KW = ["SPORT", "SPORTS", "ONTIME", "ON TIME", "KASS", "AD_SPORTS", "AD SPORTS", "SSC", "BEIN", "MATCH", "FOOTBALL", "SOCCER", "GOLF", "NBA", "UFC", "EXTREME", "EUROSPORT", "DSF", "FIGHTING", "WWE", "OLYMPIC", "RACING"]
+    if any(w in name for w in SPORT_KW): return ALL_AVAILABLE_CATEGORIES[5]
+    NEWS_KW = ["NEWS", "JAZEERA", "ARABIYA", "HADATH", "CAIRO", "SKY NEWS", "BBC", "CNN", "FRANCE 24", "RT", "EXTRA NEWS", "CBC", "ON E", "SADA", "BALADI", "MASR", "MISR", "AHRAR", "EL WATAN", "ALARABY", "AL GHAD", "MEKAMELEEN", "HIWAR", "ALAAN"]
+    if any(w in name for w in NEWS_KW): return ALL_AVAILABLE_CATEGORIES[6]
     return ALL_AVAILABLE_CATEGORIES[7]
 
 # ══════════════════════════════════════════════
@@ -266,12 +220,20 @@ uploaded_file = st.file_uploader(t['upload_label'], type=["TLL"])
 if uploaded_file is not None:
     file_bytes = uploaded_file.read()
 
+    # القراءة الآمنة للنصوص المنظفة لمنع تلف بنية ملف شاشات LG
     try:
         file_text_original = file_bytes.decode('utf-8')
     except UnicodeDecodeError:
         file_text_original = file_bytes.decode('latin-1')
 
-    root = ET.fromstring(file_bytes)
+    file_text_cleaned = re.sub(r'^\s+', '', file_text_original)
+    
+    try:
+        root = ET.fromstring(file_text_cleaned.encode('utf-8'))
+    except Exception as e:
+        # المحاولة البديلة بـ latin-1 لضمان القبول المطلق للهياكل القديمة
+        root = ET.fromstring(file_text_cleaned.encode('latin-1'))
+
     model_setting = root.find(".//ModelName")
     model_name = model_setting.text if model_setting is not None else "Unknown LG TV"
 
@@ -355,8 +317,7 @@ if uploaded_file is not None:
                         "التردد الجديد": f"{live_freq} MHz",
                         "تاريخ التحديث": NILESAT_LIVE_DB[name_up]["update_date"]
                     })
-                    item_str = re.sub(r'<frequency>\d+</frequency>',
-                                      f'<frequency>{live_freq}</frequency>', item_str)
+                    item_str = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{live_freq}</frequency>', item_str)
                     old_freq = live_freq
 
             channels_to_sort.append({"id": idx, "name": ch_name, "freq": old_freq, "raw_str": item_str})
@@ -434,7 +395,7 @@ if uploaded_file is not None:
         st.write(f"### 🆕 تقرير القنوات الجديدة المزروعة — تبع الـ {detected_satellite}:")
         st.table(injected_report)
 
-    # ── بناء الملفات النهائية ──
+    # ── بناء الملفات النهائية بشكل مستقر ──
     text_report  = f"{t['txt_header']} ({model_name})\n"
     text_report += f"🛰️ القمر الصناعي المكتشف: {detected_satellite}\n"
     text_report += "=" * 50 + "\n"
