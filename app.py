@@ -178,19 +178,17 @@ def ai_classify(channel_name):
     if any(w in name for w in NEWS_KW): return ALL_AVAILABLE_CATEGORIES[6]
     return ALL_AVAILABLE_CATEGORIES[7]
 
-# ── رفع الملف والمعالجة الموثوقة ──
+# ── رفع الملف والمعالجة ──
 uploaded_file = st.file_uploader(t['upload_label'], type=["TLL"])
 
 if uploaded_file is not None:
     file_bytes = uploaded_file.read()
 
-    # محاولة فك التشفير بالطرق القياسية والتبادلية لشاشات LG
     try:
         file_text = file_bytes.decode('utf-8')
     except UnicodeDecodeError:
         file_text = file_bytes.decode('latin-1')
 
-    # تنظيف الفراغات السطحية لضمان سلامة الهيكل الأساسي للـ XML
     file_text_cleaned = re.sub(r'^\s+', '', file_text)
     
     try:
@@ -213,21 +211,24 @@ if uploaded_file is not None:
         </div>
     """, unsafe_allow_html=True)
 
+    # خانات التحكم المفعلة برمجياً
     update_freq = st.checkbox(t['update_freq_label'], value=True)
+    add_new_ch = st.checkbox(t['add_new_ch_label'], value=True)
 
     channels_to_sort = []
     report_changes   = []
+    existing_names_upper = set()
 
     if is_modern:
-        # معالجة الشاشات الحديثة بطريقة كائنات JSON البرمجية الكاملة 100%
         try:
             broadcast_data = json.loads(legacy_broadcast_tag.text.strip())
             channels_list = broadcast_data.get("channelList", [])
 
-            for idx, ch in enumerate(channels_list):
+            for ch in channels_list:
                 ch_name = ch.get("channelName", "Unknown")
                 old_freq = str(ch.get("frequency", "N/A"))
                 name_up = ch_name.upper()
+                existing_names_upper.add(name_up)
 
                 if update_freq and name_up in NILESAT_LIVE_DB:
                     live_freq = NILESAT_LIVE_DB[name_up]["frequency"]
@@ -240,20 +241,43 @@ if uploaded_file is not None:
                         ch["polarization"] = NILESAT_LIVE_DB[name_up]["polarization"]
                         old_freq = str(live_freq)
 
-                channels_to_sort.append({"name": ch_name, "freq": old_freq, "node_data": ch})
+                channels_to_sort.append({"name": ch_name, "freq": old_freq, "node_data": ch, "is_injected": False})
+
+            # 🔥 عملية زرع وفحص القنوات الجديدة المفقودة للشاشات الحديثة 🔥
+            if add_new_ch and channels_list:
+                sample_node = channels_list[0] # نسخ قالب البنية الهيكلية لقنوات شاشتك لعدم ضرب الفك والتركيب
+                for db_name, db_info in NILESAT_LIVE_DB.items():
+                    if db_name not in existing_names_upper:
+                        new_node = sample_node.copy()
+                        new_node["channelName"] = db_name
+                        new_node["frequency"] = db_info["frequency"]
+                        new_node["polarization"] = db_info["polarization"]
+                        new_node["invisible"] = 0
+                        
+                        channels_to_sort.append({
+                            "name": db_name, 
+                            "freq": str(db_info["frequency"]), 
+                            "node_data": new_node,
+                            "is_injected": True
+                        })
+                        report_changes.append({
+                            "القناة": db_name, "الفئة (Category)": ai_classify(db_name),
+                            "التردد القديم": "غير موجودة (مضافة)", "التردد الجديد": f"{db_info['frequency']} MHz"
+                        })
+
         except Exception as json_err:
-            st.error(f"⚠️ خطأ في قراءة الـ JSON الخاص بالشاشة الحديثة: {str(json_err)}")
-            st.stop()
+            st.error(f"⚠️ خطأ في معالجة الملف: {str(json_err)}")
     else:
-        # معالجة الشاشات القديمة القائمة على تاجات ITEM
+        # معالجة الشاشات القديمة <ITEM>
         item_blocks = re.findall(r'(<ITEM>.*?</ITEM>)', file_text, re.DOTALL)
 
-        for idx, item_str in enumerate(item_blocks):
+        for item_str in item_blocks:
             name_match = re.search(r'<vchName>(.*?)</vchName>', item_str)
             freq_match = re.search(r'<frequency>(.*?)</frequency>', item_str)
             ch_name  = name_match.group(1) if name_match else "Unknown"
             old_freq = freq_match.group(1) if freq_match else "N/A"
             name_up  = ch_name.upper()
+            existing_names_upper.add(name_up)
 
             if update_freq and name_up in NILESAT_LIVE_DB:
                 live_freq = str(NILESAT_LIVE_DB[name_up]["frequency"])
@@ -265,7 +289,27 @@ if uploaded_file is not None:
                     item_str = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{live_freq}</frequency>', item_str)
                     old_freq = live_freq
 
-            channels_to_sort.append({"name": ch_name, "freq": old_freq, "raw_str": item_str})
+            channels_to_sort.append({"name": ch_name, "freq": old_freq, "raw_str": item_str, "is_injected": False})
+
+        # 🔥 زرع القنوات الجديدة للأنظمة القديمة <ITEM> 🔥
+        if add_new_ch and item_blocks:
+            sample_item = item_blocks[0]
+            for db_name, db_info in NILESAT_LIVE_DB.items():
+                if db_name not in existing_names_upper:
+                    new_item = sample_item
+                    new_item = re.sub(r'<vchName>.*?</vchName>', f'<vchName>{db_name}</vchName>', new_item)
+                    new_item = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{db_info["frequency"]}</frequency>', new_item)
+                    
+                    channels_to_sort.append({
+                        "name": db_name, 
+                        "freq": str(db_info["frequency"]), 
+                        "raw_str": new_item,
+                        "is_injected": True
+                    })
+                    report_changes.append({
+                        "القناة": db_name, "الفئة (Category)": ai_classify(db_name),
+                        "التردد القديم": "غير موجودة (مضافة)", "التردد الجديد": f"{db_info['frequency']} MHz"
+                    })
 
     # ── محرك البحث ──
     st.write("---")
@@ -292,7 +336,7 @@ if uploaded_file is not None:
 
     channels_sorted = sorted(channels_to_sort, key=lambda x: final_priority.index(ai_classify(x["name"])))
 
-    # المعاينة الحية للفئات
+    # المعاينة الحية
     categorized = {}
     for ch in channels_sorted:
         cat = ai_classify(ch["name"])
@@ -313,24 +357,24 @@ if uploaded_file is not None:
 
     if report_changes:
         st.write("---")
-        st.write("### 🔁 سجل صيانة وتحديث الترددات الحية:")
+        st.write("### 🔁 سجل التعديلات والزرع والصيانة الذكية:")
         st.table(report_changes)
 
-    # ── بناء التصدير النهائي المقاوم للانهيار ──
+    # ── التصدير وبناء الـ TXT والـ TLL بأمان تام ──
     text_report = f"{t['txt_header']} ({model_name})\n" + "="*50 + "\n"
+    text_report += f"{t['txt_order']} " + " -> ".join(final_priority) + "\n" + "="*50 + "\n\n"
 
     if is_modern:
-        # هنا السر الفعلي: نقوم بإعادة بناء القنوات داخل المصفوفة الأصلية مع تحديث الموضع الرقمي
         final_list_modern = []
         for index, ch in enumerate(channels_sorted, start=1):
             node = ch["node_data"]
-            node["majorNumber"] = index  # التعديل البرمجي السليم لرقم القناة المعتمد بالشاشة و ChanSort
+            node["majorNumber"] = index
             final_list_modern.append(node)
-            text_report += f"No. {index:03d} : {ch['name']:<25} | Freq: {ch['freq']}\n"
+            # ملء تقرير الـ TXT خطوة بخطوة لمنع خروجه فارغاً
+            tag_status = " [NEW] " if ch["is_injected"] else ""
+            text_report += f"No. {index:03d} : {ch['name']:<25} | Freq: {ch['freq']}{tag_status}\n"
         
         broadcast_data["channelList"] = final_list_modern
-        
-        # استخدام التنسيق الصارم جداً وبدون مسافات عشوائية تمنع المفسر في ChanSort من القراءة
         legacy_broadcast_tag.text = json.dumps(broadcast_data, ensure_ascii=False, separators=(',', ':'))
         final_xml_bytes = ET.tostring(root, encoding="utf-8")
     else:
@@ -342,7 +386,8 @@ if uploaded_file is not None:
             else:
                 raw = raw.replace("<ITEM>", f"<ITEM>\r\n<prNum>{index}</prNum>")
             item_strings_sorted.append(raw)
-            text_report += f"No. {index:03d} : {ch['name']:<25} | Freq: {ch['freq']}\n"
+            tag_status = " [NEW] " if ch["is_injected"] else ""
+            text_report += f"No. {index:03d} : {ch['name']:<25} | Freq: {ch['freq']}{tag_status}\n"
 
         combined_items_str = "\r\n".join(item_strings_sorted)
         start_idx = file_text.find("<ITEM>")
