@@ -24,9 +24,11 @@ if 'file_text_original' not in st.session_state:
     st.session_state.file_text_original = ""
 if 'model_name' not in st.session_state:
     st.session_state.model_name = ""
+if 'edit_finished' not in st.session_state:
+    st.session_state.edit_finished = False # حالة زر إنهاء التعديل
 
 # ─────────────────────────────────────────────
-# 2. نصوص الواجهة (عربي / إنجليزي) - تم إضافة المفتاح المفقود هنا
+# 2. نصوص الواجهة (عربي / إنجليزي)
 # ─────────────────────────────────────────────
 UI = {
     'ar': {
@@ -43,14 +45,15 @@ UI = {
         'btn_remove':      "❌ حذف",
         'edit_freq_title': "✏️ تعديل / إضافة تردد قناة موجودة",
         'add_title':       "➕ إضافة قناة جديدة تماماً واختراعها",
-        'auto_features_title': "⚙️ خيارات الفحص الذكي والصيانة الفورية للملف",
+        'auto_features_title': "⚙️ خيارات الفحص الذكي والصيانة الفورية للملف (بعد الرفع)",
         'chk_scan_inject': "📡 تفعيل الفحص التلقائي وزرع القنوات الجديدة المتاحة على القمر فوراً",
         'chk_modern_maint': "🔧 تفعيل الصيانة الحديثة وتحديث الترددات الميتة والقديمة تلقائياً",
-        'preview_title':   "🏁 المعاينة النهائية للملف قبل التحميل",
-        'ready_msg':       "🌌 الملفات المعدلة جاهزة للتحميل الآن!",
-        'btn_tll':         "📥 تحميل ملف الشاشة (GlobalClone00001.TLL)",
-        'btn_txt':         "📄 تحميل تقرير الترتيب (Channels_List.txt)",
-        'txt_header':      "📄 تقرير الترتيب اليدوي المطور — RAMBO Page 2",  # تم الإصلاح هنا
+        'preview_title':   "🏁 استخراج وتنزيل الملفات النهائية",
+        'btn_finish':      "🔒 إنهاء التعديل وتجهيز ملفات التحميل",
+        'ready_msg':       "🌌 تم بناء الترتيب وعمل التقرير بنجاح! الملفات جاهزة للتنزيل الآن:",
+        'btn_tll':         "📥 تحميل ملف الشاشة المعدل (GlobalClone00001.TLL)",
+        'btn_txt':         "📄 تحميل تقرير لستة الترتيب (Channels_List.txt)",
+        'txt_header':      "📄 تقرير الترتيب اليدوي المطور — RAMBO Page 2",
         'no_file':         "⬆️ ارفع ملف TLL أولاً لتبدأ العمل.",
     },
     'en': {
@@ -67,14 +70,15 @@ UI = {
         'btn_remove':      "❌ Remove",
         'edit_freq_title': "✏️ Edit / Add Frequency of Existing Channel",
         'add_title':       "➕ Invent & Add Completely New Channel",
-        'auto_features_title': "⚙️ Smart Auto-Maintenance & Scanning Options",
+        'auto_features_title': "⚙️ Smart Auto-Maintenance & Scanning Options (Post-Upload)",
         'chk_scan_inject': "📡 Enable Auto-Scan & Inject newly available Satellite Channels",
         'chk_modern_maint': "🔧 Enable Modern Maintenance & Auto-Update dead frequencies",
-        'preview_title':   "🏁 Final File Preview Before Download",
-        'ready_msg':       "🌌 Modified files are now ready for download!",
+        'preview_title':   "🏁 Export & Download Final Files",
+        'btn_finish':      "🔒 Finish Editing & Generate Download Links",
+        'ready_msg':       "🌌 Sorting completed & report generated! Ready for download:",
         'btn_tll':         "📥 Download TV File (GlobalClone00001.TLL)",
-        'btn_txt':         "📄 Download Report (Channels_List.txt)",
-        'txt_header':      "📄 Manual Sorting Advanced Report — RAMBO Page 2",  # تم الإصلاح هنا
+        'btn_txt':         "📄 Download Sorted List Report (Channels_List.txt)",
+        'txt_header':      "📄 Manual Sorting Advanced Report — RAMBO Page 2",
         'no_file':         "⬆️ Upload a TLL file to start.",
     }
 }
@@ -123,10 +127,6 @@ st.markdown(f"""
     .rambo-table tr:nth-child(even) td {{ background:{table_row_alt}; }}
     .rambo-table tr:nth-child(odd)  td {{ background:{table_row_bg}; }}
     .rambo-table tr:hover td {{ background: rgba(255,0,127,0.12) !important; }}
-    .table-scroll {{ max-height:450px; overflow-y:auto; border: 2px solid {box_border}; border-radius:12px; margin-bottom: 10px; }}
-    .futuristic-cyber-footer {{ background:{footer_bg}; border:2px solid #00f0ff; color:{footer_text} !important; padding:35px; text-align:center; border-radius:20px; margin-top:65px; font-family:'Orbitron', sans-serif; }}
-    .footer-dev {{ color:#ff007f; font-size:26px; font-weight:bold; }}
-    .cyber-whatsapp-btn {{ color:#25d366 !important; padding:14px 35px; border-radius:35px; display:inline-block; font-weight:bold; border:2px solid #25d366; text-decoration:none; margin-top:20px; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -171,7 +171,7 @@ def parse_tll(file_bytes):
         return channels, False, root, None, file_text, None
 
 # ─────────────────────────────────────────────
-# 5. رفع ومعالجة الملفات
+# 5. رفع ومعالجة الملفات أولاً
 # ─────────────────────────────────────────────
 uploaded = st.file_uploader(t['upload_label'], type=["TLL"])
 
@@ -190,15 +190,17 @@ if uploaded is not None:
         model_node = st.session_state.root.find(".//ModelName")
         st.session_state.model_name = model_node.text if model_node is not None else "Unknown LG TV"
         st.session_state.ordered_channels = []
+        st.session_state.edit_finished = False # إعادة تصفير المفتاح عند رفع ملف جديد
 
 if not st.session_state.channels:
     st.info(t['no_file'])
     st.stop()
 
-st.info(f"{t['success_read']} **{st.session_state.model_name}** | 📡 {'Modern JSON' if st.session_state.is_modern else 'Legacy XML'}")
+# تظهر رسالة النجاح فور الرفع مباشرة
+st.success(f"{t['success_read']} **{st.session_state.model_name}** | 📡 {'Modern JSON' if st.session_state.is_modern else 'Legacy XML'}")
 
 # ─────────────────────────────────────────────
-# 6. المربعات التعليمية الذكية (في أول الصفحة)
+# 6. مربعات الفحص والصيانة التلقائية (تظهر الآن فوراً بعد نجاح الرفع)
 # ─────────────────────────────────────────────
 st.write(f"### {t['auto_features_title']}")
 col_chk1, col_chk2 = st.columns(2)
@@ -223,11 +225,12 @@ with col_chk1:
                     nc['raw_str'] = f"<ITEM>\r\n<prNum>{new_idx+1}</prNum>\r\n<vchName>{nc['name']}</vchName>\r\n<frequency>{nc['freq']}</frequency>\r\n</ITEM>"
                 nc['id'] = new_idx
                 st.session_state.channels.append(nc)
-                st.session_state.ordered_channels.append(nc)
+                st.session_state.ordered_channels.append(nc) # زرع تلقائي في اللستة المرتبة
                 added_count += 1
         st.session_state.scan_done = True
         if added_count > 0:
-            st.success(f"📡 تم الفحص! عثر الرادار على {added_count} قنوات جديدة على القمر وتم زرعها بنجاح في القنوات.")
+            st.success(f"📡 تم الفحص والزرع التلقائي لـ {added_count} قنوات جديدة بالملف!")
+            st.session_state.edit_finished = False # نتيح الفرصة للمعاينة والضغط على إنهاء من جديد
             st.rerun()
 
 with col_chk2:
@@ -253,7 +256,8 @@ with col_chk2:
                 
         st.session_state.maint_done = True
         if updated_count > 0:
-            st.success(f"🔧 تمت الصيانة الحديثة أوتوماتيكياً! تم تصحيح وتحديث ترددات {updated_count} قناة ميتة.")
+            st.success(f"🔧 تمت صيانة الملف بنجاح وتحديث ترددات {updated_count} قناة!")
+            st.session_state.edit_finished = False
             st.rerun()
 
 # ─────────────────────────────────────────────
@@ -287,6 +291,7 @@ with col_table1:
             col_n.write(f"**{ch['name']}**")
             if col_b.button(t['btn_add_to_order'], key=f"add_{c_id}"):
                 st.session_state.ordered_channels.append(ch.copy())
+                st.session_state.edit_finished = False # عند تعديل أي شيء يتم إلغاء القفل لحين الضغط عليه مجدداً
                 st.toast(f"✔️ تم زرع {ch['name']} في الترتيب")
                 st.rerun()
 
@@ -315,6 +320,7 @@ with col_table2:
             col_n.write(f"{ch['name']}")
             if col_b.button(t['btn_remove'], key=f"rem_{real_idx}"):
                 st.session_state.ordered_channels.pop(real_idx)
+                st.session_state.edit_finished = False
                 st.toast(f"❌ تم حذف القناة")
                 st.rerun()
 
@@ -344,6 +350,7 @@ with col_edit:
                     raw = st.session_state.ordered_channels[idx]['raw_str']
                     raw = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{ed_freq}</frequency>', raw)
                     st.session_state.ordered_channels[idx]['raw_str'] = raw
+            st.session_state.edit_finished = False
             st.success("✔️ تم تحديث التردد للقناة بنجاح في الجدول!")
             st.rerun()
     else:
@@ -366,79 +373,89 @@ with col_add:
                 new_ch = {"id": fake_idx, "name": nm_clean, "freq": str(new_freq), "pol": new_pol, "raw_str": r_str}
             
             st.session_state.ordered_channels.append(new_ch)
-            st.success(f"✔️ تم اختراع القناة {nm_clean} وزرعها بالترتيب التلقائي الأخير!")
+            st.session_state.edit_finished = False
+            st.success(f"✔️ تم اختراع القناة {nm_clean} وزرعها بالترتيب!")
             st.rerun()
 
 st.write("---")
 
 # ─────────────────────────────────────────────
-# 9. التجهيز النهائي والتحميل
+# 9. التجهيز النهائي والتحميل بناءً على زر الإنهاء
 # ─────────────────────────────────────────────
 st.write(f"### {t['preview_title']}")
 
 final_out_list = st.session_state.ordered_channels
 
 if not final_out_list:
-    st.warning("⚠️ جدولك المخصص فارغ حالياً! قم بزرع القنوات من الجدول الأيمن لتستطيع استخراج وتنزيل الملف النهائي.")
+    st.warning("⚠️ جدولك المخصص فارغ حالياً! قم بزرع القنوات أولاً لتتمكن من تفعيل خيار الإنهاء والتحميل.")
 else:
-    st.success(t['ready_msg'])
-    
-    # استخدام قاموس النصوص بأمان وحمايته بـ get احتياطياً
-    report_header = t.get('txt_header', "📄 Manual Sorting Report — RAMBO")
-    txt_report = f"{report_header} ({st.session_state.model_name})\n"
-    txt_report += "=" * 60 + "\n"
-    for rank, ch in enumerate(final_out_list, start=1):
-        txt_report += f"No. {rank:03d} : {ch['name']:<30} | Freq: {ch['freq']} MHz | Pol: {ch.get('pol','—')}\n"
+    # زر إنهاء التعديل
+    if st.button(t['btn_finish'], key="finish_sorting_btn"):
+        st.session_state.edit_finished = True
+        st.rerun()
 
-    root = st.session_state.root
-    legacy_tag = st.session_state.get('legacy_tag')
-
-    if st.session_state.is_modern:
-        bdata = st.session_state.broadcast_data
-        final_list_nodes = []
+    # إذا قام المستخدم بالضغط على زر إنهاء التعديل، يتم بناء التكست والملف النهائي فوراً وإظهار أزرار التحميل
+    if st.session_state.edit_finished:
+        st.success(t['ready_msg'])
+        
+        # بناء قائمة التقرير النصي (Text List) للترتيب الجديد
+        report_header = t.get('txt_header', "📄 Manual Sorting Report — RAMBO")
+        txt_report = f"{report_header} ({st.session_state.model_name})\n"
+        txt_report += "=" * 60 + "\n"
         for rank, ch in enumerate(final_out_list, start=1):
-            node = ch["raw_node"]
-            node["majorNumber"] = rank
-            final_list_nodes.append(node)
-        bdata["channelList"] = final_list_nodes
-        legacy_tag.text = json.dumps(bdata, ensure_ascii=False)
-        final_tll_bytes = ET.tostring(root, encoding="utf-8")
-    else:
-        file_text = st.session_state.file_text_original
-        item_strings = []
-        for rank, ch in enumerate(final_out_list, start=1):
-            raw = ch.get("raw_str", f"<ITEM>\r\n<vchName>{ch['name']}</vchName>\r\n<frequency>{ch['freq']}</frequency>\r\n</ITEM>")
-            if "<prNum>" in raw:
-                raw = re.sub(r'<prNum>\d+</prNum>', f'<prNum>{rank}</prNum>', raw)
-            else:
-                raw = raw.replace("<ITEM>", f"<ITEM>\r\n<prNum>{rank}</prNum>")
-            item_strings.append(raw)
+            txt_report += f"No. {rank:03d} : {ch['name']:<30} | Freq: {ch['freq']} MHz | Pol: {ch.get('pol','—')}\n"
 
-        combined = "\r\n".join(item_strings)
-        start_i = file_text.find("<ITEM>")
-        end_i = file_text.rfind("</ITEM>") + len("</ITEM>")
-        if start_i != -1 and end_i != -1:
-            final_text = file_text[:start_i] + combined + file_text[end_i:]
+        # بناء ومعالجة ملف الـ TLL النهائي
+        root = st.session_state.root
+        legacy_tag = st.session_state.get('legacy_tag')
+
+        if st.session_state.is_modern:
+            bdata = st.session_state.broadcast_data
+            final_list_nodes = []
+            for rank, ch in enumerate(final_out_list, start=1):
+                node = ch["raw_node"]
+                node["majorNumber"] = rank
+                final_list_nodes.append(node)
+            bdata["channelList"] = final_list_nodes
+            legacy_tag.text = json.dumps(bdata, ensure_ascii=False)
+            final_tll_bytes = ET.tostring(root, encoding="utf-8")
         else:
-            final_text = combined
-        try: final_tll_bytes = final_text.encode('utf-8')
-        except UnicodeEncodeError: final_tll_bytes = final_text.encode('latin-1')
+            file_text = st.session_state.file_text_original
+            item_strings = []
+            for rank, ch in enumerate(final_out_list, start=1):
+                raw = ch.get("raw_str", f"<ITEM>\r\n<vchName>{ch['name']}</vchName>\r\n<frequency>{ch['freq']}</frequency>\r\n</ITEM>")
+                if "<prNum>" in raw:
+                    raw = re.sub(r'<prNum>\d+</prNum>', f'<prNum>{rank}</prNum>', raw)
+                else:
+                    raw = raw.replace("<ITEM>", f"<ITEM>\r\n<prNum>{rank}</prNum>")
+                item_strings.append(raw)
 
-    col_d1, col_d2 = st.columns(2)
-    with col_d1:
-        st.download_button(label=t['btn_tll'], data=final_tll_bytes, file_name="GlobalClone00001.TLL", mime="application/octet-stream")
-    with col_d2:
-        st.download_button(label=t['btn_txt'], data=txt_report, file_name="Channels_List_Manual.txt", mime="text/plain; charset=utf-8")
+            combined = "\r\n".join(item_strings)
+            start_i = file_text.find("<ITEM>")
+            end_i = file_text.rfind("</ITEM>") + len("</ITEM>")
+            if start_i != -1 and end_i != -1:
+                final_text = file_text[:start_i] + combined + file_text[end_i:]
+            else:
+                final_text = combined
+            try: final_tll_bytes = final_text.encode('utf-8')
+            except UnicodeEncodeError: final_tll_bytes = final_text.encode('latin-1')
+
+        # أزرار التحميل
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            st.download_button(label=t['btn_tll'], data=final_tll_bytes, file_name="GlobalClone00001.TLL", mime="application/octet-stream")
+        with col_d2:
+            st.download_button(label=t['btn_txt'], data=txt_report, file_name="Channels_List_Manual.txt", mime="text/plain; charset=utf-8")
 
 # ─────────────────────────────────────────────
 # 10. الفوتر السيبراني
 # ─────────────────────────────────────────────
 whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
 st.markdown(f"""
-<div class="futuristic-cyber-footer">
-    <div class="footer-dev">🛠️ DEVELOPER ENG: RAFIK RAMBO</div>
+<div class="futuristic-cyber-footer" style="background:{footer_bg}; border:2px solid #00f0ff; color:{footer_text} !important; padding:35px; text-align:center; border-radius:20px; margin-top:65px; font-family:'Orbitron', sans-serif;">
+    <div class="footer-dev" style="color:#ff007f; font-size:26px; font-weight:bold;">🛠️ DEVELOPER ENG: RAFIK RAMBO</div>
     <div>📱 <b>MOBILE / الموبايل:</b> +201280339779</div>
     <div>✉️ <b>E-MAIL:</b> rafikrambo113@gmail.com</div>
-    <a href="{whatsapp_url}" target="_blank" class="cyber-whatsapp-btn">WhatsApp Web</a>
+    <a href="{whatsapp_url}" target="_blank" class="cyber-whatsapp-btn" style="color:#25d366 !important; padding:14px 35px; border-radius:35px; display:inline-block; font-weight:bold; border:2px solid #25d366; text-decoration:none; margin-top:20px;">WhatsApp Web</a>
 </div>
 """, unsafe_allow_html=True)
