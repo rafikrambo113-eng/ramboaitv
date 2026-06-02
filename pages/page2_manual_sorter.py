@@ -190,7 +190,7 @@ if not st.session_state.channels:
 st.success(f"{t['success_read']} **{st.session_state.model_name}** | 📡 {'Modern JSON' if st.session_state.is_modern else 'Legacy XML'} | الإجمالي: {len(st.session_state.channels)} قناة.")
 
 # ─────────────────────────────────────────────
-# 6. خيارات الفحص والصيانة التلقائية (تحديث وزرع داخل الجدول الكلي المتوفر فقط)
+# 6. خيارات الفحص والصيانة التلقائية
 # ─────────────────────────────────────────────
 st.write(f"### {t['auto_features_title']}")
 col_chk1, col_chk2 = st.columns(2)
@@ -219,7 +219,6 @@ with col_chk1:
                     nc['raw_str'] = f"<ITEM>\r\n<prNum>{new_idx+1}</prNum>\r\n<vchName>{nc['name']}</vchName>\r\n<frequency>{nc['freq']}</frequency>\r\n</ITEM>"
                 
                 nc['id'] = new_idx
-                # التعديل: تضاف إلى مصفوفة القنوات الكلية المتوفرة فقط!
                 st.session_state.channels.append(nc)
                 new_inserted_names.append(f"📡 {nc['name']} (تردد: {nc['freq']})")
                 added_count += 1
@@ -230,7 +229,6 @@ with col_chk1:
             st.toast("📡 تم زرع القنوات الجديدة في جدول المتوفر!")
             st.rerun()
 
-    # التوضيح المكتوب للقنوات المزروعة داخل جزئية الفحص الذكي
     if scan_active:
         if st.session_state.get('inserted_list_p2'):
             st.markdown("<div style='background:rgba(0, 240, 255, 0.1); padding:12px; border-radius:10px; border-left:4px solid #00f0ff; margin-top:10px;'>", unsafe_allow_html=True)
@@ -249,7 +247,6 @@ with col_chk2:
         freq_updates = {"11747": "12054", "11137": "11785", "12015": "11678"}
         maint_details = []
         
-        # التعديل: التحديث يطبق على القنوات داخل جدول المتوفر الكلي فقط!
         for ch in st.session_state.channels:
             current_freq = ch.get('freq', 'N/A')
             if current_freq in freq_updates:
@@ -271,7 +268,6 @@ with col_chk2:
             st.toast("🔧 تم تحديث الترددات في جدول المتوفر بنجاح!")
             st.rerun()
 
-    # التوضيح المكتوب للترددات المحدثة داخل جزئية الفحص الذكي
     if maint_active:
         if st.session_state.get('maint_details_p2'):
             st.markdown("<div style='background:rgba(255, 0, 127, 0.1); padding:12px; border-radius:10px; border-left:4px solid #ff007f; margin-top:10px;'>", unsafe_allow_html=True)
@@ -283,14 +279,14 @@ with col_chk2:
             st.markdown("<div style='color:#888; margin-top:10px;'>ℹ️ جميع الترددات الحالية بجدول المتوفر مطابقة لأحدث نسخة.</div>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# 7. دوال الـ Callbacks لضمان عدم سقوط البيانات أثناء الضغط
+# 7. دوال الـ Callbacks لضمان ثبات البيانات
 # ─────────────────────────────────────────────
 def add_channel_callback(ch_obj):
     st.session_state.ordered_channels.append(ch_obj.copy())
     st.session_state.edit_finished = False
 
 # ─────────────────────────────────────────────
-# 8. واجهة نظام الجدولين المتجاورين (المستقرة)
+# 8. واجهة نظام الجدولين المتجاورين
 # ─────────────────────────────────────────────
 st.write("---")
 col_table1, col_table2 = st.columns(2)
@@ -359,7 +355,7 @@ with col_table2:
                 col_name.write(f"**{ch.get('name', 'Unknown')}**")
                 col_freq.write(f"`{ch.get('freq', 'N/A')}`")
                 
-                # 3. زر سلة المهملات الأحمر للحذف الفوري الفعال
+                # 3. زر سلة المهملات الفورية
                 with col_del:
                     if st.button("🗑️", key=f"del_btn_{i}_{ch['id']}", help="حذف القناة فوراً من قائمة الترتيب"):
                         st.session_state.ordered_channels.pop(i)
@@ -368,7 +364,7 @@ with col_table2:
                         st.rerun()
         
         st.write("")
-        # 4. زر اعتماد وفرز الترتيب بناءً على الأرقام المكتوبة
+        # 4. زر اعتماد الترتيب الجديد
         if st.button("💾 اعتماد الترتيب الجديد وحفظ التعديلات", key="save_ordered_ranks_btn"):
             indexed_channels = [(new_ranks[idx], ch) for idx, ch in enumerate(ord_list)]
             indexed_channels.sort(key=lambda x: x[0])
@@ -384,7 +380,7 @@ with col_table2:
 st.write("---")
 
 # ─────────────────────────────────────────────
-# 9. التجهيز النهائي والتحميل بناءً على زر الإنهاء
+# 9. التجهيز النهائي والتحميل والملحوظة الفنية
 # ─────────────────────────────────────────────
 st.write(f"### {t['preview_title']}")
 
@@ -400,6 +396,7 @@ else:
     if st.session_state.edit_finished:
         st.success(t['ready_msg'])
         
+        # إنشاء ملف التقارير المكتوبة
         report_header = t.get('txt_header', "📄 تقرير الترتيب اليدوي المطور")
         txt_report = f"{report_header} ({st.session_state.model_name})\n"
         txt_report += "=" * 60 + "\n"
@@ -409,6 +406,7 @@ else:
         root = st.session_state.root
         legacy_tag = st.session_state.get('legacy_tag')
 
+        # بناء ملف الـ TLL النهائي بناءً على نوع البنية
         if st.session_state.is_modern:
             bdata = st.session_state.broadcast_data
             final_list_nodes = []
@@ -440,11 +438,31 @@ else:
             try: final_tll_bytes = final_text.encode('utf-8')
             except UnicodeEncodeError: final_tll_bytes = final_text.encode('latin-1')
 
+        # أزرار التحميل
         col_d1, col_d2 = st.columns(2)
         with col_d1:
             st.download_button(label=t['btn_tll'], data=final_tll_bytes, file_name="GlobalClone00001.TLL", mime="application/octet-stream")
         with col_d2:
             st.download_button(label=t['btn_txt'], data=txt_report, file_name="Channels_List_Manual.txt", mime="text/plain; charset=utf-8")
+
+        # ── إضافة الملحوظة الفنية الهامة المخصصة لشاشات LG ──
+        st.markdown("""
+        <div style="background-color: rgba(255, 165, 0, 0.12); border-left: 5px solid #ffa500; padding: 20px; border-radius: 12px; margin-top: 25px;">
+            <h4 style="color: #ffa500; margin-top: 0; font-weight: bold;">💡 ملحوظة فنية هامة جداً بعد تنزيل الملف على شاشة LG:</h4>
+            <p style="font-size: 15px; line-height: 1.6;">
+            في بعض الحالات، بعد تنزيل ملف القنوات على الشاشة، قد تشعر أن القنوات ليست منظمة كما رتبتها. لحل هذا الأمر فوراً واجبار الشاشة على تفعيل الترتيب الصحيح، قم بالآتي:
+            </p>
+            <ol style="font-size: 15px; line-height: 1.7; margin-right: 20px;">
+                <li>من إعدادات التلفزيون اختار <b>القنوات (Channels)</b>.</li>
+                <li>بعد ذلك اختار <b>مدير القنوات (Channel Manager)</b>.</li>
+                <li>اختار <b>التعديل على كل القنوات (Edit All Channels)</b>.</li>
+                <li>ستظهر لك القنوات المرتبة ويكون بعضها في وضع مخفي، قم <b>بتحديد كل القنوات</b> واختار <b>استعادة (Restore)</b>.</li>
+            </ol>
+            <p style="font-size: 13px; color: #ffaa55; font-style: italic; margin-bottom: 0; margin-top: 10px;">
+            *ملحوظة: تفعل هذه الخطوة فقط إذا شعرت أن الملف بعد التنزيل غير مرتب كما حددته على الموقع.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # 10. الفوتر السيبراني
