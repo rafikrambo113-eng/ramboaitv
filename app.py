@@ -119,34 +119,34 @@ st.title(t['title'])
 st.markdown(f"<h3>{t['subtitle']}</h3>", unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
-# 🛰️ DATABASE — نايل سات (محدّثة)
+# 🛰️ DATABASE — نايل سات
 # ══════════════════════════════════════════════
 NILESAT_LIVE_DB = {
-    "AL HAYAT":         {"frequency": 12207, "polarization": "Vertical",   "update_date": "2026-05-10"},
-    "AL HAYAT 2":       {"frequency": 12207, "polarization": "Vertical",   "update_date": "2026-05-10"},
-    "SAT-7 KIDS":       {"frequency": 11353, "polarization": "Vertical",   "update_date": "2026-04-18"},
-    "SAT-7 ARABIC":     {"frequency": 11353, "polarization": "Vertical",   "update_date": "2026-04-18"},
-    "CTV":              {"frequency": 12022, "polarization": "Vertical",   "update_date": "2026-05-01"},
-    "AGHAPY TV":        {"frequency": 11179, "polarization": "Horizontal", "update_date": "2026-03-12"},
-    "MESAT":            {"frequency": 11096, "polarization": "Horizontal", "update_date": "2026-01-10"},
-    "IQRAA":            {"frequency": 11938, "polarization": "Vertical",   "update_date": "2026-04-01"},
-    "MAJD":             {"frequency": 11862, "polarization": "Vertical",   "update_date": "2026-02-14"},
-    "RAHMA":            {"frequency": 11938, "polarization": "Vertical",   "update_date": "2026-04-01"},
-    "QURAN KAREEM":     {"frequency": 11727, "polarization": "Vertical",   "update_date": "2026-03-05"},
-    "AL JAZEERA HD":    {"frequency": 10853, "polarization": "Vertical",   "update_date": "2026-05-20"},
-    "AL ARABIYA":       {"frequency": 11938, "polarization": "Vertical",   "update_date": "2026-04-15"},
-    "AL HADATH":        {"frequency": 11938, "polarization": "Vertical",   "update_date": "2026-04-15"},
-    "CBC":              {"frequency": 12092, "polarization": "Vertical",   "update_date": "2026-05-01"},
-    "EXTRA NEWS":       {"frequency": 12092, "polarization": "Vertical",   "update_date": "2026-05-01"},
-    "ON E":             {"frequency": 12092, "polarization": "Vertical",   "update_date": "2026-05-01"},
-    "MBC 2":            {"frequency": 11938, "polarization": "Vertical",   "update_date": "2026-01-20"},
-    "MBC 4":            {"frequency": 11938, "polarization": "Vertical",   "update_date": "2026-01-20"},
-    "ROTANA CINEMA":    {"frequency": 11938, "polarization": "Vertical",   "update_date": "2026-02-01"},
-    "ON TIME SPORTS 1": {"frequency": 11861, "polarization": "Vertical",   "update_date": "2026-05-01"},
-    "ON TIME SPORTS 2": {"frequency": 11861, "polarization": "Vertical",   "update_date": "2026-05-01"},
-    "SPACE TOON":       {"frequency": 11727, "polarization": "Vertical",   "update_date": "2026-01-05"},
-    "MAJID":            {"frequency": 11862, "polarization": "Vertical",   "update_date": "2026-01-05"},
-    "TOYOR ALJANNAH":   {"frequency": 11179, "polarization": "Horizontal", "update_date": "2026-02-10"}
+    "AL HAYAT":         {"frequency": 12207, "polarization": "Vertical"},
+    "AL HAYAT 2":       {"frequency": 12207, "polarization": "Vertical"},
+    "SAT-7 KIDS":       {"frequency": 11353, "polarization": "Vertical"},
+    "SAT-7 ARABIC":     {"frequency": 11353, "polarization": "Vertical"},
+    "CTV":              {"frequency": 12022, "polarization": "Vertical"},
+    "AGHAPY TV":        {"frequency": 11179, "polarization": "Horizontal"},
+    "MESAT":            {"frequency": 11096, "polarization": "Horizontal"},
+    "IQRAA":            {"frequency": 11938, "polarization": "Vertical"},
+    "MAJD":             {"frequency": 11862, "polarization": "Vertical"},
+    "RAHMA":            {"frequency": 11938, "polarization": "Vertical"},
+    "QURAN KAREEM":     {"frequency": 11727, "polarization": "Vertical"},
+    "AL JAZEERA HD":    {"frequency": 10853, "polarization": "Vertical"},
+    "AL ARABIYA":       {"frequency": 11938, "polarization": "Vertical"},
+    "AL HADATH":        {"frequency": 11938, "polarization": "Vertical"},
+    "CBC":              {"frequency": 12092, "polarization": "Vertical"},
+    "EXTRA NEWS":       {"frequency": 12092, "polarization": "Vertical"},
+    "ON E":             {"frequency": 12092, "polarization": "Vertical"},
+    "MBC 2":            {"frequency": 11938, "polarization": "Vertical"},
+    "MBC 4":            {"frequency": 11938, "polarization": "Vertical"},
+    "ROTANA CINEMA":    {"frequency": 11938, "polarization": "Vertical"},
+    "ON TIME SPORTS 1": {"frequency": 11861, "polarization": "Vertical"},
+    "ON TIME SPORTS 2": {"frequency": 11861, "polarization": "Vertical"},
+    "SPACE TOON":       {"frequency": 11727, "polarization": "Vertical"},
+    "MAJID":            {"frequency": 11862, "polarization": "Vertical"},
+    "TOYOR ALJANNAH":   {"frequency": 11179, "polarization": "Horizontal"}
 }
 
 ALL_AVAILABLE_CATEGORIES = [
@@ -178,21 +178,20 @@ def ai_classify(channel_name):
     if any(w in name for w in NEWS_KW): return ALL_AVAILABLE_CATEGORIES[6]
     return ALL_AVAILABLE_CATEGORIES[7]
 
-# ══════════════════════════════════════════════
-# رفع الملف والمعالجة الذكية المستقرة جداً
-# ══════════════════════════════════════════════
+# ── رفع الملف والمعالجة الموثوقة ──
 uploaded_file = st.file_uploader(t['upload_label'], type=["TLL"])
 
 if uploaded_file is not None:
     file_bytes = uploaded_file.read()
 
+    # محاولة فك التشفير بالطرق القياسية والتبادلية لشاشات LG
     try:
-        file_text_original = file_bytes.decode('utf-8')
+        file_text = file_bytes.decode('utf-8')
     except UnicodeDecodeError:
-        file_text_original = file_bytes.decode('latin-1')
+        file_text = file_bytes.decode('latin-1')
 
-    # تنظيف الفراغات السطحية لحماية الهيكل
-    file_text_cleaned = re.sub(r'^\s+', '', file_text_original)
+    # تنظيف الفراغات السطحية لضمان سلامة الهيكل الأساسي للـ XML
+    file_text_cleaned = re.sub(r'^\s+', '', file_text)
     
     try:
         root = ET.fromstring(file_text_cleaned.encode('utf-8'))
@@ -220,40 +219,34 @@ if uploaded_file is not None:
     report_changes   = []
 
     if is_modern:
-        # لتجنب كسر ChanSort: نقوم بقص نصوص الـ JSON الخاصة بكل قناة نصياً كما هي تماماً!
-        raw_json_text = legacy_broadcast_tag.text.strip()
-        
-        # استخراج القنوات عبر التعبيرات النمطية النصية للحفاظ على سلامة الحقول والمفاتيح الأصلية
-        channel_blocks = re.findall(r'(\{"channelName":.*?\})(?:,|\])', raw_json_text)
-        
-        for idx, block in enumerate(channel_blocks):
-            # إصلاح القوس النهائي إذا فُقد أثناء السحب التعبيري
-            if not block.endswith('}'): block += '}'
-            
-            try:
-                ch_obj = json.loads(block)
-                ch_name = ch_obj.get("channelName", "Unknown")
-                old_freq = str(ch_obj.get("frequency", "N/A"))
+        # معالجة الشاشات الحديثة بطريقة كائنات JSON البرمجية الكاملة 100%
+        try:
+            broadcast_data = json.loads(legacy_broadcast_tag.text.strip())
+            channels_list = broadcast_data.get("channelList", [])
+
+            for idx, ch in enumerate(channels_list):
+                ch_name = ch.get("channelName", "Unknown")
+                old_freq = str(ch.get("frequency", "N/A"))
                 name_up = ch_name.upper()
 
                 if update_freq and name_up in NILESAT_LIVE_DB:
-                    live_freq = str(NILESAT_LIVE_DB[name_up]["frequency"])
-                    if old_freq != live_freq:
+                    live_freq = NILESAT_LIVE_DB[name_up]["frequency"]
+                    if old_freq != str(live_freq):
                         report_changes.append({
                             "القناة": ch_name, "الفئة (Category)": ai_classify(ch_name),
                             "التردد القديم": f"{old_freq} MHz", "التردد الجديد": f"{live_freq} MHz"
                         })
-                        # تحديث التردد والاستقطاب داخل السلسلة النصية الخام مباشرة دون إفساد الترتيب
-                        block = re.sub(r'"frequency":\s*\d+', f'"frequency":{live_freq}', block)
-                        block = re.sub(r'"polarization":"[^"]+"', f'"polarization":"{NILESAT_LIVE_DB[name_up]["polarization"]}"', block)
-                        old_freq = live_freq
+                        ch["frequency"] = int(live_freq)
+                        ch["polarization"] = NILESAT_LIVE_DB[name_up]["polarization"]
+                        old_freq = str(live_freq)
 
-                channels_to_sort.append({"id": idx, "name": ch_name, "freq": old_freq, "raw_block": block})
-            except:
-                continue
+                channels_to_sort.append({"name": ch_name, "freq": old_freq, "node_data": ch})
+        except Exception as json_err:
+            st.error(f"⚠️ خطأ في قراءة الـ JSON الخاص بالشاشة الحديثة: {str(json_err)}")
+            st.stop()
     else:
-        # الأنظمة القديمة القائمة على التاجات التقليدية <ITEM>
-        item_blocks = re.findall(r'(<ITEM>.*?</ITEM>)', file_text_original, re.DOTALL)
+        # معالجة الشاشات القديمة القائمة على تاجات ITEM
+        item_blocks = re.findall(r'(<ITEM>.*?</ITEM>)', file_text, re.DOTALL)
 
         for idx, item_str in enumerate(item_blocks):
             name_match = re.search(r'<vchName>(.*?)</vchName>', item_str)
@@ -272,7 +265,7 @@ if uploaded_file is not None:
                     item_str = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{live_freq}</frequency>', item_str)
                     old_freq = live_freq
 
-            channels_to_sort.append({"id": idx, "name": ch_name, "freq": old_freq, "raw_str": item_str})
+            channels_to_sort.append({"name": ch_name, "freq": old_freq, "raw_str": item_str})
 
     # ── محرك البحث ──
     st.write("---")
@@ -289,7 +282,7 @@ if uploaded_file is not None:
         if search_results: st.table(search_results)
         else: st.warning(t['search_no_results'])
 
-    # ── مصفوفة الفئات والترتيب ──
+    # ── مصفوفة الترتيب ──
     st.write("---")
     st.write(f"### {t['config_title']}")
     user_priority = st.multiselect(t['multiselect_label'], options=ALL_AVAILABLE_CATEGORIES, default=[])
@@ -299,7 +292,7 @@ if uploaded_file is not None:
 
     channels_sorted = sorted(channels_to_sort, key=lambda x: final_priority.index(ai_classify(x["name"])))
 
-    # المعاينة الحية
+    # المعاينة الحية للفئات
     categorized = {}
     for ch in channels_sorted:
         cat = ai_classify(ch["name"])
@@ -323,24 +316,22 @@ if uploaded_file is not None:
         st.write("### 🔁 سجل صيانة وتحديث الترددات الحية:")
         st.table(report_changes)
 
-    # ── إعادة بناء وإنتاج الملف النهائي الآمن تماماً لـ ChanSort ──
+    # ── بناء التصدير النهائي المقاوم للانهيار ──
     text_report = f"{t['txt_header']} ({model_name})\n" + "="*50 + "\n"
 
     if is_modern:
-        # نقوم بتحديث الرقم الترتيبي "majorNumber" نصياً داخل كل بلوك خام لحماية البنية الكاملة للقناة
-        final_blocks = []
+        # هنا السر الفعلي: نقوم بإعادة بناء القنوات داخل المصفوفة الأصلية مع تحديث الموضع الرقمي
+        final_list_modern = []
         for index, ch in enumerate(channels_sorted, start=1):
-            updated_block = re.sub(r'"majorNumber":\s*\d+', f'"majorNumber":{index}', ch["raw_block"])
-            final_blocks.append(updated_block)
+            node = ch["node_data"]
+            node["majorNumber"] = index  # التعديل البرمجي السليم لرقم القناة المعتمد بالشاشة و ChanSort
+            final_list_modern.append(node)
             text_report += f"No. {index:03d} : {ch['name']:<25} | Freq: {ch['freq']}\n"
         
-        # دمج البلوكات النصية الأصلية داخل مصفوفة الـ channelList من جديد
-        new_channel_list_str = "[" + ",".join(final_blocks) + "]"
+        broadcast_data["channelList"] = final_list_modern
         
-        # استبدال المصفوفة القديمة بالمصفوفة النصية المرتبة الجديدة بعناية فائقة
-        modified_json_text = re.sub(r'"channelList":\s*\[.*?\]', f'"channelList":{new_channel_list_str}', raw_json_text)
-        
-        legacy_broadcast_tag.text = modified_json_text
+        # استخدام التنسيق الصارم جداً وبدون مسافات عشوائية تمنع المفسر في ChanSort من القراءة
+        legacy_broadcast_tag.text = json.dumps(broadcast_data, ensure_ascii=False, separators=(',', ':'))
         final_xml_bytes = ET.tostring(root, encoding="utf-8")
     else:
         item_strings_sorted = []
@@ -354,11 +345,11 @@ if uploaded_file is not None:
             text_report += f"No. {index:03d} : {ch['name']:<25} | Freq: {ch['freq']}\n"
 
         combined_items_str = "\r\n".join(item_strings_sorted)
-        start_idx = file_text_original.find("<ITEM>")
-        end_idx   = file_text_original.rfind("</ITEM>") + len("</ITEM>")
+        start_idx = file_text.find("<ITEM>")
+        end_idx   = file_text.rfind("</ITEM>") + len("</ITEM>")
 
         if start_idx != -1 and end_idx != -1:
-            final_text_output = file_text_original[:start_idx] + combined_items_str + file_text_original[end_idx:]
+            final_text_output = file_text[:start_idx] + combined_items_str + file_text[end_idx:]
         else:
             final_text_output = combined_items_str
 
@@ -376,7 +367,7 @@ if uploaded_file is not None:
         st.download_button(label=t['btn_download_txt'], data=text_report,
                            file_name="Channels_List.txt", mime="text/plain; charset=utf-8")
 
-# ── الفوتر ──
+# ── الفوتر الفني ──
 whatsapp_url = ("https://api.whatsapp.com/send?phone=201280339779"
                 "&text=Hello%20Developer%20Rafik%20Rambo%2C%20"
                 "I%20have%20an%20inquiry%20regarding%20your%20LG%20TV%20Sorter%20script%3A")
