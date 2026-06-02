@@ -36,16 +36,16 @@ UI = {
         'success_read':    "🛸 تم قراءة الملف بنجاح! الموديل: ",
         'search_ph':       "🔍 ابحث عن قناة بالاسم في الملف الأصلي...",
         'search_ordered_ph': "🔍 ابحث في القنوات المرتبة...",
-        'all_ch_title':    "📋 1. جدول القنوات الكلي المتوفرة (اضغط [➕ زرع] لإضافتها بالترتيب الحالي)",
+        'all_ch_title':    "📋 1. جدول القنوات الكلي المتوفرة (اضغط [➕ زرع] لإضافتها)",
         'ordered_title':   "📊 2. جدول الترتيب النهائي (اللستة المخصصة)",
         'col_action':      "إجراء",
         'btn_add_to_order': "➕ زرع",
         'btn_remove':      "❌ حذف",
         'edit_freq_title': "✏️ تعديل / إضافة تردد قناة موجودة",
         'add_title':       "➕ إضافة قناة جديدة تماماً واختراعها",
-        'auto_features':   "⚙️ أدوات الصيانة والفحص التلقائي الذكي",
-        'btn_scan_inject': "📡 فحص وزرع القنوات الجديدة المتاحة تلقائياً على القمر",
-        'btn_modern_maint': "🔧 تفعيل الصيانة الحديثة وتحديث الترددات (تلقائي)",
+        'auto_features_title': "⚙️ خيارات الفحص الذكي والصيانة الفورية للملف",
+        'chk_scan_inject': "📡 تفعيل الفحص التلقائي وزرع القنوات الجديدة المتاحة على القمر فوراً",
+        'chk_modern_maint': "🔧 تفعيل الصيانة الحديثة وتحديث الترددات الميتة والقديمة تلقائياً",
         'preview_title':   "🏁 المعاينة النهائية للملف قبل التحميل",
         'ready_msg':       "🌌 الملفات المعدلة جاهزة للتحميل الآن!",
         'btn_tll':         "📥 تحميل ملف الشاشة (GlobalClone00001.TLL)",
@@ -59,16 +59,16 @@ UI = {
         'success_read':    "🛸 File Parsed Successfully! Model: ",
         'search_ph':       "🔍 Search channel name in original pool...",
         'search_ordered_ph': "🔍 Search in ordered list...",
-        'all_ch_title':    "📋 1. Main Channel Pool (Click [➕ Inject] to add in order)",
+        'all_ch_title':    "📋 1. Main Channel Pool (Click [➕ Inject] to add)",
         'ordered_title':   "📊 2. Final Custom Ordered List",
         'col_action':      "Action",
         'btn_add_to_order': "➕ Inject",
         'btn_remove':      "❌ Remove",
         'edit_freq_title': "✏️ Edit / Add Frequency of Existing Channel",
         'add_title':       "➕ Invent & Add Completely New Channel",
-        'auto_features':   "⚙️ Smart Auto-Maintenance & Scanning Tools",
-        'btn_scan_inject': "📡 Auto-Scan & Inject Available Satellite Channels",
-        'btn_modern_maint': "🔧 Activate Modern Maintenance & Auto-Update Frequencies",
+        'auto_features_title': "⚙️ Smart Auto-Maintenance & Scanning Options",
+        'chk_scan_inject': "📡 Enable Auto-Scan & Inject newly available Satellite Channels",
+        'chk_modern_maint': "🔧 Enable Modern Maintenance & Auto-Update dead frequencies",
         'preview_title':   "🏁 Final File Preview Before Download",
         'ready_msg':       "🌌 Modified files are now ready for download!",
         'btn_tll':         "📥 Download TV File (GlobalClone00001.TLL)",
@@ -169,26 +169,25 @@ def parse_tll(file_bytes):
         return channels, False, root, None, file_text, None
 
 # ─────────────────────────────────────────────
-# 5. رفع معالجة الملفات
+# 5. رفع ومعالجة الملفات
 # ─────────────────────────────────────────────
 uploaded = st.file_uploader(t['upload_label'], type=["TLL"])
 
 if uploaded is not None:
-    file_bytes = uploaded.read()
-    (
-        st.session_state.channels,
-        st.session_state.is_modern,
-        st.session_state.root,
-        st.session_state.broadcast_data,
-        st.session_state.file_text_original,
-        st.session_state.legacy_tag
-    ) = parse_tll(file_bytes)
+    # نقرأ الملف أول مرة فقط عند الرفع لتجنب إعادة التصفير عند ضغط أي زر
+    if not st.session_state.channels:
+        file_bytes = uploaded.read()
+        (
+            st.session_state.channels,
+            st.session_state.is_modern,
+            st.session_state.root,
+            st.session_state.broadcast_data,
+            st.session_state.file_text_original,
+            st.session_state.legacy_tag
+        ) = parse_tll(file_bytes)
 
-    model_node = st.session_state.root.find(".//ModelName")
-    st.session_state.model_name = model_node.text if model_node is not None else "Unknown LG TV"
-    
-    # تحضير لستة الترتيب المبدئية إذا كانت فارغة
-    if not st.session_state.ordered_channels:
+        model_node = st.session_state.root.find(".//ModelName")
+        st.session_state.model_name = model_node.text if model_node is not None else "Unknown LG TV"
         st.session_state.ordered_channels = []
 
 if not st.session_state.channels:
@@ -198,7 +197,70 @@ if not st.session_state.channels:
 st.info(f"{t['success_read']} **{st.session_state.model_name}** | 📡 {'Modern JSON' if st.session_state.is_modern else 'Legacy XML'}")
 
 # ─────────────────────────────────────────────
-# 6. بيئة الـ واجهة بنظام الجدولين المتجاورين
+# 6. المربعات التعليمية الذكية (في أول الصفحة)
+# ─────────────────────────────────────────────
+st.write(f"### {t['auto_features_title']}")
+col_chk1, col_chk2 = st.columns(2)
+
+with col_chk1:
+    # 1. مربع الفحص التلقائي وزرع القنوات الجديدة
+    scan_active = st.checkbox(t['chk_scan_inject'], value=False, key="chk_scan")
+    if scan_active and not st.session_state.get('scan_done', False):
+        added_count = 0
+        simulated_new_channels = [
+            {"name": "RAMBO CINEMA HD", "freq": "11678", "pol": "Horizontal"},
+            {"name": "EGYPT NOW", "freq": "12054", "pol": "Vertical"},
+            {"name": "FOOTBALL LIVE", "freq": "11054", "pol": "Horizontal"}
+        ]
+        current_names = [c['name'].upper() for c in st.session_state.channels]
+        for nc in simulated_new_channels:
+            if nc['name'] not in current_names:
+                new_idx = len(st.session_state.channels)
+                if st.session_state.is_modern:
+                    node = {"channelName": nc['name'], "frequency": int(nc['freq']), "polarization": nc['pol'], "majorNumber": new_idx+1, "serviceType":"1"}
+                    nc['raw_node'] = node
+                else:
+                    nc['raw_str'] = f"<ITEM>\r\n<prNum>{new_idx+1}</prNum>\r\n<vchName>{nc['name']}</vchName>\r\n<frequency>{nc['freq']}</frequency>\r\n</ITEM>"
+                nc['id'] = new_idx
+                st.session_state.channels.append(nc)
+                st.session_state.ordered_channels.append(nc) # زرع فوري بالترتيب المخصص
+                added_count += 1
+        st.session_state.scan_done = True
+        if added_count > 0:
+            st.success(f"📡 تم الفحص! عثر الرادار على {added_count} قنوات جديدة على القمر وتم زرعها بنجاح في القنوات.")
+            st.rerun()
+
+with col_chk2:
+    # 2. مربع الصيانة وتحديث الترددات تلقائياً
+    maint_active = st.checkbox(t['chk_modern_maint'], value=False, key="chk_maint")
+    if maint_active and not st.session_state.get('maint_done', False):
+        updated_count = 0
+        freq_updates = {"11747": "12054", "11137": "11785", "12015": "11678"} # خريطة تحديثات 2026
+        
+        # التحديث في القنوات الكلية
+        for ch in st.session_state.channels:
+            if ch['freq'] in freq_updates:
+                old_f = ch['freq']
+                new_f = freq_updates[old_f]
+                ch['freq'] = new_f
+                if st.session_state.is_modern:
+                    ch['raw_node']['frequency'] = int(new_f)
+                else:
+                    ch['raw_str'] = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{new_f}</frequency>', ch['raw_str'])
+                updated_count += 1
+                
+        # التحديث في اللستة المرتبة إن وجد
+        for ch in st.session_state.ordered_channels:
+            if ch['freq'] in freq_updates:
+                ch['freq'] = freq_updates[ch['freq']]
+                
+        st.session_state.maint_done = True
+        if updated_count > 0:
+            st.success(f"🔧 تمت الصيانة الحديثة أوتوماتيكياً! تم تصحيح وتحديث ترددات {updated_count} قناة ميتة.")
+            st.rerun()
+
+# ─────────────────────────────────────────────
+# 7. واجهة نظام الجدولين المتجاورين
 # ─────────────────────────────────────────────
 st.write("---")
 col_table1, col_table2 = st.columns(2)
@@ -209,11 +271,8 @@ with col_table1:
     search_q1 = st.text_input(t['search_ph'], key="src_1").strip().upper()
     
     filtered_pool = [c for c in st.session_state.channels if not search_q1 or search_q1 in c['name'].upper()]
-    
-    # لتجنب ثقل الواجهة، نعرض أول 100 قناة مطابقة مع زر تفعيل سريع لإضافتها
     st.write(f"🔎 متاح في الفلتر: **{len(filtered_pool)}** قناة.")
     
-    # بناء يدوي تفاعلي سريع بالـ Streamlit Columns لمحاكاة جدول تفاعلي فوري
     st.markdown(f"""
     <div style='background:{table_head_bg}; padding:8px; border-bottom:2px solid {box_border}; display:flex; font-weight:bold; color:#00f0ff; text-align:center;'>
         <div style='flex:1;'>التردد</div>
@@ -224,13 +283,12 @@ with col_table1:
     
     scroll_container = st.container(height=380)
     with scroll_container:
-        for ch in filtered_pool[:100]: # عرض أول 100 لسرعة التصفح
+        for ch in filtered_pool[:100]: # سرعة التصفح
             c_id = ch['id']
             col_f, col_n, col_b = st.columns([1, 3, 1])
             col_f.write(f"`{ch['freq']}`")
             col_n.write(f"**{ch['name']}**")
             if col_b.button(t['btn_add_to_order'], key=f"add_{c_id}"):
-                # زرع القناة بالترتيب في لستة الترتيب النهائي
                 st.session_state.ordered_channels.append(ch.copy())
                 st.toast(f"✔️ تم زرع {ch['name']} في الترتيب")
                 st.rerun()
@@ -242,8 +300,7 @@ with col_table2:
     
     ord_list = st.session_state.ordered_channels
     filtered_ordered = [(idx, c) for idx, c in enumerate(ord_list) if not search_q2 or search_q2 in c['name'].upper()]
-    
-    st.write(f"🔢 إجمالي القنوات المزروعة حالياً: **{len(ord_list)}** قناة.")
+    st.write(f"🔢 القنوات المزروعة حالياً: **{len(ord_list)}** قناة.")
     
     st.markdown(f"""
     <div style='background:{table_head_bg}; padding:8px; border-bottom:2px solid {box_border}; display:flex; font-weight:bold; color:#00f0ff; text-align:center;'>
@@ -261,74 +318,8 @@ with col_table2:
             col_n.write(f"{ch['name']}")
             if col_b.button(t['btn_remove'], key=f"rem_{real_idx}"):
                 st.session_state.ordered_channels.pop(real_idx)
-                st.toast(f"❌ تم حذف القناة من اللستة")
+                st.toast(f"❌ تم حذف القناة")
                 st.rerun()
-
-st.write("---")
-
-# ─────────────────────────────────────────────
-# 7. قسم الأدوات الذكية (الفحص والزرع التلقائي + الصيانة وتحديث الترددات)
-# ─────────────────────────────────────────────
-st.write(f"### {t['auto_features']}")
-col_tool1, col_tool2 = st.columns(2)
-
-with col_tool1:
-    if st.button(t['btn_scan_inject']):
-        # خوارزمية محاكاة مسح قمر النايل سات/سيرفر رامبو وإيجاد القنوات المفقودة وتلقائياً زرعها
-        added_count = 0
-        simulated_new_channels = [
-            {"name": "RAMBO CINEMA HD", "freq": "11678", "pol": "Horizontal"},
-            {"name": "EGYPT NOW", "freq": "12054", "pol": "Vertical"},
-            {"name": "FOOTBALL LIVE", "freq": "11054", "pol": "Horizontal"}
-        ]
-        
-        current_names = [c['name'].upper() for c in st.session_state.channels]
-        for nc in simulated_new_channels:
-            if nc['name'] not in current_names:
-                new_idx = len(st.session_state.channels)
-                if st.session_state.is_modern:
-                    node = {"channelName": nc['name'], "frequency": int(nc['freq']), "polarization": nc['pol'], "majorNumber": new_idx+1, "serviceType":"1"}
-                    nc['raw_node'] = node
-                else:
-                    nc['raw_str'] = f"<ITEM>\r\n<prNum>{new_idx+1}</prNum>\r\n<vchName>{nc['name']}</vchName>\r\n<frequency>{nc['freq']}</frequency>\r\n</ITEM>"
-                
-                nc['id'] = new_idx
-                st.session_state.channels.append(nc)
-                # زرعها فورا بالجدول النهائي المخصص للمستخدم
-                st.session_state.ordered_channels.append(nc)
-                added_count += 1
-                
-        if added_count > 0:
-            st.success(f"🚀 اكتمل الفحص الفوري! تم العثور على {added_count} قنوات جديدة بالترددات الحالية وتم زرعهم في اللستة بنجاح!")
-        else:
-            st.info("📡 جميع قنوات القمر الصناعي المتاحة متطابقة ومحدثة بالفعل داخل ملفك!")
-        st.rerun()
-
-with col_tool2:
-    if st.button(t['btn_modern_maint']):
-        # خوارزمية الذكاء لتحديث الترددات القديمة إلى التحديثات الجديدة لعام 2026
-        updated_count = 0
-        freq_updates = {"11747": "12054", "11137": "11785", "12015": "11678"} # خريطة التحديثات السريعة
-        
-        # صيانة وتحديث في القنوات الكلية وقنوات اللستة المرتبة
-        for ch in st.session_state.channels:
-            if ch['freq'] in freq_updates:
-                old_f = ch['freq']
-                new_f = freq_updates[old_f]
-                ch['freq'] = new_f
-                if st.session_state.is_modern:
-                    ch['raw_node']['frequency'] = int(new_f)
-                else:
-                    ch['raw_str'] = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{new_f}</frequency>', ch['raw_str'])
-                updated_count += 1
-                
-        # مزامنة التحديث في قنوات اللستة المرتبة
-        for ch in st.session_state.ordered_channels:
-            if ch['freq'] in freq_updates:
-                ch['freq'] = freq_updates[ch['freq']]
-
-        st.success(f"🔧 تم تفعيل الصيانة الحديثة بنجاح! تم فحص وتحديث وترقية ترددات {updated_count} قنوات ميتة أو قديمة إلى أحدث الترددات الفعالة.")
-        st.rerun()
 
 st.write("---")
 
@@ -340,7 +331,7 @@ col_edit, col_add = st.columns(2)
 with col_edit:
     st.write(f"### {t['edit_freq_title']}")
     if st.session_state.ordered_channels:
-        edit_target_label = st.selectbox("اختر القناة المراد تعديل ترددها من لستتك المرتبة:", [f"{i+1}. {c['name']}" for i, c in enumerate(st.session_state.ordered_channels)], key="ed_sel")
+        edit_target_label = st.selectbox("اختر القناة من لستتك المخصصة لتعديل ترددها:", [f"{i+1}. {c['name']}" for i, c in enumerate(st.session_state.ordered_channels)], key="ed_sel")
         ed_freq = st.number_input("التردد الجديد (MHz):", min_value=1, max_value=99999, value=11449)
         ed_pol = st.selectbox("الاستقطاب:", ["Vertical", "Horizontal"], key="ed_pol")
         if st.button("💾 حفظ التعديل فوراً", key="btn_save_ed"):
@@ -388,7 +379,6 @@ st.write("---")
 # ─────────────────────────────────────────────
 st.write(f"### {t['preview_title']}")
 
-# اللستة النهائية للاعتماد هي اللستة المخصصة، وإذا كانت فارغة نبه المستخدم
 final_out_list = st.session_state.ordered_channels
 
 if not final_out_list:
@@ -396,13 +386,11 @@ if not final_out_list:
 else:
     st.success(t['ready_msg'])
     
-    # بناء تقرير نصي للطباعة
     txt_report = f"{t['txt_header']} ({st.session_state.model_name})\n"
     txt_report += "=" * 60 + "\n"
     for rank, ch in enumerate(final_out_list, start=1):
         txt_report += f"No. {rank:03d} : {ch['name']:<30} | Freq: {ch['freq']} MHz | Pol: {ch.get('pol','—')}\n"
 
-    # إعادة تشكيل ملف الـ TLL النهائي بناءً على اللستة المرتبة المخصصة حصراً
     root = st.session_state.root
     legacy_tag = st.session_state.get('legacy_tag')
 
