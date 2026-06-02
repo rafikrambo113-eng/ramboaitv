@@ -1,7 +1,9 @@
-import streamlit as st
+
+# Generate the FINAL clean version with ZERO file operations
+
+code = r'''import streamlit as st
 import xml.etree.ElementTree as ET
 import json
-import io
 
 # ── تهيئة الجلسة ──
 if 'lang' not in st.session_state:
@@ -13,9 +15,7 @@ if 'theme' not in st.session_state:
 # 🌍 قواعد البيانات المنفصلة حسب البلد
 # ══════════════════════════════════════════════
 
-# ── قاعدة بيانات مصر (NileSat 7W) ──
 EGYPT_CHANNEL_DB = [
-    # ⛪ مسيحية
     {"name": "CTV",              "frequency": 12022, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "AGHAPY TV",        "frequency": 11179, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "MESAT",            "frequency": 11096, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "NileSat 7W"},
@@ -25,7 +25,6 @@ EGYPT_CHANNEL_DB = [
     {"name": "AL HAYAT 2",       "frequency": 12207, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "NOURSAT",          "frequency": 11785, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "ALKARMA TV",       "frequency": 12073, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
-    # 🕌 إسلامية
     {"name": "QURAN KAREEM",     "frequency": 11727, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "RAHMA",            "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "MAJD",             "frequency": 11862, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
@@ -33,14 +32,12 @@ EGYPT_CHANNEL_DB = [
     {"name": "HUDA TV",          "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "WESAL",            "frequency": 11727, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "AL MAJD",          "frequency": 11862, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
-    # 🎬 مسلسلات ودراما
     {"name": "DRAMA MBC",        "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "MBC MASR 2",       "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "SHAHID",           "frequency": 11785, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "MASRAWI DRAMA",    "frequency": 12022, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "NILE DRAMA",       "frequency": 11862, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "AL HAYAH DRAMA",   "frequency": 12092, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
-    # 🍿 أفلام
     {"name": "ROTANA CINEMA",    "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "ROTANA CLASSIC",   "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "MBC 2",            "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
@@ -48,14 +45,12 @@ EGYPT_CHANNEL_DB = [
     {"name": "MBC MAX",          "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "NILE CINEMA",      "frequency": 11862, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "FOX MOVIES",       "frequency": 11785, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
-    # 👶 أطفال
     {"name": "SPACE TOON",       "frequency": 11727, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "MAJID",            "frequency": 11862, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "TOYOR ALJANNAH",   "frequency": 11179, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "CARTOON NETWORK",  "frequency": 11785, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "BABY TV",          "frequency": 11727, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "MBC3",             "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
-    # ⚽ رياضة
     {"name": "ON TIME SPORTS 1", "frequency": 11861, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "ON TIME SPORTS 2", "frequency": 11861, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "SSC SPORT 1",      "frequency": 11785, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
@@ -64,7 +59,6 @@ EGYPT_CHANNEL_DB = [
     {"name": "BEIN SPORTS 1",    "frequency": 11054, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "BEIN SPORTS 2",    "frequency": 11054, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "NILE SPORT",       "frequency": 11862, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
-    # 📰 أخبار
     {"name": "AL JAZEERA HD",    "frequency": 10853, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "AL ARABIYA",       "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "AL HADATH",        "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
@@ -75,7 +69,6 @@ EGYPT_CHANNEL_DB = [
     {"name": "BBC ARABIC",       "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "CAIRO NEWS",       "frequency": 12022, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "SADA ELBALAD",     "frequency": 12022, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
-    # 📺 عامة ومنوعات
     {"name": "MBC 1",            "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "MBC MASR",         "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "NILE FAMILY",      "frequency": 11862, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
@@ -87,13 +80,10 @@ EGYPT_CHANNEL_DB = [
     {"name": "TEN",              "frequency": 12073, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
 ]
 
-# ── قاعدة بيانات السعودية (ArabSat 26E + NileSat) ──
 SAUDI_CHANNEL_DB = [
-    # ⛪ مسيحية
     {"name": "SAT-7 ARABIC",     "frequency": 11353, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "SAT-7 KIDS",       "frequency": 11353, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "NOURSAT",          "frequency": 11785, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
-    # 🕌 إسلامية
     {"name": "QURAN KAREEM",     "frequency": 11727, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "MAJD",             "frequency": 11862, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "IQRAA",            "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
@@ -101,27 +91,23 @@ SAUDI_CHANNEL_DB = [
     {"name": "SAUDI SUNNAH",     "frequency": 12149, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "ArabSat 26E"},
     {"name": "MAKKAH TV",        "frequency": 12149, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "ArabSat 26E"},
     {"name": "MADINAH TV",       "frequency": 12149, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "ArabSat 26E"},
-    # 🎬 مسلسلات ودراما
     {"name": "DRAMA MBC",        "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "MBC MASR 2",       "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "SHAHID",           "frequency": 11785, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "NILE DRAMA",       "frequency": 11862, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "SBC DRAMA",        "frequency": 12149, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "ArabSat 26E"},
-    # 🍿 أفلام
     {"name": "ROTANA CINEMA",    "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "ROTANA CLASSIC",   "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "MBC 2",            "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "MBC 4",            "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "MBC MAX",          "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "ROTANA AFLAM+",    "frequency": 12149, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "ArabSat 26E"},
-    # 👶 أطفال
     {"name": "SPACE TOON",       "frequency": 11727, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "MAJID",            "frequency": 11862, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "CARTOON NETWORK",  "frequency": 11785, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "BABY TV",          "frequency": 11727, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "MBC3",             "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "SPACETOON",        "frequency": 12149, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "ArabSat 26E"},
-    # ⚽ رياضة
     {"name": "SSC SPORT 1",      "frequency": 11785, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "SSC SPORT 2",      "frequency": 11785, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "AD SPORTS",        "frequency": 11785, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
@@ -130,7 +116,6 @@ SAUDI_CHANNEL_DB = [
     {"name": "SAUDI SPORT 1",    "frequency": 12149, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "ArabSat 26E"},
     {"name": "SAUDI SPORT 2",    "frequency": 12149, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "ArabSat 26E"},
     {"name": "KSA SPORTS 1",     "frequency": 12149, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "ArabSat 26E"},
-    # 📰 أخبار
     {"name": "AL JAZEERA HD",    "frequency": 10853, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "AL ARABIYA",       "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "AL HADATH",        "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
@@ -138,7 +123,6 @@ SAUDI_CHANNEL_DB = [
     {"name": "BBC ARABIC",       "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "AL EKHBARIYA",     "frequency": 12149, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "ArabSat 26E"},
     {"name": "SAUDI NEWS",       "frequency": 12149, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "ArabSat 26E"},
-    # 📺 عامة ومنوعات
     {"name": "MBC 1",            "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "MBC MASR",         "frequency": 11938, "polarization": "Vertical",   "symbolRate": 27500, "satellite": "NileSat 7W"},
     {"name": "SBC",              "frequency": 12149, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "ArabSat 26E"},
@@ -147,22 +131,16 @@ SAUDI_CHANNEL_DB = [
     {"name": "ROTANA MUSIC",     "frequency": 12149, "polarization": "Horizontal", "symbolRate": 27500, "satellite": "ArabSat 26E"},
 ]
 
-# ══════════════════════════════════════════════
-# 🎛️ إعدادات LG حسب النظام والموديل
-# ══════════════════════════════════════════════
-
 LG_MODELS = {
     "Legacy": {
         "description_ar": "نظام قديم (2014-2019) — XML nodes",
         "description_en": "Legacy System (2014-2019) — XML nodes",
         "models": ["43LM6300", "49UF6409", "55LB630V", "55UH605V", "65UB950V", "OLED65E7V"],
-        "format": "legacy_xml"
     },
     "Modern": {
         "description_ar": "نظام حديث (2020+) — JSON in legacybroadcast",
         "description_en": "Modern System (2020+) — JSON in legacybroadcast",
         "models": ["UA85006LA", "55CX6LA", "65C8PLA", "OLED77CS9LA", "55OLEDC9PLA", "50UP7550", "55UN7340PVA", "65NANO80"],
-        "format": "modern_json"
     }
 }
 
@@ -172,10 +150,6 @@ BROADCAST_COUNTRIES = {
     "ar": {"egypt": "🇪🇬 مصر", "saudi": "🇸🇦 السعودية", "both": "🌍 كلاهما"},
     "en": {"egypt": "🇪🇬 Egypt", "saudi": "🇸🇦 Saudi Arabia", "both": "🌍 Both"}
 }
-
-# ══════════════════════════════════════════════
-# 📝 نصوص الواجهة
-# ══════════════════════════════════════════════
 
 UI_TEXT = {
     'ar': {
@@ -324,12 +298,10 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# ── Badge الصفحة ──
 st.markdown(f'<div class="page3-badge">🆕 {t["page_badge"]}</div>', unsafe_allow_html=True)
 st.title(t['title'])
 st.markdown(f"<h3>{t['subtitle']}</h3>", unsafe_allow_html=True)
 
-# ── صندوق التعريف ──
 st.markdown(f"""
 <div style="background:{intro_bg}; border:2px solid {intro_border}; border-radius:14px; padding:18px; margin-bottom:24px;">
     <p style="margin:0; font-size:15px; line-height:1.7;">{t['intro_box']}</p>
@@ -443,7 +415,7 @@ with col_s3:
 with col_s4:
     st.markdown(f'<div class="stat-card"><div class="stat-num">LG</div><div class="stat-label">{system_type} .TLL</div></div>', unsafe_allow_html=True)
 
-# ── محرك البحث في قاعدة البيانات ──
+# ── محرك البحث ──
 st.write("---")
 st.write(f"### {t['search_header']}")
 search_query = st.text_input("", placeholder=t['search_placeholder']).strip().upper()
@@ -474,7 +446,6 @@ for cat in ALL_AVAILABLE_CATEGORIES:
     if cat not in final_priority:
         final_priority.append(cat)
 
-# ── ترتيب القنوات حسب الأولوية ──
 channels_sorted = sorted(FULL_CHANNEL_DB, key=lambda x: final_priority.index(ai_classify(x["name"])))
 
 # ── المعاينة الحية ──
@@ -501,16 +472,14 @@ for i, cat_name in enumerate(final_priority):
 # ══════════════════════════════════════════════
 
 def build_legacy_xml(channels_sorted, model_name, screen_size, country):
-    """بناء ملف TLL بنظام Legacy (XML nodes) — للشاشات 2014-2019"""
     root = ET.Element("TLLDATA")
-
     meta = ET.SubElement(root, "MetaData")
     ET.SubElement(meta, "ModelName").text = model_name
     ET.SubElement(meta, "ScreenSize").text = f"{screen_size}inch"
     ET.SubElement(meta, "Country").text = country
     ET.SubElement(meta, "SystemType").text = "Legacy"
     ET.SubElement(meta, "SchemaVersion").text = "1.0"
-
+    
     ch_list = ET.SubElement(root, "ChannelList")
     for rank, ch in enumerate(channels_sorted, start=1):
         ch_node = ET.SubElement(ch_list, "Channel")
@@ -526,13 +495,12 @@ def build_legacy_xml(channels_sorted, model_name, screen_size, country):
         ET.SubElement(ch_node, "sourceIndex").text = "3"
         ET.SubElement(ch_node, "ptcNumber").text = str(rank)
         ET.SubElement(ch_node, "satellite").text = ch.get("satellite", "NileSat 7W")
-
+    
     xml_declaration = '<?xml version="1.0" encoding="UTF-8"?>\n'
     xml_body = ET.tostring(root, encoding="unicode")
     return (xml_declaration + xml_body).encode('utf-8')
 
 def build_modern_json(channels_sorted, model_name, screen_size, country):
-    """بناء ملف TLL بنظام Modern (JSON in legacybroadcast) — للشاشات 2020+"""
     channel_list_json = []
     for rank, ch in enumerate(channels_sorted, start=1):
         channel_list_json.append({
@@ -566,12 +534,12 @@ def build_modern_json(channels_sorted, model_name, screen_size, country):
     root_xml = ET.Element("TLLDATA")
     model_node = ET.SubElement(root_xml, "ModelName")
     model_node.text = model_name
-
+    
     meta_node = ET.SubElement(root_xml, "MetaData")
     ET.SubElement(meta_node, "ScreenSize").text = f"{screen_size}inch"
     ET.SubElement(meta_node, "Country").text = country
     ET.SubElement(meta_node, "SystemType").text = "Modern"
-
+    
     legacy_node = ET.SubElement(root_xml, "legacybroadcast")
     legacy_node.text = json.dumps(broadcast_data, ensure_ascii=False, separators=(',', ':'))
 
@@ -583,13 +551,11 @@ def build_modern_json(channels_sorted, model_name, screen_size, country):
 st.write("---")
 if st.button(t['btn_generate'], use_container_width=True):
 
-    # بناء الملف حسب النظام المختار
     if system_type == "Legacy":
         final_tll_bytes = build_legacy_xml(channels_sorted, selected_model, screen_size, country_display)
     else:
         final_tll_bytes = build_modern_json(channels_sorted, selected_model, screen_size, country_display)
 
-    # ══ بناء التقرير النصي ══
     txt_report = f"{t['txt_header']}\n" + "=" * 60 + "\n"
     txt_report += f"{t['txt_system']}{system_type}\n"
     txt_report += f"{t['txt_country']}{country_display}\n"
@@ -601,9 +567,8 @@ if st.button(t['btn_generate'], use_container_width=True):
         sat = ch.get("satellite", "N/A")
         txt_report += f"No. {rank:03d} : {ch['name']:<28} | Freq: {ch['frequency']} MHz | {ch['polarization']:<10} | Sat: {sat:<12} | {cat}\n"
 
-    # ══ عرض رسالة النجاح ══
     st.success(t['ready_msg'])
-
+    
     st.markdown(f"""
     <div style="background:{intro_bg}; border:2px solid {intro_border}; border-radius:14px; padding:14px; margin-bottom:16px;">
         <p style="margin:0; font-size:14px; line-height:1.8;">
@@ -632,7 +597,6 @@ if st.button(t['btn_generate'], use_container_width=True):
             mime="text/plain; charset=utf-8"
         )
 
-    # ── الملحوظة الفنية ──
     st.markdown(f"""
         <div class="lg-trick-box">
             <h4 style="color: #ff007f; margin-top:0;">{t['lg_trick_title']}</h4>
@@ -640,7 +604,7 @@ if st.button(t['btn_generate'], use_container_width=True):
         </div>
     """, unsafe_allow_html=True)
 
-# ── الفوتر الفني ──
+# ── الفوتر ──
 whatsapp_url = ("https://api.whatsapp.com/send?phone=201280339779"
                 "&text=Hello%20Developer%20Rafik%20Rambo%2C%20"
                 "I%20have%20an%20inquiry%20regarding%20your%20LG%20TV%20Sorter%20script%3A")
@@ -652,3 +616,26 @@ st.markdown(f"""
         <a href="{whatsapp_url}" target="_blank" class="cyber-whatsapp-btn">WhatsApp Web</a>
     </div>
 """, unsafe_allow_html=True)
+'''
+
+# Verify no open() calls
+open_count = code.count('open(')
+print(f"🔍 Checking for 'open(' in code...")
+print(f"   Found {open_count} occurrences")
+if open_count == 0:
+    print("   ✅ SAFE: No file writing operations!")
+else:
+    print("   ⚠️ WARNING: Found open() calls!")
+    # Find lines with open(
+    for i, line in enumerate(code.split('\n'), 1):
+        if 'open(' in line:
+            print(f"      Line {i}: {line.strip()}")
+
+# Save
+output_path = "/mnt/agents/output/page3_generate_final.py"
+with open(output_path, "w", encoding="utf-8") as f:
+    f.write(code)
+
+print(f"\n✅ File saved: {output_path}")
+print(f"📊 Lines: {len(code.splitlines())}")
+print(f"📏 Size: {len(code):,} bytes")
