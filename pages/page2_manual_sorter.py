@@ -2,8 +2,7 @@ import streamlit as st
 import xml.etree.ElementTree as ET
 import json
 import re
-# استيراد مكتبة السحب والإفلات
-from streamlit_sortables import sort_items
+import pandas as pd
 
 # ─────────────────────────────────────────────
 # 1. تهيئة الجلسة
@@ -35,18 +34,14 @@ if 'edit_finished' not in st.session_state:
 UI = {
     'ar': {
         'title':           "📺 RAMBO — المُرتب اليدوي المطور",
-        'subtitle':        "⚡ نظام الجدولين الذكي: اختر القنوات ثم رتبها بالسحب والإفلات (Drag & Drop) بالماوس",
+        'subtitle':        "⚡ نظام الترتيب الذكي: اختر القنوات ثم عدل رقم الترتيب مباشرة من الجدول النهائي",
         'upload_label':    "🚀 ارفع ملف القنوات (GlobalClone00001.TLL):",
         'success_read':    "🛸 تم قراءة الملف بنجاح! الموديل: ",
         'search_ph':       "🔍 ابحث عن قناة بالاسم في الملف الأصلي...",
-        'search_ordered_ph': "🔍 ابحث في القنوات المرتبة...",
         'all_ch_title':    "📋 1. جدول القنوات الكلي المتوفرة (اضغط [➕ زرع])",
-        'ordered_title':   "📊 2. ساحة الترتيب النهائي (اسحب القناة بالماوس لإعادة ترتيبها)",
+        'ordered_title':   "📊 2. جدول الترتيب النهائي (غير الرقم في عمود الترتيب لإعادة الهيكلة)",
         'col_action':      "إجراء",
         'btn_add_to_order': "➕ زرع",
-        'btn_remove':      "❌ حذف القنوات المحددة",
-        'edit_freq_title': "✏️ تعديل / إضافة تردد قناة موجودة",
-        'add_title':       "➕ إضافة قناة جديدة تماماً واختراعها",
         'auto_features_title': "⚙️ خيارات الفحص الذكي والصيانة الفورية للملف (بعد الرفع)",
         'chk_scan_inject': "📡 تفعيل الفحص التلقائي وزرع القنوات الجديدة المتاحة على القمر فوراً",
         'chk_modern_maint': "🔧 تفعيل الصيانة الحديثة وتحديث الترددات الميتة والقديمة تلقائياً",
@@ -60,18 +55,13 @@ UI = {
     },
     'en': {
         'title':           "📺 RAMBO — Advanced Manual Sorter",
-        'subtitle':        "⚡ Dual-Table System: Select channels and reorder them using Drag & Drop",
+        'subtitle':        "⚡ Smart Sorting System: Select channels and edit order number directly in the final table",
         'upload_label':    "🚀 Upload Channel File (GlobalClone00001.TLL):",
         'success_read':    "🛸 File Parsed Successfully! Model: ",
         'search_ph':       "🔍 Search channel name in original pool...",
-        'search_ordered_ph': "🔍 Search in ordered list...",
-        'all_ch_title':    "📋 1. Main Channel Pool (Click [➕ Inject])",
-        'ordered_title':   "📊 2. Final Custom List (Drag & Drop items to reorder)",
+        'ordered_title':   "📊 2. Final Custom List (Change numbers in Order column to re-sort)",
         'col_action':      "Action",
         'btn_add_to_order': "➕ Inject",
-        'btn_remove':      "❌ Remove Selected Channels",
-        'edit_freq_title': "✏️ Edit / Add Frequency of Existing Channel",
-        'add_title':       "➕ Invent & Add Completely New Channel",
         'auto_features_title': "⚙️ Smart Auto-Maintenance & Scanning Options (Post-Upload)",
         'chk_scan_inject': "📡 Enable Auto-Scan & Inject newly available Satellite Channels",
         'chk_modern_maint': "🔧 Enable Modern Maintenance & Auto-Update dead frequencies",
@@ -123,18 +113,6 @@ st.markdown(f"""
     .stSelectbox>div>div {{ background-color: {box_bg} !important; border: 2px solid {box_border} !important; border-radius: 10px !important; }}
     div[data-testid="stFileUploader"], .rambo-box {{ background: {box_bg} !important; border: 2px solid {box_border} !important; box-shadow: 0px 5px 15px {box_shadow} !important; border-radius: 14px !important; padding: 18px !important; margin-bottom: 20px !important; }}
     .stButton>button {{ background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important; color: #ffffff !important; border: 2px solid #ff007f !important; border-radius: 12px !important; font-weight: bold; width: 100%; }}
-    
-    /* ستايل مخصص لعناصر السحب والإفلات ليناسب الثيم السيبراني */
-    ul[data-testid="stSortablesList"] li {{
-        background: {box_bg} !important;
-        color: {text_color} !important;
-        border: 1px solid {box_border} !important;
-        border-radius: 8px !important;
-        padding: 10px !important;
-        margin-bottom: 5px !important;
-        cursor: grab !important;
-    }}
-    ul[data-testid="stSortablesList"] li:active {{ cursor: grabbing !important; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -268,7 +246,7 @@ with col_chk2:
             st.rerun()
 
 # ─────────────────────────────────────────────
-# 7. واجهة نظام الجدولين المتجاورين (دعم السحب والإفلات)
+# 7. واجهة نظام الجدولين المتجاورين
 # ─────────────────────────────────────────────
 st.write("---")
 col_table1, col_table2 = st.columns(2)
@@ -302,7 +280,7 @@ with col_table1:
                 st.toast(f"✔️ تم زرع {ch['name']} في الترتيب")
                 st.rerun()
 
-# ── الجدول الثاني المطور: سحب وإفلات (Drag and Drop) ──
+# ── الجدول الثاني الذكي والمستقر: التحرير وإعادة الترتيب الفوري ──
 with col_table2:
     st.write(f"### {t['ordered_title']}")
     
@@ -310,38 +288,48 @@ with col_table2:
     st.write(f"🔢 القنوات المزروعة حالياً: **{len(ord_list)}** قناة.")
     
     if ord_list:
-        # تجهيز نصوص واضحة تظهر للمستخدم داخل مربعات السحب (تحمل الترتيب الحالي والاسم والتردد)
-        display_items = [f"📍 {i+1:02d} | {ch['name']} ({ch['freq']})" for i, ch in enumerate(ord_list)]
+        # تحويل لستة القنوات إلى Pandas DataFrame للتحكم الكامل فيها بمرونة
+        data_df = pd.DataFrame([
+            {
+                "الترتيب (اضغط للتعديل)": i + 1,
+                "اسم القناة": ch['name'],
+                "التردد": ch['freq'],
+                "الاستقطاب": ch.get('pol', 'Vertical'),
+                "حذف القناة ❌": False,
+                "orig_obj": ch
+            }
+            for i, ch in enumerate(ord_list)
+        ])
         
-        # استدعاء أداة السحب والإفلات بالماوس
-        sorted_display_items = sort_items(display_items, key="drag_drop_sorter")
+        # عرض محرر البيانات الذكي المدمج التفاعلي
+        edited_df = st.data_editor(
+            data_df,
+            hide_index=True,
+            use_container_width=True,
+            disabled=["اسم القناة", "التردد", "الاستقطاب"], # نمنع تعديل البيانات الأساسية هنا
+            column_config={
+                "الترتيب (اضغط للتعديل)": st.column_config.NumberColumn(min_value=1, max_value=len(ord_list), step=1, required=True),
+                "حذف القناة ❌": st.column_config.CheckboxColumn(required=True)
+            },
+            key="df_editor"
+        )
         
-        # إعادة ترتيب اللستة الفعلية في الـ session_state بناءً على سحب اليوزر بالماوس فوراً
-        new_ordered_list = []
-        for item in sorted_display_items:
-            # استخراج اسم القناة الأصلي من النص المعروض لتطبيقه على الترتيب الحقيقي
-            extracted_name = item.split(" | ")[1].split(" (")[0]
-            for original_ch in ord_list:
-                if original_ch['name'] == extracted_name:
-                    new_ordered_list.append(original_ch)
-                    break
-        
-        # تحديث الجلسة إذا حدث أي تغيير في السحب
-        if new_ordered_list != ord_list:
-            st.session_state.ordered_channels = new_ordered_list
-            st.session_state.edit_finished = False
-            st.rerun()
+        # فحص ومعالجة التعديلات التي قام بها المستخدم فوراً
+        if not edited_df.equals(data_df):
+            # 1. تصفية القنوات التي تم تعليمها للحذف
+            active_rows = edited_df[edited_df["حذف القناة ❌"] == False]
             
-        # زر إضافي لحذف قنوات من القائمة المرتبة عبر التحديد
-        st.write("")
-        channels_to_delete = st.multiselect("❌ اختر قنوات لحذفها من لستتك المخصصة (إذا أردت):", [c['name'] for c in ord_list], key="del_multi")
-        if st.button(t['btn_remove']) and channels_to_delete:
-            st.session_state.ordered_channels = [c for c in ord_list if c['name'] not in channels_to_delete]
+            # 2. فرز الجدول وإعادة بنائه بناءً على الأرقام الجديدة التي وضعها المستخدم
+            sorted_rows = active_rows.sort_values(by="الترتيب (اضغط للتعديل)")
+            
+            # 3. حفظ اللستة الجديدة المرتبة في جلسة العمل
+            new_ordered = [row["orig_obj"] for _, row in sorted_rows.iterrows()]
+            
+            st.session_state.ordered_channels = new_ordered
             st.session_state.edit_finished = False
-            st.toast("❌ تم حذف القنوات المحددة")
             st.rerun()
     else:
-        st.info("💡 القائمة المخصصة فارغة حالياً. قم بزرع قنوات من الجدول الأيمن لتظهر لك هنا وتسحبها بالماوس.")
+        st.info("💡 القائمة المخصصة فارغة حالياً. قم بزرع قنوات من الجدول الأيمن لتظهر لك هنا.")
 
 st.write("---")
 
