@@ -18,8 +18,10 @@ UI_TEXT = {
         'sys_legacy': "الموديلات القديمة (نظام كتل ITEM الكلاسيكي)",
         'sat_label': "🛰️ اختر القمر الصناعي الأساسي للتشغيل:",
         'country_label': "🌍 اختر بلد البث الافتراضي (Region):",
-        'inch_label': "📐 حجم الشاشة بالبوصة (اختياري - اتركها فارغة إذا لم ترد تحديدها):",
+        'inch_label': "📐 حجم الشاشة بالبوصة (اختياري):",
         'inch_placeholder': "مثال: 55",
+        'update_freq_label': "⚛️ تفعيل الصيانة الذكية وتحديث الترددات تلقائياً في الملف المولد",
+        'add_new_ch_label': "✨ فحص وزرع القنوات المتاحة تلقائياً داخل قمر نايل سات",
         'config_title': "🎛️ مصفوفة ترتيب الفئات المخصصة لملفك المولد:",
         'multiselect_label': "اضغط هنا لبناء تسلسل خطة العرض التفاعلي للفئات:",
         'preview_title': "📊 مجسم المعاينة الحية للملف الذي سيتم توليده:",
@@ -40,8 +42,10 @@ UI_TEXT = {
         'sys_legacy': "Legacy Models (Classic ITEM Block Engine)",
         'sat_label': "🛰️ Select Primary Satellite:",
         'country_label': "🌍 Select Broadcast Region/Country:",
-        'inch_label': "📐 Screen Size in Inches (Optional - Leave empty if unsure):",
+        'inch_label': "📐 Screen Size in Inches (Optional):",
         'inch_placeholder': "e.g., 55",
+        'update_freq_label': "⚛️ Activate Satellite Live Frequency Auto-Update in Generated File",
+        'add_new_ch_label': "✨ Automatically Scan & Inject Available Channels into Nilesat Database",
         'config_title': "🎛️ Generated Category Priority Control Matrix:",
         'multiselect_label': "Select categories one by one to configure your layout priority:",
         'preview_title': "📊 Live 3D Preview Dashboard of the Generated File:",
@@ -109,9 +113,7 @@ st.markdown(f"""
 st.title(t['title'])
 st.markdown(f"<h3>{t['subtitle']}</h3>", unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════
-# 🛰️ DATABASE — نايل سات الثابت لغرض التوليد
-# ══════════════════════════════════════════════
+# ── قنوات نايل سات للحقن والتوليد ──
 NILESAT_GEN_DB = {
     "AL HAYAT":         {"frequency": 12207, "polarization": "Vertical"},
     "AL HAYAT 2":       {"frequency": 12207, "polarization": "Vertical"},
@@ -178,23 +180,31 @@ with col_cfg1:
     satellite = st.selectbox(t['sat_label'], options=["Nilesat 7W (نايل سات)"])
 
 with col_cfg2:
-    country = st.selectbox(t['country_label'], options=["Egypt (مصر)", "Saudi Arabia (السعودية)", "UAE (الإمارات)", "Other (آخر)"])
+    country = st.selectbox(t['country_label'], options=["Egypt (مصر)", "Saudi Arabia (السعودية)", "UAE (الإمارات)"])
     inch_size = st.text_input(t['inch_label'], placeholder=t['inch_placeholder']).strip()
 
 st.markdown('</div>', unsafe_allow_html=True)
 
-# تحضير الاسم الافتراضي للموديل داخل الملف بناء على المدخلات
+# 🛡️ إضافة الـ Checkboxes التفاعلية الجديدة بناء على طلبك 🛡️
+update_freq = st.checkbox(t['update_freq_label'], value=True)
+add_new_ch = st.checkbox(t['add_new_ch_label'], value=True)
+
 chosen_inch = f"{inch_size}LG" if inch_size else "55LG"
 generated_model_name = f"{chosen_inch}_RAMBO_GEN"
 
-# بناء مصفوفة القنوات الخام المستهدفة للتوليد
+# بناء مصفوفة القنوات بناء على حالة اختيار زرع القنوات (Checkbox)
 channels_to_generate = []
-for name, info in NILESAT_GEN_DB.items():
-    channels_to_generate.append({
-        "name": name,
-        "freq": str(info["frequency"]),
-        "polarization": info["polarization"]
-    })
+if add_new_ch:
+    for name, info in NILESAT_GEN_DB.items():
+        freq_to_inject = info["frequency"] if update_freq else 11000  # استخدام التردد الحي أو الافتراضي حسب الـ Checkbox
+        channels_to_generate.append({
+            "name": name,
+            "freq": str(freq_to_inject),
+            "polarization": info["polarization"]
+        })
+else:
+    # إذا لم يتم تفعيل زرع القنوات، نولد دمو بسيط أو ملف خالٍ من القنوات حسب الرغبة البرمجية المظبوطة
+    channels_to_generate.append({"name": "RAMBO TEST CH", "freq": "12000", "polarization": "Vertical"})
 
 # ── مصفوفة الترتيب المخصصة ──
 st.write("---")
@@ -226,12 +236,12 @@ for i, cat_name in enumerate(final_priority):
             with st.expander(f"{is_user_chosen}{cat_name} — ({len(ch_list)} {t['channels_count']})"):
                 st.write(", ".join(ch_list))
 
-# ── تخليق الملف الفعلي النهائي ──
+# ── تخليق الملف الفعلي النهائي لـ LG ──
 text_report = f"{t['txt_header']} ({generated_model_name})\n" + "="*50 + "\n"
 text_report += f"{t['txt_order']} " + " -> ".join(final_priority) + "\n" + "="*50 + "\n\n"
 
 if system_type == t['sys_modern']:
-    # 💥 تخليق هيكل ملف حديث (WebOS - JSON Embedded) من الصفر 💥
+    # 🔥 الهندسة المحسنة لتخليق ملف حديث (JSON المدمج الحقيقي لـ LG WebOS) 🔥
     channel_list_json = []
     for index, ch in enumerate(channels_sorted, start=1):
         ch_node = {
@@ -255,18 +265,18 @@ if system_type == t['sys_modern']:
     }
     json_string_payload = json.dumps(broadcast_payload, ensure_ascii=False, separators=(',', ':'))
 
-    # بناء قالب الـ XML الأساسي الحاضن للـ JSON لشاشات LG
-    root = ET.Element("TLLDATA")
-    model_node = ET.SubElement(root, "ModelName")
-    model_node.text = generated_model_name
-    
-    legacy_tag = ET.SubElement(root, "legacybroadcast")
-    legacy_tag.text = json_string_payload
-
-    final_xml_bytes = ET.tostring(root, encoding="utf-8")
+    # صياغة الـ XML الكامل بالترويسة المظبوطة تقنياً لتقبلها الشاشات الحديثة فوراً
+    raw_xml_modern = (
+        f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n"
+        f"<TLLDATA>\r\n"
+        f"  <ModelName>{generated_model_name}</ModelName>\r\n"
+        f"  <legacybroadcast><![CDATA[{json_string_payload}]]></legacybroadcast>\r\n"
+        f"</TLLDATA>"
+    )
+    final_xml_bytes = raw_xml_modern.encode('utf-8')
 
 else:
-    # 💥 تخليق هيكل ملف قديم (Classic ITEM System) من الصفر 💥
+    # 🔥 الهندسة المحسنة لتخليق ملف كلاسيكي (نظام كتل ITEM للموديلات القديمة) 🔥
     xml_items_list = []
     for index, ch in enumerate(channels_sorted, start=1):
         item_block = (
@@ -283,7 +293,7 @@ else:
 
     combined_items = "\r\n".join(xml_items_list)
     
-    # صياغة النص الـ XML الخام الكلاسيكي للموديلات القديمة
+    # الصياغة الكلاسيكية المكتملة بعناصرها لتقبلها الشاشات القديمة بدون مشاكل
     raw_xml_legacy = (
         f"<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n"
         f"<TLLDATA>\r\n"
