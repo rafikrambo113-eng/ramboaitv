@@ -319,7 +319,7 @@ with col_table1:
             col_n.write(f"**{ch.get('name', 'Unknown')}**")
             col_b.button(t['btn_add_to_order'], key=f"btn_add_{ch['id']}_{len(st.session_state.ordered_channels)}", on_click=add_channel_callback, args=(ch,))
 
-# ── الجدول الثاني التفاعلي: عرض وتحديث الترتيب النهائي ──
+# ── الجدول الثاني التفاعلي: عرض وتحديث الترتيب النهائي بسلة المهملات ──
 with col_table2:
     st.write(f"### {t['ordered_title']}")
     
@@ -327,42 +327,57 @@ with col_table2:
     st.write(f"🔢 القنوات داخل لستتك الآن: **{len(ord_list)}** قناة.")
     
     if ord_list:
-        data_df = pd.DataFrame([
-            {
-                "الترتيب الحالي": i + 1,
-                "اسم القناة": ch.get('name', 'Unknown'),
-                "التردد": ch.get('freq', 'N/A'),
-                "حذف ❌": False,
-                "orig_idx": i
-            }
-            for i, ch in enumerate(ord_list)
-        ])
+        st.markdown(f"""
+        <div style='background:{table_head_bg}; padding:8px; border-bottom:2px solid {box_border}; display:flex; font-weight:bold; color:#ff007f; text-align:center; margin-bottom:10px;'>
+            <div style='flex:1.2;'>الترتيب الحالي</div>
+            <div style='flex:2.5;'>اسم القناة</div>
+            <div style='flex:1.3;'>التردد</div>
+            <div style='flex:1;'>حذف</div>
+        </div>
+        """, unsafe_allow_html=True)
         
-        edited_df = st.data_editor(
-            data_df,
-            hide_index=True,
-            use_container_width=True,
-            disabled=["اسم القناة", "التردد"],
-            column_config={
-                "الترتيب الحالي": st.column_config.NumberColumn(min_value=1, max_value=2000, step=1, required=True),
-                "حذف ❌": st.column_config.CheckboxColumn(required=True)
-            },
-            key="p2_data_editor"
-        )
+        scroll_ordered = st.container(height=400)
+        new_ranks = {}
         
-        if st.button("💾 اعتماد الترتيب الجديد وحفظ التعديلات", key="save_df_changes_btn"):
-            active_rows = edited_df[edited_df["حذف ❌"] == False]
-            sorted_rows = active_rows.sort_values(by="الترتيب الحالي")
-            
-            new_ordered = []
-            for _, row in sorted_rows.iterrows():
-                old_idx = row["orig_idx"]
-                new_ordered.append(ord_list[old_idx])
+        with scroll_ordered:
+            for i, ch in enumerate(ord_list):
+                col_rank, col_name, col_freq, col_del = st.columns([1.2, 2.5, 1.3, 1])
                 
-            st.session_state.ordered_channels = new_ordered
+                # 1. خانة تعديل رقم الترتيب اليدوي
+                with col_rank:
+                    new_val = st.number_input(
+                        "الترتيب", 
+                        min_value=1, 
+                        max_value=2000, 
+                        value=i + 1, 
+                        key=f"rank_input_{i}_{ch['id']}", 
+                        label_visibility="collapsed"
+                    )
+                    new_ranks[i] = new_val
+                
+                # 2. اسم القناة والتردد
+                col_name.write(f"**{ch.get('name', 'Unknown')}**")
+                col_freq.write(f"`{ch.get('freq', 'N/A')}`")
+                
+                # 3. زر سلة المهملات الأحمر للحذف الفوري الفعال
+                with col_del:
+                    if st.button("🗑️", key=f"del_btn_{i}_{ch['id']}", help="حذف القناة فوراً من قائمة الترتيب"):
+                        st.session_state.ordered_channels.pop(i)
+                        st.session_state.edit_finished = False
+                        st.toast(f"🗑️ تم حذف قناة [{ch.get('name')}] من الترتيب!")
+                        st.rerun()
+        
+        st.write("")
+        # 4. زر اعتماد وفرز الترتيب بناءً على الأرقام المكتوبة
+        if st.button("💾 اعتماد الترتيب الجديد وحفظ التعديلات", key="save_ordered_ranks_btn"):
+            indexed_channels = [(new_ranks[idx], ch) for idx, ch in enumerate(ord_list)]
+            indexed_channels.sort(key=lambda x: x[0])
+            
+            st.session_state.ordered_channels = [item[1] for item in indexed_channels]
             st.session_state.edit_finished = False
-            st.toast("🎯 تم تحديث وفرز جدول الترتيب بنجاح!")
+            st.toast("🎯 تم فرز وتحديث جدول الترتيب بنجاح طبقاً للأرقام المكتوبة!")
             st.rerun()
+            
     else:
         st.info("💡 اضغط على زر [➕ زرع] من الجدول الأيمن لتصنع قائمة الترتيب المخصصة هنا.")
 
