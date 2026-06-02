@@ -1,7 +1,4 @@
-
-# Build the FIXED Streamlit app - no file writing, memory-only
-
-code = r'''import streamlit as st
+import streamlit as st
 import xml.etree.ElementTree as ET
 import json
 import io
@@ -506,14 +503,14 @@ for i, cat_name in enumerate(final_priority):
 def build_legacy_xml(channels_sorted, model_name, screen_size, country):
     """بناء ملف TLL بنظام Legacy (XML nodes) — للشاشات 2014-2019"""
     root = ET.Element("TLLDATA")
-    
+
     meta = ET.SubElement(root, "MetaData")
     ET.SubElement(meta, "ModelName").text = model_name
     ET.SubElement(meta, "ScreenSize").text = f"{screen_size}inch"
     ET.SubElement(meta, "Country").text = country
     ET.SubElement(meta, "SystemType").text = "Legacy"
     ET.SubElement(meta, "SchemaVersion").text = "1.0"
-    
+
     ch_list = ET.SubElement(root, "ChannelList")
     for rank, ch in enumerate(channels_sorted, start=1):
         ch_node = ET.SubElement(ch_list, "Channel")
@@ -529,7 +526,7 @@ def build_legacy_xml(channels_sorted, model_name, screen_size, country):
         ET.SubElement(ch_node, "sourceIndex").text = "3"
         ET.SubElement(ch_node, "ptcNumber").text = str(rank)
         ET.SubElement(ch_node, "satellite").text = ch.get("satellite", "NileSat 7W")
-    
+
     xml_declaration = '<?xml version="1.0" encoding="UTF-8"?>\n'
     xml_body = ET.tostring(root, encoding="unicode")
     return (xml_declaration + xml_body).encode('utf-8')
@@ -569,12 +566,12 @@ def build_modern_json(channels_sorted, model_name, screen_size, country):
     root_xml = ET.Element("TLLDATA")
     model_node = ET.SubElement(root_xml, "ModelName")
     model_node.text = model_name
-    
+
     meta_node = ET.SubElement(root_xml, "MetaData")
     ET.SubElement(meta_node, "ScreenSize").text = f"{screen_size}inch"
     ET.SubElement(meta_node, "Country").text = country
     ET.SubElement(meta_node, "SystemType").text = "Modern"
-    
+
     legacy_node = ET.SubElement(root_xml, "legacybroadcast")
     legacy_node.text = json.dumps(broadcast_data, ensure_ascii=False, separators=(',', ':'))
 
@@ -606,7 +603,7 @@ if st.button(t['btn_generate'], use_container_width=True):
 
     # ══ عرض رسالة النجاح ══
     st.success(t['ready_msg'])
-    
+
     st.markdown(f"""
     <div style="background:{intro_bg}; border:2px solid {intro_border}; border-radius:14px; padding:14px; margin-bottom:16px;">
         <p style="margin:0; font-size:14px; line-height:1.8;">
@@ -655,21 +652,3 @@ st.markdown(f"""
         <a href="{whatsapp_url}" target="_blank" class="cyber-whatsapp-btn">WhatsApp Web</a>
     </div>
 """, unsafe_allow_html=True)
-'''
-
-# Save to file
-output_path = "/mnt/agents/output/page3_generate_fixed.py"
-with open(output_path, "w", encoding="utf-8") as f:
-    f.write(code)
-
-print(f"✅ File saved successfully!")
-print(f"📁 Path: {output_path}")
-print(f"📊 Lines: {len(code.splitlines())}")
-print(f"📏 Size: {len(code):,} bytes")
-print(f"\n🔍 Checking for 'open(' in code...")
-open_count = code.count('open(')
-print(f"   Found {open_count} occurrences of 'open('")
-if open_count == 0:
-    print("   ✅ SAFE: No file writing operations!")
-else:
-    print("   ⚠️ WARNING: Found open() calls!")
