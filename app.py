@@ -220,7 +220,6 @@ uploaded_file = st.file_uploader(t['upload_label'], type=["TLL"])
 if uploaded_file is not None:
     file_bytes = uploaded_file.read()
 
-    # القراءة الآمنة للنصوص المنظفة لمنع تلف بنية ملف شاشات LG
     try:
         file_text_original = file_bytes.decode('utf-8')
     except UnicodeDecodeError:
@@ -231,7 +230,6 @@ if uploaded_file is not None:
     try:
         root = ET.fromstring(file_text_cleaned.encode('utf-8'))
     except Exception as e:
-        # المحاولة البديلة بـ latin-1 لضمان القبول المطلق للهياكل القديمة
         root = ET.fromstring(file_text_cleaned.encode('latin-1'))
 
     model_setting = root.find(".//ModelName")
@@ -269,7 +267,8 @@ if uploaded_file is not None:
                 new_node = {
                     "channelName": nch["name"], "frequency": nch["frequency"],
                     "polarization": nch["polarization"], "majorNumber": 0,
-                    "serviceType": "1", "scrambled": "false", "symbolRate": "27500"
+                    "serviceType": "1", "scrambled": "false", "symbolRate": "27500",
+                    "chType": "satellite", "skipped": "false", "locked": "false"
                 }
                 channels_list.append(new_node)
                 injected_report.append({
@@ -395,7 +394,7 @@ if uploaded_file is not None:
         st.write(f"### 🆕 تقرير القنوات الجديدة المزروعة — تبع الـ {detected_satellite}:")
         st.table(injected_report)
 
-    # ── بناء الملفات النهائية بشكل مستقر ──
+    # ── بناء الملفات النهائية بشكل مستقر ومحمي لـ ChanSort ──
     text_report  = f"{t['txt_header']} ({model_name})\n"
     text_report += f"🛰️ القمر الصناعي المكتشف: {detected_satellite}\n"
     text_report += "=" * 50 + "\n"
@@ -418,12 +417,14 @@ if uploaded_file is not None:
     if is_modern:
         final_list_modern = []
         for index, ch in enumerate(channels_sorted, start=1):
-            node = ch["raw_node"]
+            node = dict(ch["raw_node"]) # حماية وتوليد نسخة كاملة دون أي فقدان للمفاتيح الأساسية
             node["majorNumber"] = index
             final_list_modern.append(node)
             text_report += f"No. {index:03d} : {ch['name']:<25} | Freq: {ch['freq']}\n"
+        
         broadcast_data["channelList"] = final_list_modern
-        legacy_broadcast_tag.text     = json.dumps(broadcast_data, ensure_ascii=False)
+        # الحفظ الصارم لضمان فك وعمل التاجات داخل ChanSort والشاشات مباشرة
+        legacy_broadcast_tag.text     = json.dumps(broadcast_data, ensure_ascii=False, separators=(',', ':'))
         final_xml_bytes               = ET.tostring(root, encoding="utf-8")
     else:
         item_strings_sorted = []
