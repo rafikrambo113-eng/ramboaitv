@@ -125,7 +125,6 @@ def parse_tll(file_bytes):
     try: file_text = file_bytes.decode('utf-8')
     except UnicodeDecodeError: file_text = file_bytes.decode('latin-1')
 
-    # تنظيف مسبق لأي مسافات غريبة تمنع الـ XML Parser من العمل
     file_text_cleaned = re.sub(r'^\s+', '', file_text)
     root = ET.fromstring(file_text_cleaned.encode('utf-8'))
     
@@ -161,4 +160,256 @@ def parse_tll(file_bytes):
 # ─────────────────────────────────────────────
 # 5. رفع ومعالجة الملف الأصلي
 # ─────────────────────────────────────────────
-uploaded = st.file_uploader(t['upload_label'], type=["TLL"], key="tll_uploader_p
+uploaded = st.file_uploader(t['upload_label'], type=["TLL"], key="tll_uploader_p2")
+
+if uploaded is not None:
+    if not st.session_state.channels:
+        try:
+            file_bytes = uploaded.read()
+            (
+                st.session_state.channels,
+                st.session_state.is_modern,
+                st.session_state.root,
+                st.session_state.broadcast_data,
+                st.session_state.file_text_original,
+                st.session_state.legacy_tag
+            ) = parse_tll(file_bytes)
+
+            model_node = st.session_state.root.find(".//ModelName")
+            st.session_state.model_name = model_node.text if model_node is not None else "LG TV Custom"
+            st.session_state.ordered_channels = []
+            st.session_state.edit_finished = False 
+        except Exception as e:
+            st.error(f"❌ خطأ في معالجة بناء الملف. تأكد أن الملف سليم وغير تالف. تفاصيل: {e}")
+            st.stop()
+
+if not st.session_state.channels:
+    st.info(t['no_file'])
+    st.stop()
+
+st.success(f"{t['success_read']} **{st.session_state.model_name}** | 📡 {'Modern JSON' if st.session_state.is_modern else 'Legacy XML'} | الإجمالي: {len(st.session_state.channels)} قناة.")
+
+# ─────────────────────────────────────────────
+# 6. خيارات الفحص والصيانة التلقائية (مؤمنة بالكامل لحل الـ TypeError)
+# ─────────────────────────────────────────────
+st.write(f"### {t['auto_features_title']}")
+col_chk1, col_chk2 = st.columns(2)
+
+with col_chk1:
+    scan_active = st.checkbox(t['chk_scan_inject'], value=False, key="chk_scan_p2")
+    if scan_active and not st.session_state.get('scan_done_p2', False):
+        added_count = 0
+        simulated_new_channels = [
+            {"name": "RAMBO CINEMA HD", "freq": "11678", "pol": "Horizontal"},
+            {"name": "EGYPT NOW", "freq": "12054", "pol": "Vertical"},
+            {"name": "FOOTBALL LIVE", "freq": "11054", "pol": "Horizontal"}
+        ]
+        current_names = [c.get('name', '').upper() for c in st.session_state.channels]
+        for nc in simulated_new_channels:
+            if nc['name'] not in current_names:
+                new_idx = len(st.session_state.channels)
+                if st.session_state.is_modern:
+                    node = {"channelName": nc['name'], "frequency": int(nc['freq']), "polarization": nc['pol'], "majorNumber": new_idx+1, "serviceType":"1"}
+                    nc['raw_node'] = node
+                else:
+                    nc['raw_str'] = f"<ITEM>\r\n<prNum>{new_idx+1}</prNum>\r\n<vchName>{nc['name']}</vchName>\r\n<frequency>{nc['freq']}</frequency>\r\n</ITEM>"
+                nc['id'] = new_idx
+                st.session_state.channels.append(nc)
+                st.session_state.ordered_channels.append(nc) 
+                added_count += 1
+        st.session_state.scan_done_p2 = True
+        if added_count > 0:
+            st.success(f"📡 تم الفحص والزرع التلقائي لـ {added_count} قنوات جديدة بالملف!")
+            st.session_state.edit_finished = False 
+            st.rerun()
+
+with col_chk2:
+    maint_active = st.checkbox(t['chk_modern_maint'], value=False, key="chk_maint_p2")
+    if maint_active and not st.session_state.get('maint_done_p2', False):
+        updated_count = 0
+        freq_updates = {"11747": "12054", "11137": "11785", "12015": "11678"}
+        
+        # استخدام .get() الآمن لمنع الـ TypeError تماماً
+        for ch in st.session_state.channels:
+            current_freq = ch.get('freq', 'N/A')
+            if current_freq in freq_updates:
+                new_f = freq_updates[current_freq]
+                ch['freq'] = new_f
+                if st.session_state.is_modern and 'raw_node' in ch:
+                    ch['raw_node']['frequency'] = int(new_f)
+                elif 'raw_str' in ch:
+                    ch['raw_str'] = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{new_f}</frequency>', ch['raw_str'])
+                updated_count += 1
+                
+        for ch in st.session_state.ordered_channels:
+            current_freq = ch.get('freq', 'N/A')
+            if current_freq in freq_updates:
+                ch['freq'] = freq_updates[current_freq]
+                
+        st.session_state.maint_done_p2 = True
+        if updated_count > 0:
+            st.success(f"🔧 تمت صيانة الملف بنجاح وتحديث ترددات {updated_count} قناة!")
+            st.session_state.edit_finished = False
+            st.rerun()
+
+# ─────────────────────────────────────────────
+# 7. دوال الـ Callbacks لضمان عدم سقوط البيانات أثناء الضغط
+# ─────────────────────────────────────────────
+def add_channel_callback(ch_obj):
+    st.session_state.ordered_channels.append(ch_obj.copy())
+    st.session_state.edit_finished = False
+
+# ─────────────────────────────────────────────
+# 8. واجهة نظام الجدولين المتجاورين (المستقرة)
+# ─────────────────────────────────────────────
+st.write("---")
+col_table1, col_table2 = st.columns(2)
+
+# ── الجدول الأول: القنوات الكلية المتاحة ──
+with col_table1:
+    st.write(f"### {t['all_ch_title']}")
+    search_q1 = st.text_input(t['search_ph'], key="src_p2_1").strip().upper()
+    
+    filtered_pool = [c for c in st.session_state.channels if not search_q1 or search_q1 in c.get('name', '').upper()]
+    st.write(f"🔎 المتاح حسب البحث: **{len(filtered_pool)}** قناة.")
+    
+    st.markdown(f"""
+    <div style='background:{table_head_bg}; padding:8px; border-bottom:2px solid {box_border}; display:flex; font-weight:bold; color:#00f0ff; text-align:center;'>
+        <div style='flex:1;'>التردد</div>
+        <div style='flex:3;'>اسم القناة</div>
+        <div style='flex:1;'>{t['col_action']}</div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    scroll_container = st.container(height=400)
+    with scroll_container:
+        for ch in filtered_pool[:100]:
+            col_f, col_n, col_b = st.columns([1, 3, 1])
+            col_f.write(f"`{ch.get('freq', 'N/A')}`")
+            col_n.write(f"**{ch.get('name', 'Unknown')}**")
+            col_b.button(t['btn_add_to_order'], key=f"btn_add_{ch['id']}_{len(st.session_state.ordered_channels)}", on_click=add_channel_callback, args=(ch,))
+
+# ── الجدول الثاني التفاعلي: عرض وتحديث الترتيب النهائي ──
+with col_table2:
+    st.write(f"### {t['ordered_title']}")
+    
+    ord_list = st.session_state.ordered_channels
+    st.write(f"🔢 القنوات داخل لستتك الآن: **{len(ord_list)}** قناة.")
+    
+    if ord_list:
+        data_df = pd.DataFrame([
+            {
+                "الترتيب الحالي": i + 1,
+                "اسم القناة": ch.get('name', 'Unknown'),
+                "التردد": ch.get('freq', 'N/A'),
+                "حذف ❌": False,
+                "orig_idx": i
+            }
+            for i, ch in enumerate(ord_list)
+        ])
+        
+        edited_df = st.data_editor(
+            data_df,
+            hide_index=True,
+            use_container_width=True,
+            disabled=["اسم القناة", "التردد"],
+            column_config={
+                "الترتيب الحالي": st.column_config.NumberColumn(min_value=1, max_value=2000, step=1, required=True),
+                "حذف ❌": st.column_config.CheckboxColumn(required=True)
+            },
+            key="p2_data_editor"
+        )
+        
+        if st.button("💾 اعتماد الترتيب الجديد وحفظ التعديلات", key="save_df_changes_btn"):
+            active_rows = edited_df[edited_df["حذف ❌"] == False]
+            sorted_rows = active_rows.sort_values(by="الترتيب الحالي")
+            
+            new_ordered = []
+            for _, row in sorted_rows.iterrows():
+                old_idx = row["orig_idx"]
+                new_ordered.append(ord_list[old_idx])
+                
+            st.session_state.ordered_channels = new_ordered
+            st.session_state.edit_finished = False
+            st.toast("🎯 تم تحديث وفرز جدول الترتيب بنجاح!")
+            st.rerun()
+    else:
+        st.info("💡 اضغط على زر [➕ زرع] من الجدول الأيمن لتصنع قائمة الترتيب المخصصة هنا.")
+
+st.write("---")
+
+# ─────────────────────────────────────────────
+# 9. التجهيز النهائي والتحميل بناءً على زر الإنهاء
+# ─────────────────────────────────────────────
+st.write(f"### {t['preview_title']}")
+
+final_out_list = st.session_state.ordered_channels
+
+if not final_out_list:
+    st.warning("⚠️ جدولك المخصص فارغ حالياً! قم بزرع قنوات أولاً لتفعيل روابط التحميل.")
+else:
+    if st.button(t['btn_finish'], key="finish_sorting_btn_p2"):
+        st.session_state.edit_finished = True
+        st.rerun()
+
+    if st.session_state.edit_finished:
+        st.success(t['ready_msg'])
+        
+        report_header = t.get('txt_header', "📄 تقرير الترتيب اليدوي المطور")
+        txt_report = f"{report_header} ({st.session_state.model_name})\n"
+        txt_report += "=" * 60 + "\n"
+        for rank, ch in enumerate(final_out_list, start=1):
+            txt_report += f"No. {rank:03d} : {ch.get('name','Unknown'):<30} | Freq: {ch.get('freq','N/A')} MHz\n"
+
+        root = st.session_state.root
+        legacy_tag = st.session_state.get('legacy_tag')
+
+        if st.session_state.is_modern:
+            bdata = st.session_state.broadcast_data
+            final_list_nodes = []
+            for rank, ch in enumerate(final_out_list, start=1):
+                node = ch["raw_node"]
+                node["majorNumber"] = rank
+                final_list_nodes.append(node)
+            bdata["channelList"] = final_list_nodes
+            legacy_tag.text = json.dumps(bdata, ensure_ascii=False)
+            final_tll_bytes = ET.tostring(root, encoding="utf-8")
+        else:
+            file_text = st.session_state.file_text_original
+            item_strings = []
+            for rank, ch in enumerate(final_out_list, start=1):
+                raw = ch.get("raw_str", f"<ITEM>\r\n<vchName>{ch.get('name','Unknown')}</vchName>\r\n<frequency>{ch.get('freq','N/A')}</frequency>\r\n</ITEM>")
+                if "<prNum>" in raw:
+                    raw = re.sub(r'<prNum>\d+</prNum>', f'<prNum>{rank}</prNum>', raw)
+                else:
+                    raw = raw.replace("<ITEM>", f"<ITEM>\r\n<prNum>{rank}</prNum>")
+                item_strings.append(raw)
+
+            combined = "\r\n".join(item_strings)
+            start_i = file_text.find("<ITEM>")
+            end_i = file_text.rfind("</ITEM>") + len("</ITEM>")
+            if start_i != -1 and end_i != -1:
+                final_text = file_text[:start_i] + combined + file_text[end_i:]
+            else:
+                final_text = combined
+            try: final_tll_bytes = final_text.encode('utf-8')
+            except UnicodeEncodeError: final_tll_bytes = final_text.encode('latin-1')
+
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            st.download_button(label=t['btn_tll'], data=final_tll_bytes, file_name="GlobalClone00001.TLL", mime="application/octet-stream")
+        with col_d2:
+            st.download_button(label=t['btn_txt'], data=txt_report, file_name="Channels_List_Manual.txt", mime="text/plain; charset=utf-8")
+
+# ─────────────────────────────────────────────
+# 10. الفوتر السيبراني
+# ─────────────────────────────────────────────
+whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
+st.markdown(f"""
+<div class="futuristic-cyber-footer" style="background:{footer_bg}; border:2px solid #00f0ff; color:{footer_text} !important; padding:35px; text-align:center; border-radius:20px; margin-top:65px; font-family:'Orbitron', sans-serif;">
+    <div class="footer-dev" style="color:#ff007f; font-size:26px; font-weight:bold;">🛠️ DEVELOPER ENG: RAFIK RAMBO</div>
+    <div>📱 <b>MOBILE / الموبايل:</b> +201280339779</div>
+    <div>✉️ <b>E-MAIL:</b> rafikrambo113@gmail.com</div>
+    <a href="{whatsapp_url}" target="_blank" class="cyber-whatsapp-btn" style="color:#25d366 !important; padding:14px 35px; border-radius:35px; display:inline-block; font-weight:bold; border:2px solid #25d366; text-decoration:none; margin-top:20px;">WhatsApp Web</a>
+</div>
+""", unsafe_allow_html=True)
