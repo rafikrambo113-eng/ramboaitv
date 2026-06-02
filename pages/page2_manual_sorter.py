@@ -26,7 +26,7 @@ if 'model_name' not in st.session_state:
     st.session_state.model_name = ""
 
 # ─────────────────────────────────────────────
-# 2. نصوص الواجهة (عربي / إنجليزي)
+# 2. نصوص الواجهة (عربي / إنجليزي) - تم إضافة المفتاح المفقود هنا
 # ─────────────────────────────────────────────
 UI = {
     'ar': {
@@ -50,6 +50,7 @@ UI = {
         'ready_msg':       "🌌 الملفات المعدلة جاهزة للتحميل الآن!",
         'btn_tll':         "📥 تحميل ملف الشاشة (GlobalClone00001.TLL)",
         'btn_txt':         "📄 تحميل تقرير الترتيب (Channels_List.txt)",
+        'txt_header':      "📄 تقرير الترتيب اليدوي المطور — RAMBO Page 2",  # تم الإصلاح هنا
         'no_file':         "⬆️ ارفع ملف TLL أولاً لتبدأ العمل.",
     },
     'en': {
@@ -73,6 +74,7 @@ UI = {
         'ready_msg':       "🌌 Modified files are now ready for download!",
         'btn_tll':         "📥 Download TV File (GlobalClone00001.TLL)",
         'btn_txt':         "📄 Download Report (Channels_List.txt)",
+        'txt_header':      "📄 Manual Sorting Advanced Report — RAMBO Page 2",  # تم الإصلاح هنا
         'no_file':         "⬆️ Upload a TLL file to start.",
     }
 }
@@ -174,7 +176,6 @@ def parse_tll(file_bytes):
 uploaded = st.file_uploader(t['upload_label'], type=["TLL"])
 
 if uploaded is not None:
-    # نقرأ الملف أول مرة فقط عند الرفع لتجنب إعادة التصفير عند ضغط أي زر
     if not st.session_state.channels:
         file_bytes = uploaded.read()
         (
@@ -203,7 +204,6 @@ st.write(f"### {t['auto_features_title']}")
 col_chk1, col_chk2 = st.columns(2)
 
 with col_chk1:
-    # 1. مربع الفحص التلقائي وزرع القنوات الجديدة
     scan_active = st.checkbox(t['chk_scan_inject'], value=False, key="chk_scan")
     if scan_active and not st.session_state.get('scan_done', False):
         added_count = 0
@@ -223,7 +223,7 @@ with col_chk1:
                     nc['raw_str'] = f"<ITEM>\r\n<prNum>{new_idx+1}</prNum>\r\n<vchName>{nc['name']}</vchName>\r\n<frequency>{nc['freq']}</frequency>\r\n</ITEM>"
                 nc['id'] = new_idx
                 st.session_state.channels.append(nc)
-                st.session_state.ordered_channels.append(nc) # زرع فوري بالترتيب المخصص
+                st.session_state.ordered_channels.append(nc)
                 added_count += 1
         st.session_state.scan_done = True
         if added_count > 0:
@@ -231,13 +231,11 @@ with col_chk1:
             st.rerun()
 
 with col_chk2:
-    # 2. مربع الصيانة وتحديث الترددات تلقائياً
     maint_active = st.checkbox(t['chk_modern_maint'], value=False, key="chk_maint")
     if maint_active and not st.session_state.get('maint_done', False):
         updated_count = 0
-        freq_updates = {"11747": "12054", "11137": "11785", "12015": "11678"} # خريطة تحديثات 2026
+        freq_updates = {"11747": "12054", "11137": "11785", "12015": "11678"}
         
-        # التحديث في القنوات الكلية
         for ch in st.session_state.channels:
             if ch['freq'] in freq_updates:
                 old_f = ch['freq']
@@ -249,7 +247,6 @@ with col_chk2:
                     ch['raw_str'] = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{new_f}</frequency>', ch['raw_str'])
                 updated_count += 1
                 
-        # التحديث في اللستة المرتبة إن وجد
         for ch in st.session_state.ordered_channels:
             if ch['freq'] in freq_updates:
                 ch['freq'] = freq_updates[ch['freq']]
@@ -283,7 +280,7 @@ with col_table1:
     
     scroll_container = st.container(height=380)
     with scroll_container:
-        for ch in filtered_pool[:100]: # سرعة التصفح
+        for ch in filtered_pool[:100]:
             c_id = ch['id']
             col_f, col_n, col_b = st.columns([1, 3, 1])
             col_f.write(f"`{ch['freq']}`")
@@ -386,7 +383,9 @@ if not final_out_list:
 else:
     st.success(t['ready_msg'])
     
-    txt_report = f"{t['txt_header']} ({st.session_state.model_name})\n"
+    # استخدام قاموس النصوص بأمان وحمايته بـ get احتياطياً
+    report_header = t.get('txt_header', "📄 Manual Sorting Report — RAMBO")
+    txt_report = f"{report_header} ({st.session_state.model_name})\n"
     txt_report += "=" * 60 + "\n"
     for rank, ch in enumerate(final_out_list, start=1):
         txt_report += f"No. {rank:03d} : {ch['name']:<30} | Freq: {ch['freq']} MHz | Pol: {ch.get('pol','—')}\n"
