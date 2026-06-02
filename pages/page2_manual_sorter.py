@@ -2,6 +2,8 @@ import streamlit as st
 import xml.etree.ElementTree as ET
 import json
 import re
+# استيراد مكتبة السحب والإفلات
+from streamlit_sortables import sort_items
 
 # ─────────────────────────────────────────────
 # 1. تهيئة الجلسة
@@ -11,9 +13,9 @@ if 'lang' not in st.session_state:
 if 'theme' not in st.session_state:
     st.session_state.theme = 'dark'
 if 'channels' not in st.session_state:
-    st.session_state.channels = []          # القنوات الأصلية المرفوعة
+    st.session_state.channels = []          
 if 'ordered_channels' not in st.session_state:
-    st.session_state.ordered_channels = []  # اللستة المرتبة الجديدة (الجدول الثاني)
+    st.session_state.ordered_channels = []  
 if 'is_modern' not in st.session_state:
     st.session_state.is_modern = False
 if 'root' not in st.session_state:
@@ -25,7 +27,7 @@ if 'file_text_original' not in st.session_state:
 if 'model_name' not in st.session_state:
     st.session_state.model_name = ""
 if 'edit_finished' not in st.session_state:
-    st.session_state.edit_finished = False # حالة زر إنهاء التعديل
+    st.session_state.edit_finished = False 
 
 # ─────────────────────────────────────────────
 # 2. نصوص الواجهة (عربي / إنجليزي)
@@ -33,16 +35,16 @@ if 'edit_finished' not in st.session_state:
 UI = {
     'ar': {
         'title':           "📺 RAMBO — المُرتب اليدوي المطور",
-        'subtitle':        "⚡ نظام الجدولين الذكي: اختر القنوات من الجدول الكلي لزرعها بالترتيب في اللستة النهائية",
+        'subtitle':        "⚡ نظام الجدولين الذكي: اختر القنوات ثم رتبها بالسحب والإفلات (Drag & Drop) بالماوس",
         'upload_label':    "🚀 ارفع ملف القنوات (GlobalClone00001.TLL):",
         'success_read':    "🛸 تم قراءة الملف بنجاح! الموديل: ",
         'search_ph':       "🔍 ابحث عن قناة بالاسم في الملف الأصلي...",
         'search_ordered_ph': "🔍 ابحث في القنوات المرتبة...",
-        'all_ch_title':    "📋 1. جدول القنوات الكلي المتوفرة (اضغط [➕ زرع] لإضافتها)",
-        'ordered_title':   "📊 2. جدول الترتيب النهائي (اللستة المخصصة)",
+        'all_ch_title':    "📋 1. جدول القنوات الكلي المتوفرة (اضغط [➕ زرع])",
+        'ordered_title':   "📊 2. ساحة الترتيب النهائي (اسحب القناة بالماوس لإعادة ترتيبها)",
         'col_action':      "إجراء",
         'btn_add_to_order': "➕ زرع",
-        'btn_remove':      "❌ حذف",
+        'btn_remove':      "❌ حذف القنوات المحددة",
         'edit_freq_title': "✏️ تعديل / إضافة تردد قناة موجودة",
         'add_title':       "➕ إضافة قناة جديدة تماماً واختراعها",
         'auto_features_title': "⚙️ خيارات الفحص الذكي والصيانة الفورية للملف (بعد الرفع)",
@@ -50,7 +52,7 @@ UI = {
         'chk_modern_maint': "🔧 تفعيل الصيانة الحديثة وتحديث الترددات الميتة والقديمة تلقائياً",
         'preview_title':   "🏁 استخراج وتنزيل الملفات النهائية",
         'btn_finish':      "🔒 إنهاء التعديل وتجهيز ملفات التحميل",
-        'ready_msg':       "🌌 تم بناء الترتيب وعمل التقرير بنجاح! الملفات جاهزة للتنزيل الآن:",
+        'ready_msg':       "🌌 تم اعتماد الترتيب الجديد وعمل التقرير بنجاح! الملفات جاهزة الآن:",
         'btn_tll':         "📥 تحميل ملف الشاشة المعدل (GlobalClone00001.TLL)",
         'btn_txt':         "📄 تحميل تقرير لستة الترتيب (Channels_List.txt)",
         'txt_header':      "📄 تقرير الترتيب اليدوي المطور — RAMBO Page 2",
@@ -58,16 +60,16 @@ UI = {
     },
     'en': {
         'title':           "📺 RAMBO — Advanced Manual Sorter",
-        'subtitle':        "⚡ Dual-Table System: Select channels from main pool to inject sequentially into your custom list",
+        'subtitle':        "⚡ Dual-Table System: Select channels and reorder them using Drag & Drop",
         'upload_label':    "🚀 Upload Channel File (GlobalClone00001.TLL):",
         'success_read':    "🛸 File Parsed Successfully! Model: ",
         'search_ph':       "🔍 Search channel name in original pool...",
         'search_ordered_ph': "🔍 Search in ordered list...",
-        'all_ch_title':    "📋 1. Main Channel Pool (Click [➕ Inject] to add)",
-        'ordered_title':   "📊 2. Final Custom Ordered List",
+        'all_ch_title':    "📋 1. Main Channel Pool (Click [➕ Inject])",
+        'ordered_title':   "📊 2. Final Custom List (Drag & Drop items to reorder)",
         'col_action':      "Action",
         'btn_add_to_order': "➕ Inject",
-        'btn_remove':      "❌ Remove",
+        'btn_remove':      "❌ Remove Selected Channels",
         'edit_freq_title': "✏️ Edit / Add Frequency of Existing Channel",
         'add_title':       "➕ Invent & Add Completely New Channel",
         'auto_features_title': "⚙️ Smart Auto-Maintenance & Scanning Options (Post-Upload)",
@@ -121,12 +123,18 @@ st.markdown(f"""
     .stSelectbox>div>div {{ background-color: {box_bg} !important; border: 2px solid {box_border} !important; border-radius: 10px !important; }}
     div[data-testid="stFileUploader"], .rambo-box {{ background: {box_bg} !important; border: 2px solid {box_border} !important; box-shadow: 0px 5px 15px {box_shadow} !important; border-radius: 14px !important; padding: 18px !important; margin-bottom: 20px !important; }}
     .stButton>button {{ background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important; color: #ffffff !important; border: 2px solid #ff007f !important; border-radius: 12px !important; font-weight: bold; width: 100%; }}
-    .rambo-table {{ width:100%; border-collapse:collapse; font-family:{font_family}; font-size:13px; }}
-    .rambo-table th {{ background:{table_head_bg}; color:#00f0ff; padding:10px 14px; text-align:center; border-bottom: 2px solid {box_border}; position: sticky; top: 0; }}
-    .rambo-table td {{ padding:8px 14px; text-align:center; border-bottom:1px solid {table_border}; color:{text_color}; }}
-    .rambo-table tr:nth-child(even) td {{ background:{table_row_alt}; }}
-    .rambo-table tr:nth-child(odd)  td {{ background:{table_row_bg}; }}
-    .rambo-table tr:hover td {{ background: rgba(255,0,127,0.12) !important; }}
+    
+    /* ستايل مخصص لعناصر السحب والإفلات ليناسب الثيم السيبراني */
+    ul[data-testid="stSortablesList"] li {{
+        background: {box_bg} !important;
+        color: {text_color} !important;
+        border: 1px solid {box_border} !important;
+        border-radius: 8px !important;
+        padding: 10px !important;
+        margin-bottom: 5px !important;
+        cursor: grab !important;
+    }}
+    ul[data-testid="stSortablesList"] li:active {{ cursor: grabbing !important; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -190,17 +198,16 @@ if uploaded is not None:
         model_node = st.session_state.root.find(".//ModelName")
         st.session_state.model_name = model_node.text if model_node is not None else "Unknown LG TV"
         st.session_state.ordered_channels = []
-        st.session_state.edit_finished = False # إعادة تصفير المفتاح عند رفع ملف جديد
+        st.session_state.edit_finished = False 
 
 if not st.session_state.channels:
     st.info(t['no_file'])
     st.stop()
 
-# تظهر رسالة النجاح فور الرفع مباشرة
 st.success(f"{t['success_read']} **{st.session_state.model_name}** | 📡 {'Modern JSON' if st.session_state.is_modern else 'Legacy XML'}")
 
 # ─────────────────────────────────────────────
-# 6. مربعات الفحص والصيانة التلقائية (تظهر الآن فوراً بعد نجاح الرفع)
+# 6. مربعات الفحص والصيانة التلقائية
 # ─────────────────────────────────────────────
 st.write(f"### {t['auto_features_title']}")
 col_chk1, col_chk2 = st.columns(2)
@@ -225,12 +232,12 @@ with col_chk1:
                     nc['raw_str'] = f"<ITEM>\r\n<prNum>{new_idx+1}</prNum>\r\n<vchName>{nc['name']}</vchName>\r\n<frequency>{nc['freq']}</frequency>\r\n</ITEM>"
                 nc['id'] = new_idx
                 st.session_state.channels.append(nc)
-                st.session_state.ordered_channels.append(nc) # زرع تلقائي في اللستة المرتبة
+                st.session_state.ordered_channels.append(nc) 
                 added_count += 1
         st.session_state.scan_done = True
         if added_count > 0:
             st.success(f"📡 تم الفحص والزرع التلقائي لـ {added_count} قنوات جديدة بالملف!")
-            st.session_state.edit_finished = False # نتيح الفرصة للمعاينة والضغط على إنهاء من جديد
+            st.session_state.edit_finished = False 
             st.rerun()
 
 with col_chk2:
@@ -261,7 +268,7 @@ with col_chk2:
             st.rerun()
 
 # ─────────────────────────────────────────────
-# 7. واجهة نظام الجدولين المتجاورين
+# 7. واجهة نظام الجدولين المتجاورين (دعم السحب والإفلات)
 # ─────────────────────────────────────────────
 st.write("---")
 col_table1, col_table2 = st.columns(2)
@@ -282,7 +289,7 @@ with col_table1:
     </div>
     """, unsafe_allow_html=True)
     
-    scroll_container = st.container(height=380)
+    scroll_container = st.container(height=400)
     with scroll_container:
         for ch in filtered_pool[:100]:
             c_id = ch['id']
@@ -291,38 +298,50 @@ with col_table1:
             col_n.write(f"**{ch['name']}**")
             if col_b.button(t['btn_add_to_order'], key=f"add_{c_id}"):
                 st.session_state.ordered_channels.append(ch.copy())
-                st.session_state.edit_finished = False # عند تعديل أي شيء يتم إلغاء القفل لحين الضغط عليه مجدداً
+                st.session_state.edit_finished = False 
                 st.toast(f"✔️ تم زرع {ch['name']} في الترتيب")
                 st.rerun()
 
-# ── الجدول الثاني: جدول الترتيب المخصص النهائي ──
+# ── الجدول الثاني المطور: سحب وإفلات (Drag and Drop) ──
 with col_table2:
     st.write(f"### {t['ordered_title']}")
-    search_q2 = st.text_input(t['search_ordered_ph'], key="src_2").strip().upper()
     
     ord_list = st.session_state.ordered_channels
-    filtered_ordered = [(idx, c) for idx, c in enumerate(ord_list) if not search_q2 or search_q2 in c['name'].upper()]
     st.write(f"🔢 القنوات المزروعة حالياً: **{len(ord_list)}** قناة.")
     
-    st.markdown(f"""
-    <div style='background:{table_head_bg}; padding:8px; border-bottom:2px solid {box_border}; display:flex; font-weight:bold; color:#00f0ff; text-align:center;'>
-        <div style='flex:1;'>الترتيب</div>
-        <div style='flex:3;'>اسم القناة</div>
-        <div style='flex:1;'>{t['col_action']}</div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    scroll_container2 = st.container(height=380)
-    with scroll_container2:
-        for real_idx, ch in filtered_ordered:
-            col_r, col_n, col_b = st.columns([1, 3, 1])
-            col_r.write(f"✨ `{real_idx + 1}`")
-            col_n.write(f"{ch['name']}")
-            if col_b.button(t['btn_remove'], key=f"rem_{real_idx}"):
-                st.session_state.ordered_channels.pop(real_idx)
-                st.session_state.edit_finished = False
-                st.toast(f"❌ تم حذف القناة")
-                st.rerun()
+    if ord_list:
+        # تجهيز نصوص واضحة تظهر للمستخدم داخل مربعات السحب (تحمل الترتيب الحالي والاسم والتردد)
+        display_items = [f"📍 {i+1:02d} | {ch['name']} ({ch['freq']})" for i, ch in enumerate(ord_list)]
+        
+        # استدعاء أداة السحب والإفلات بالماوس
+        sorted_display_items = sort_items(display_items, key="drag_drop_sorter")
+        
+        # إعادة ترتيب اللستة الفعلية في الـ session_state بناءً على سحب اليوزر بالماوس فوراً
+        new_ordered_list = []
+        for item in sorted_display_items:
+            # استخراج اسم القناة الأصلي من النص المعروض لتطبيقه على الترتيب الحقيقي
+            extracted_name = item.split(" | ")[1].split(" (")[0]
+            for original_ch in ord_list:
+                if original_ch['name'] == extracted_name:
+                    new_ordered_list.append(original_ch)
+                    break
+        
+        # تحديث الجلسة إذا حدث أي تغيير في السحب
+        if new_ordered_list != ord_list:
+            st.session_state.ordered_channels = new_ordered_list
+            st.session_state.edit_finished = False
+            st.rerun()
+            
+        # زر إضافي لحذف قنوات من القائمة المرتبة عبر التحديد
+        st.write("")
+        channels_to_delete = st.multiselect("❌ اختر قنوات لحذفها من لستتك المخصصة (إذا أردت):", [c['name'] for c in ord_list], key="del_multi")
+        if st.button(t['btn_remove']) and channels_to_delete:
+            st.session_state.ordered_channels = [c for c in ord_list if c['name'] not in channels_to_delete]
+            st.session_state.edit_finished = False
+            st.toast("❌ تم حذف القنوات المحددة")
+            st.rerun()
+    else:
+        st.info("💡 القائمة المخصصة فارغة حالياً. قم بزرع قنوات من الجدول الأيمن لتظهر لك هنا وتسحبها بالماوس.")
 
 st.write("---")
 
@@ -334,7 +353,7 @@ col_edit, col_add = st.columns(2)
 with col_edit:
     st.write(f"### {t['edit_freq_title']}")
     if st.session_state.ordered_channels:
-        edit_target_label = st.selectbox("اختر القناة من لستتك المخصصة لتعديل ترددها:", [f"{i+1}. {c['name']}" for i, c in enumerate(st.session_state.ordered_channels)], key="ed_sel")
+        edit_target_label = st.selectbox("اختر القناة لتعديل ترددها منفصلاً:", [f"{i+1}. {c['name']}" for i, c in enumerate(st.session_state.ordered_channels)], key="ed_sel")
         ed_freq = st.number_input("التردد الجديد (MHz):", min_value=1, max_value=99999, value=11449)
         ed_pol = st.selectbox("الاستقطاب:", ["Vertical", "Horizontal"], key="ed_pol")
         if st.button("💾 حفظ التعديل فوراً", key="btn_save_ed"):
@@ -389,23 +408,19 @@ final_out_list = st.session_state.ordered_channels
 if not final_out_list:
     st.warning("⚠️ جدولك المخصص فارغ حالياً! قم بزرع القنوات أولاً لتتمكن من تفعيل خيار الإنهاء والتحميل.")
 else:
-    # زر إنهاء التعديل
     if st.button(t['btn_finish'], key="finish_sorting_btn"):
         st.session_state.edit_finished = True
         st.rerun()
 
-    # إذا قام المستخدم بالضغط على زر إنهاء التعديل، يتم بناء التكست والملف النهائي فوراً وإظهار أزرار التحميل
     if st.session_state.edit_finished:
         st.success(t['ready_msg'])
         
-        # بناء قائمة التقرير النصي (Text List) للترتيب الجديد
-        report_header = t.get('txt_header', "📄 Manual Sorting Report — RAMBO")
+        report_header = t.get('txt_header', "📄 تقرير الترتيب اليدوي المطور — RAMBO Page 2")
         txt_report = f"{report_header} ({st.session_state.model_name})\n"
         txt_report += "=" * 60 + "\n"
         for rank, ch in enumerate(final_out_list, start=1):
             txt_report += f"No. {rank:03d} : {ch['name']:<30} | Freq: {ch['freq']} MHz | Pol: {ch.get('pol','—')}\n"
 
-        # بناء ومعالجة ملف الـ TLL النهائي
         root = st.session_state.root
         legacy_tag = st.session_state.get('legacy_tag')
 
@@ -440,7 +455,6 @@ else:
             try: final_tll_bytes = final_text.encode('utf-8')
             except UnicodeEncodeError: final_tll_bytes = final_text.encode('latin-1')
 
-        # أزرار التحميل
         col_d1, col_d2 = st.columns(2)
         with col_d1:
             st.download_button(label=t['btn_tll'], data=final_tll_bytes, file_name="GlobalClone00001.TLL", mime="application/octet-stream")
