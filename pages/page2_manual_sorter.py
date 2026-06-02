@@ -43,7 +43,7 @@ UI = {
         'col_action':      "إجراء",
         'btn_add_to_order': "➕ زرع",
         'auto_features_title': "⚙️ خيارات الفحص الذكي والصيانة الفورية للملف",
-        'chk_scan_inject': "📡 تفعيل الفحص التلقائي وزرع القنوات الجديدة المتاحة على القمر (تنزل أسفل الترتيب فوراً)",
+        'chk_scan_inject': "📡 تفعيل الفحص التلقائي وزرع القنوات الجديدة المتاحة على القمر فوراً",
         'chk_modern_maint': "🔧 تفعيل الصيانة الحديثة وتحديث الترددات الميتة والقديمة تلقائياً",
         'preview_title':   "🏁 استخراج وتنزيل الملفات النهائية",
         'btn_finish':      "🔒 إنهاء التعديل وتجهيز ملفات التحميل",
@@ -63,7 +63,7 @@ UI = {
         'col_action':      "Action",
         'btn_add_to_order': "➕ Inject",
         'auto_features_title': "⚙️ Smart Auto-Maintenance & Scanning Options",
-        'chk_scan_inject': "📡 Enable Auto-Scan & Inject newly available Satellite Channels (Appends to bottom)",
+        'chk_scan_inject': "📡 Enable Auto-Scan & Inject newly available Satellite Channels",
         'chk_modern_maint': "🔧 Enable Modern Maintenance & Auto-Update dead frequencies",
         'preview_title':   "🏁 Export & Download Final Files",
         'btn_finish':      "🔒 Finish Editing & Generate Download Links",
@@ -190,13 +190,14 @@ if not st.session_state.channels:
 st.success(f"{t['success_read']} **{st.session_state.model_name}** | 📡 {'Modern JSON' if st.session_state.is_modern else 'Legacy XML'} | الإجمالي: {len(st.session_state.channels)} قناة.")
 
 # ─────────────────────────────────────────────
-# 6. خيارات الفحص والصيانة التلقائية (تعديل موضع الزرع ليكون في أسفل القائمة)
+# 6. خيارات الفحص والصيانة التلقائية (تحديث وزرع داخل الجدول الكلي المتوفر فقط)
 # ─────────────────────────────────────────────
 st.write(f"### {t['auto_features_title']}")
 col_chk1, col_chk2 = st.columns(2)
 
 with col_chk1:
     scan_active = st.checkbox(t['chk_scan_inject'], value=False, key="chk_scan_p2")
+    
     if scan_active and not st.session_state.get('scan_done_p2', False):
         added_count = 0
         simulated_new_channels = [
@@ -205,39 +206,50 @@ with col_chk1:
             {"name": "FOOTBALL LIVE", "freq": "11054", "pol": "Horizontal"}
         ]
         current_names = [c.get('name', '').upper() for c in st.session_state.channels]
+        new_inserted_names = []
         
         for nc in simulated_new_channels:
             if nc['name'] not in current_names:
                 new_idx = len(st.session_state.channels)
                 
-                # هنا التعديل: القنوات المزروعة الجديدة تأخذ ترتيب مسلسل يبدأ من نهاية لستة الترتيب الحالي
-                target_position = len(st.session_state.ordered_channels) + 1
-                
                 if st.session_state.is_modern:
-                    node = {"channelName": nc['name'], "frequency": int(nc['freq']), "polarization": nc['pol'], "majorNumber": target_position, "serviceType":"1"}
+                    node = {"channelName": nc['name'], "frequency": int(nc['freq']), "polarization": nc['pol'], "majorNumber": new_idx+1, "serviceType":"1"}
                     nc['raw_node'] = node
                 else:
-                    nc['raw_str'] = f"<ITEM>\r\n<prNum>{target_position}</prNum>\r\n<vchName>{nc['name']}</vchName>\r\n<frequency>{nc['freq']}</frequency>\r\n</ITEM>"
+                    nc['raw_str'] = f"<ITEM>\r\n<prNum>{new_idx+1}</prNum>\r\n<vchName>{nc['name']}</vchName>\r\n<frequency>{nc['freq']}</frequency>\r\n</ITEM>"
                 
                 nc['id'] = new_idx
+                # التعديل: تضاف إلى مصفوفة القنوات الكلية المتوفرة فقط!
                 st.session_state.channels.append(nc)
-                
-                # إدراج القناة مباشرة في نهاية لستة الترتيب النهائي (تحت القنوات المرتبة يدوياً)
-                st.session_state.ordered_channels.append(nc) 
+                new_inserted_names.append(f"📡 {nc['name']} (تردد: {nc['freq']})")
                 added_count += 1
                 
         st.session_state.scan_done_p2 = True
+        st.session_state.inserted_list_p2 = new_inserted_names
         if added_count > 0:
-            st.success(f"📡 تم الفحص والزرع التلقائي لـ {added_count} قنوات جديدة في أسفل قائمة الترتيب!")
-            st.session_state.edit_finished = False 
+            st.toast("📡 تم زرع القنوات الجديدة في جدول المتوفر!")
             st.rerun()
+
+    # التوضيح المكتوب للقنوات المزروعة داخل جزئية الفحص الذكي
+    if scan_active:
+        if st.session_state.get('inserted_list_p2'):
+            st.markdown("<div style='background:rgba(0, 240, 255, 0.1); padding:12px; border-radius:10px; border-left:4px solid #00f0ff; margin-top:10px;'>", unsafe_allow_html=True)
+            st.markdown("**✨ قنوات جديدة تم زرعها في (1. جدول القنوات الكلي المتوفرة):**")
+            for item in st.session_state.inserted_list_p2:
+                st.markdown(f"<span style='color:#00f0ff;'>{item}</span>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+        else:
+            st.markdown("<div style='color:#888; margin-top:10px;'>ℹ️ لم يتم العثور على قنوات جديدة للزرع (مضافة بالفعل).</div>", unsafe_allow_html=True)
 
 with col_chk2:
     maint_active = st.checkbox(t['chk_modern_maint'], value=False, key="chk_maint_p2")
+    
     if maint_active and not st.session_state.get('maint_done_p2', False):
         updated_count = 0
         freq_updates = {"11747": "12054", "11137": "11785", "12015": "11678"}
+        maint_details = []
         
+        # التعديل: التحديث يطبق على القنوات داخل جدول المتوفر الكلي فقط!
         for ch in st.session_state.channels:
             current_freq = ch.get('freq', 'N/A')
             if current_freq in freq_updates:
@@ -247,18 +259,28 @@ with col_chk2:
                     ch['raw_node']['frequency'] = int(new_f)
                 elif 'raw_str' in ch:
                     ch['raw_str'] = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{new_f}</frequency>', ch['raw_str'])
+                
+                detail_str = f"🔄 القناة: **{ch.get('name','Unknown')}** | تم تحديث التردد من `{current_freq}` إلى `{new_f}`"
+                if detail_str not in maint_details:
+                    maint_details.append(detail_str)
                 updated_count += 1
                 
-        for ch in st.session_state.ordered_channels:
-            current_freq = ch.get('freq', 'N/A')
-            if current_freq in freq_updates:
-                ch['freq'] = freq_updates[current_freq]
-                
         st.session_state.maint_done_p2 = True
+        st.session_state.maint_details_p2 = maint_details
         if updated_count > 0:
-            st.success(f"🔧 تمت صيانة الملف بنجاح وتحديث ترددات {updated_count} قناة!")
-            st.session_state.edit_finished = False
+            st.toast("🔧 تم تحديث الترددات في جدول المتوفر بنجاح!")
             st.rerun()
+
+    # التوضيح المكتوب للترددات المحدثة داخل جزئية الفحص الذكي
+    if maint_active:
+        if st.session_state.get('maint_details_p2'):
+            st.markdown("<div style='background:rgba(255, 0, 127, 0.1); padding:12px; border-radius:10px; border-left:4px solid #ff007f; margin-top:10px;'>", unsafe_allow_html=True)
+            st.markdown("**🔧 تقرير الترددات المعدلة في (1. جدول القنوات الكلي المتوفرة):**")
+            for detail in st.session_state.maint_details_p2:
+                st.markdown(f"<span style='color:#ff007f;'>{detail}</span>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+        else:
+            st.markdown("<div style='color:#888; margin-top:10px;'>ℹ️ جميع الترددات الحالية بجدول المتوفر مطابقة لأحدث نسخة.</div>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # 7. دوال الـ Callbacks لضمان عدم سقوط البيانات أثناء الضغط
@@ -339,7 +361,7 @@ with col_table2:
                 
             st.session_state.ordered_channels = new_ordered
             st.session_state.edit_finished = False
-            st.toast("🎯 تم تحديث وفرز جدول الترتيب بنجاح وحفظ القنوات المزروعة بالأسفل!")
+            st.toast("🎯 تم تحديث وفرز جدول الترتيب بنجاح!")
             st.rerun()
     else:
         st.info("💡 اضغط على زر [➕ زرع] من الجدول الأيمن لتصنع قائمة الترتيب المخصصة هنا.")
