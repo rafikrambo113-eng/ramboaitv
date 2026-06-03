@@ -7,57 +7,65 @@ import re
 if 'lang' not in st.session_state: st.session_state.lang = 'ar'
 if 'theme' not in st.session_state: st.session_state.theme = 'dark'
 
-# نصوص الواجهة (كما هي في ملفك)
+# نصوص الواجهة
 UI_TEXT = {
-    'ar': {'title': "📺 RAMBO - المنسق العالمي لشاشات LG", 'subtitle': "⚡ هندسة متطورة لترتيب ملفات القنوات", 'upload_label': "🚀 اختر ملف القنوات (GlobalClone00001.TLL):", 'success_read': "🛸 تم قراءة الهيكل بنجاح! الموديل:", 'search_header': "🔍 محرك البحث:", 'search_placeholder': "ابحث هنا...", 'config_title': "🎛️ مصفوفة ترتيب الفئات:", 'multiselect_label': "رتب الفئات حسب الأولوية:", 'preview_title': "📊 معاينة حية:", 'channels_count': "قناة", 'ready_msg': "🌌 تم الدمج بنجاح! جاهز للتحميل.", 'btn_download_tll': "📥 تحميل ملف الشاشة النهائي", 'btn_download_txt': "📄 تحميل تقرير الترتيب"},
-    'en': {'title': "📺 RAMBO - LG Universal AI Channel Sorter", 'subtitle': "⚡ Next-Gen Cyber-Engineered Architecture", 'upload_label': "🚀 Upload Channel File (GlobalClone00001.TLL):", 'success_read': "🛸 Matrix Structure Decoded! Model:", 'search_header': "🔍 Search Engine:", 'search_placeholder': "Type channel name...", 'config_title': "🎛️ Custom Category Priority Matrix:", 'multiselect_label': "Select categories order:", 'preview_title': "📊 Channel Grid Preview:", 'channels_count': "Channels", 'ready_msg': "🌌 Quantum Matrix Deployment Successful!", 'btn_download_tll': "📥 Download Final TV Configuration", 'btn_download_txt': "📄 Download Sorting Diagnostics"}
+    'ar': {'title': "📺 RAMBO - المنسق العالمي لشاشات LG", 'subtitle': "⚡ هندسة متطورة لترتيب ملفات القنوات", 'upload_label': "🚀 اختر ملف القنوات (GlobalClone00001.TLL):", 'success_read': "🛸 تم قراءة الهيكل بنجاح!", 'ready_msg': "🌌 تم الدمج بنجاح! جاهز للتحميل.", 'btn_download_tll': "📥 تحميل ملف الشاشة النهائي", 'btn_download_txt': "📄 تحميل تقرير الترتيب"},
+    'en': {'title': "📺 RAMBO - LG Channel Sorter", 'subtitle': "⚡ Next-Gen Architecture", 'upload_label': "🚀 Upload Channel File:", 'success_read': "🛸 Structure Decoded!", 'ready_msg': "🌌 Deployment Successful!", 'btn_download_tll': "📥 Download TLL File", 'btn_download_txt': "📄 Download Report"}
 }
 t = UI_TEXT[st.session_state.lang]
 
-# تعريف قاعدة البيانات والوظائف (ai_classify, NILESAT_LIVE_DB) - [ضعها هنا كما في كودك الأصلي]
-# (تأكد من إبقاء دوال ai_classify و قاعدة بيانات الأقمار كما هي)
+# ── قاعدة البيانات (ضع باقي القنوات هنا) ──
+NILESAT_LIVE_DB = {"MBC 2": {"frequency": 11938, "polarization": "Vertical"}} # مثال
+ALL_AVAILABLE_CATEGORIES = ["⚽ رياضة", "🎬 دراما", "📰 أخبار", "📺 عامة"]
+
+def ai_classify(channel_name): return "📺 عامة" # [ضع دالة التصنيف الخاصة بك هنا]
 
 st.title(t['title'])
 uploaded_file = st.file_uploader(t['upload_label'], type=["TLL"])
 
+# 1. تعريف المتغيرات الافتراضية قبل الاستخدام
+channels_sorted = []
+final_xml_bytes = None
+text_report = "تقرير الترتيب\n"
+
 if uploaded_file is not None:
-    file_text = uploaded_file.read().decode('utf-8', errors='ignore')
-    
-    # تحديد النوع (Modern vs Legacy)
+    file_bytes = uploaded_file.read()
+    file_text = file_bytes.decode('utf-8', errors='ignore')
     is_modern = "<legacybroadcast>" in file_text
     
-    # المعالجة والترتيب (المنطق البرمجي)
-    # ... [هنا يوضع منطق معالجة القنوات الذي قمت ببرمجته] ...
+    # [هنا منطق استخراج القنوات في قائمة channels_to_sort كما في كودك الأصلي]
+    channels_to_sort = [] # استبدلها بالكود الذي يملأ القائمة
     
-    # ── التعديل الجوهري للترتيب في الملفات القديمة ──
+    # 2. عملية الترتيب (يجب أن تتم داخل الـ if)
+    final_priority = ALL_AVAILABLE_CATEGORIES # اجعلها ديناميكية حسب اختيار المستخدم
+    channels_sorted = sorted(channels_to_sort, key=lambda x: final_priority.index(ai_classify(x["name"])))
+
+    # 3. بناء الملف حسب النوع
     if not is_modern:
-        # تأكد هنا أنك تقوم بفرز مصفوفة النصوص (raw_str) بناءً على الترتيب الجديد
-        # وهذا هو الكود المحدث لضمان استجابة الشاشة:
-        
         item_strings_sorted = []
         for index, ch in enumerate(channels_sorted, start=1):
             raw = ch["raw_str"]
-            # 1. تحديث رقم القناة في الـ XML
-            if "<prNum>" in raw:
-                raw = re.sub(r'<prNum>\d+</prNum>', f'<prNum>{index}</prNum>', raw)
-            else:
-                raw = raw.replace("<ITEM>", f"<ITEM>\r\n<prNum>{index}</prNum>")
-            
-            # 2. إضافة النص المرتب للمصفوفة
+            # تحديث رقم القناة الفعلي في النص
+            raw = re.sub(r'<prNum>\d+</prNum>', f'<prNum>{index}</prNum>', raw)
             item_strings_sorted.append(raw)
-
-        # 3. دمج المصفوفة بالترتيب الجديد تماماً
-        combined_items_str = "\r\n".join(item_strings_sorted)
+            text_report += f"No.{index}: {ch['name']}\n"
         
-        # 4. إعادة بناء الملف
+        combined_items_str = "\r\n".join(item_strings_sorted)
         start_idx = file_text.find("<ITEM>")
         end_idx = file_text.rfind("</ITEM>") + len("</ITEM>")
-        if start_idx != -1:
-            final_text_output = file_text[:start_idx] + combined_items_str + file_text[end_idx:]
-            final_xml_bytes = final_text_output.encode('utf-8')
+        final_text_output = file_text[:start_idx] + combined_items_str + file_text[end_idx:]
+        final_xml_bytes = final_text_output.encode('utf-8')
     else:
-        # [منطق الـ Modern JSON هنا كما كان]
-        pass
+        # منطق الـ JSON الحديث
+        pass 
 
-    # زر التحميل
-    st.download_button(t['btn_download_tll'], data=final_xml_bytes, file_name="GlobalClone00001.TLL")
+    # 4. أزرار التحميل
+    if final_xml_bytes:
+        st.success(t['ready_msg'])
+        col1, col2 = st.columns(2)
+        with col1:
+            st.download_button(t['btn_download_tll'], data=final_xml_bytes, file_name="GlobalClone00001.TLL")
+        with col2:
+            st.download_button(t['btn_download_txt'], data=text_report, file_name="Channels_List.txt")
+else:
+    st.info("يرجى رفع الملف للبدء.")
