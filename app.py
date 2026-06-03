@@ -1,47 +1,3 @@
-<think>
-The user is saying that in the old files (legacy format), when they read the channel file and modify the categories, and then download the text file, it is sorted according to their choice. However, when downloading the channel file (TLL), nothing changes.
-
-They want me to fix this part so that the TLL file is also sorted according to the user's category priority selection.
-
-Let me analyze the code:
-
-1. The code reads the file (either modern JSON-based or legacy ITEM-based)
-2. It classifies channels into categories
-3. It allows the user to select a priority order for categories
-4. It sorts the channels based on this priority
-5. It generates the text report sorted
-6. It also needs to generate the TLL file sorted
-
-Looking at the code, I can see the issue. For the modern format (is_modern = True), the code does sort and modify the channels properly:
-```python
-final_list_modern = []
-for index, ch in enumerate(channels_sorted, start=1):
-    node = ch["node_data"]
-    node["majorNumber"] = index
-    final_list_modern.append(node)
-```
-
-But for the legacy format (else branch), the code does try to sort and update the prNum:
-```python
-item_strings_sorted = []
-for index, ch in enumerate(channels_sorted, start=1):
-    raw = ch["raw_str"]
-    if "<prNum>" in raw:
-        raw = re.sub(r'<prNum>\d+</prNum>', f'<prNum>{index}</prNum>', raw)
-    else:
-        raw = raw.replace("<ITEM>", f"<ITEM>\r\n<prNum>{index}</prNum>")
-    item_strings_sorted.append(raw)
-```
-
-However, the problem might be that:
-1. The prNum might not exist in the original file, so it's being added but maybe not correctly
-2. The XML structure might be different than expected
-3. There might be an issue with how the items are being reconstructed
- 
-I'll investigate the sorting mechanism and XML reconstruction process. The key is ensuring the channel order is preserved and correctly written back to the legacy file format. I'll verify the sorting logic and XML reconstruction steps to identify any potential issues with the ITEM tag processing.
-</think>ليك الكود الكامل بعد الإصلاح:
-
-```python
 import streamlit as st
 import xml.etree.ElementTree as ET
 import json
@@ -190,7 +146,7 @@ NILESAT_LIVE_DB = {
     "ON TIME SPORTS 2": {"frequency": 11861, "polarization": "Vertical"},
     "SPACE TOON":       {"frequency": 11727, "polarization": "Vertical"},
     "MAJID":            {"frequency": 11862, "polarization": "Vertical"},
-    "TOYOR ALJANNAH":   {"frequency": 11179, "polarization": "Horizontal"}
+    "TOYOR OSHAY":     {"frequency": 11179, "polarization": "Horizontal"}
 }
 
 ALL_AVAILABLE_CATEGORIES = [
@@ -215,4 +171,39 @@ def ai_classify(channel_name):
     MOVIE_KW = ["CINEMA", "ROTANA", "AFLAM", "MIX", "FOX", "MBC2", "MBC 2", "MBC4", "MBC 4", "MBC MAX", "ACTION", "RAMBO", "MOVIE", "FILM", "COMEDY"]
     if any(w in name for w in MOVIE_KW): return ALL_AVAILABLE_CATEGORIES[3]
     KIDS_KW = ["SPACE TOON", "SPACETOON", "CN", "CARTOON", "MAJID", "KIDS", "TOM", "TOYOR", "BABY", "JUNIOR"]
-    if any(w in name for
+    if any(w in name for w in KIDS_KW): return ALL_AVAILABLE_CATEGORIES[4]
+    SPORT_KW = ["SPORT", "SPORTS", "ONTIME", "ON TIME", "KASS", "AD_SPORTS", "AD SPORTS", "SSC", "BEIN", "MATCH"]
+    if any(w in name for w in SPORT_KW): return ALL_AVAILABLE_CATEGORIES[5]
+    NEWS_KW = ["NEWS", "JAZEERA", "ARABIYA", "HADATH", "CAIRO", "SKY NEWS", "BBC", "CNN", "EXTRA NEWS", "CBC", "ON E", "SADA", "BALADI", "MASR"]
+    if any(w in name for w in NEWS_KW): return ALL_AVAILABLE_CATEGORIES[6]
+    return ALL_AVAILABLE_CATEGORIES[7]
+
+# ── رفع الملف والمعالجة ──
+uploaded_file = st.file_uploader(t['upload_label'], type=["TLL"])
+
+if uploaded_file is not None:
+    file_bytes = uploaded_file.read()
+
+    try:
+        file_text = file_bytes.decode('utf-8')
+    except UnicodeDecodeError:
+        file_text = file_bytes.decode('latin-1')
+
+    file_text_cleaned = re.sub(r'^\s+', '', file_text)
+    
+    try:
+        root = ET.fromstring(file_text_cleaned.encode('utf-8'))
+    except Exception:
+        root = ET.fromstring(file_text_cleaned.encode('latin-1'))
+
+    model_setting = root.find(".//ModelName")
+    model_name = model_setting.text if model_setting is not None else "Unknown LG TV"
+
+    legacy_broadcast_tag = root.find(".//legacybroadcast")
+    is_modern = legacy_broadcast_tag is not None and legacy_broadcast_tag.text
+
+    st.info(f"{t['success_read']} **{model_name}**")
+
+    st.markdown(f"""
+        <div class="lg-trick-box">
+            <h4 style="color:
