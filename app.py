@@ -211,7 +211,6 @@ if uploaded_file is not None:
         </div>
     """.format(title=t['lg_trick_title'], text=t['lg_trick_text']), unsafe_allow_html=True)
 
-    # خانات التحكم المفعلة برمجياً
     update_freq = st.checkbox(t['update_freq_label'], value=True)
     add_new_ch = st.checkbox(t['add_new_ch_label'], value=True)
 
@@ -267,7 +266,6 @@ if uploaded_file is not None:
         except Exception as json_err:
             st.error("⚠️ خطأ في معالجة الملف: {}".format(str(json_err)))
     else:
-        # معالجة الشاشات القديمة <ITEM>
         item_blocks = re.findall(r'(<ITEM>.*?</ITEM>)', file_text, re.DOTALL)
         
         items_list = []
@@ -276,7 +274,6 @@ if uploaded_file is not None:
             freq_match = re.search(r'<frequency>(.*?)</frequency>', item_str)
             ch_name = name_match.group(1) if name_match else "Unknown"
             
-            # تحديث التردد
             if update_freq and ch_name.upper() in NILESAT_LIVE_DB:
                 live_freq = str(NILESAT_LIVE_DB[ch_name.upper()]["frequency"])
                 item_str = re.sub(r'<frequency>\d+</frequency>', '<frequency>{}</frequency>'.format(live_freq), item_str)
@@ -285,7 +282,6 @@ if uploaded_file is not None:
             
             items_list.append({"name": ch_name, "freq": live_freq, "raw_str": item_str, "is_injected": False})
 
-        # إضافة القنوات الجديدة
         if add_new_ch and item_blocks:
             sample_item = item_blocks[0]
             existing_names_upper = {ch["name"].upper() for ch in items_list}
@@ -296,7 +292,7 @@ if uploaded_file is not None:
                     new_item = re.sub(r'<frequency>\d+</frequency>', '<frequency>{}</frequency>'.format(freq_num), new_item)
                     items_list.append({"name": db_name, "freq": str(db_info["frequency"]), "raw_str": new_item, "is_injected": True})
 
-        channels_sorted = items_list
+        channels_to_sort = items_list
 
     # ── محرك البحث ──
     st.write("---")
@@ -304,7 +300,7 @@ if uploaded_file is not None:
     search_query = st.text_input("", placeholder=t['search_placeholder']).strip().upper()
     if search_query:
         search_results = []
-        for idx, ch in enumerate(channels_sorted, start=1):
+        for idx, ch in enumerate(channels_to_sort, start=1):
             if search_query in ch["name"].upper():
                 search_results.append({
                     t['search_col_num']: idx, t['search_col_name']: ch["name"],
@@ -324,7 +320,7 @@ if uploaded_file is not None:
         if cat not in final_priority: 
             final_priority.append(cat)
 
-    channels_sorted = sorted(channels_sorted, key=lambda x: final_priority.index(ai_classify(x["name"])))
+    channels_sorted = sorted(channels_to_sort, key=lambda x: final_priority.index(ai_classify(x["name"])))
 
     # المعاينة الحية
     categorized = {}
@@ -351,11 +347,14 @@ if uploaded_file is not None:
         st.write("### 🔁 سجل التعديلات والزرع والصيانة الذكية:")
         st.table(report_changes)
 
-    # ── التصدير وبناء الـ TXT والـ TLL بأمان تام ──
-    text_report = "{} ({}))\n".format(t['txt_header'], model_name) + "="*50 + "\n"
+    # ── التصدير ──
+    text_report = "{} ({})\n".format(t['txt_header'], model_name) + "="*50 + "\n"
     text_report += "{} ".format(t['txt_order']) + " -> ".join(final_priority) + "\n" + "="*50 + "\n\n"
 
     if is_modern:
+        # ═══════════════════════════════════════════════
+        # 🔧 الشاشات الحديثة — التصحيح: إعادة تعيين الـ JSON
+        # ═══════════════════════════════════════════════
         final_list_modern = []
         for index, ch in enumerate(channels_sorted, start=1):
             node = ch["node_data"]
@@ -365,10 +364,12 @@ if uploaded_file is not None:
             text_report += "No. {:03d} : {:25} | Freq: {}{}\n".format(index, ch['name'], ch['freq'], tag_status)
         
         broadcast_data["channelList"] = final_list_modern
+        
+        # ✅ التصحيح الرئيسي: إعادة تعيين legacy_broadcast_tag.text قبل الـ tostring
         legacy_broadcast_tag.text = json.dumps(broadcast_data, ensure_ascii=False, separators=(',', ':'))
+        
         final_xml_bytes = ET.tostring(root, encoding="utf-8")
     else:
-        # تحديث الأرقام وإعادة البناء للشاشات القديمة
         item_strings_sorted = []
         for index, ch in enumerate(channels_sorted, start=1):
             raw = ch["raw_str"]
