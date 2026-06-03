@@ -297,10 +297,9 @@ if uploaded_file is not None:
             for db_name, db_info in NILESAT_LIVE_DB.items():
                 if db_name not in existing_names_upper:
                     new_item = sample_item
-                    new_item = re.sub(r'<vchName>.*?</vchName>', f'<vchName>{db_name}</vchName>', new_item)
-                    # ✅ التصحيح هنا: استخدام f-string بغلاف مزدوج
-                    freq_value = db_info["frequency"]
-                    new_item = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{freq_value}</frequency>', new_item)
+                    new_item = re.sub(r'<vchName>.*?</vchName>', '<vchName>' + db_name + '</vchName>', new_item)
+                    freq_num = str(db_info["frequency"])
+                    new_item = re.sub(r'<frequency>\d+</frequency>', '<frequency>' + freq_num + '</frequency>', new_item)
                     
                     channels_to_sort.append({
                         "name": db_name, 
@@ -387,10 +386,10 @@ if uploaded_file is not None:
             raw = ch["raw_str"]
             # تحديث prNum بالرقم الجديد المرتّب
             if "<prNum>" in raw:
-                raw = re.sub(r'<prNum>\d+</prNum>', f'<prNum>{index}</prNum>', raw)
+                raw = re.sub(r'<prNum>\d+</prNum>', '<prNum>' + str(index) + '</prNum>', raw)
             else:
                 # إضافة prNum إذا كان غير موجود
-                raw = raw.replace("<ITEM>", f"<ITEM>\r\n<prNum>{index}</prNum>")
+                raw = raw.replace("<ITEM>", "<ITEM>\r\n<prNum>" + str(index) + "</prNum>")
             item_strings_sorted.append(raw)
             tag_status = " [NEW] " if ch["is_injected"] else ""
             text_report += f"No. {index:03d} : {ch['name']:<25} | Freq: {ch['freq']}{tag_status}\n"
