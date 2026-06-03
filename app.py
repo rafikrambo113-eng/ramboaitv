@@ -224,11 +224,11 @@ st.markdown(f"<h3 style='text-align:center;'>{t['subtitle']}</h3>", unsafe_allow
 
 col_lang, col_theme, _ = st.columns([1.2, 1.5, 8])
 with col_lang:
-    if st.button("🌐 English" if st.session_state.lang == "ar" else "🌐 العربية"):
+    if st.button("" if st.session_state.lang == "ar" else ""):
         st.session_state.lang = "en" if st.session_state.lang == "ar" else "ar"
         st.rerun()
 with col_theme:
-    if st.button("☀️ Light Mode" if st.session_state.theme == "dark" else "🌙 Dark Mode"):
+    if st.button("" if st.session_state.theme == "dark" else ""):
         st.session_state.theme = "light" if st.session_state.theme == "dark" else "dark"
         st.rerun()
 
