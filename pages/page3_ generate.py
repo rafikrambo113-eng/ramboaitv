@@ -1,28 +1,23 @@
-import streamlit as st
 import xml.etree.ElementTree as ET
 import json
 
-def apply_egypt_config(file_path):
-    tree = ET.parse(file_path)
-    root = tree.getroot()
-
-    # 1. تحديث الـ ModelInfo الرئيسي (XML)
+def fix_tll_file(file_content, target_code, target_name):
+    # تحميل الملف
+    root = ET.fromstring(file_content)
+    
+    # 1. تعديل الترويسة الرئيسية (XML)
     model_info = root.find(".//ModelInfo")
-    model_info.find("BroadcastCountrySetting").text = "EGY"
-    model_info.find("country").text = "EGY"
+    if model_info is not None:
+        model_info.find("BroadcastCountrySetting").text = target_code
+        model_info.find("country").text = target_code # كود الدولة البرمجي
 
-    # 2. تحديث الـ iepg والـ legacybroadcast (JSON المدمج)
-    # هذا الجزء هو السبب الرئيسي لرفض الملفات
-    for tag in ["iepg", "legacybroadcast"]:
-        element = root.find(f".//{tag}")
+    # 2. تعديل الـ JSON المدمج (هنا تقع المشكلة غالباً)
+    for tag_name in ["iepg", "legacybroadcast"]:
+        element = root.find(f".//{tag_name}")
         if element is not None and element.text:
             data = json.loads(element.text)
-            # تحديث كود الدولة داخل الـ JSON
             if 'modelInfo' in data:
-                data['modelInfo']['country'] = "Egypt"
+                data['modelInfo']['country'] = target_name # اسم الدولة الصريح
             element.text = json.dumps(data)
-    
-    return ET.tostring(root, encoding='utf-8', method='xml')
-
-# في واجهة الاستخدام:
-# عند اختيار "مصر"، استدعِ هذه الدالة وقم بتنزيل الملف الناتج باسم GlobalClone00001.TLL
+            
+    return ET.tostring(root, encoding='utf-8')
