@@ -118,9 +118,6 @@ st.markdown("""
 st.title(t['title'])
 st.markdown("<h3>{}</h3>".format(t['subtitle']), unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════
-# 🛰️ DATABASE — نايل سات
-# ══════════════════════════════════════════════
 NILESAT_LIVE_DB = {
     "AL HAYAT":         {"frequency": 12207, "polarization": "Vertical"},
     "AL HAYAT 2":       {"frequency": 12207, "polarization": "Vertical"},
@@ -178,7 +175,6 @@ def ai_classify(channel_name):
     if any(w in name for w in NEWS_KW): return ALL_AVAILABLE_CATEGORIES[6]
     return ALL_AVAILABLE_CATEGORIES[7]
 
-# ── رفع الملف والمعالجة ──
 uploaded_file = st.file_uploader(t['upload_label'], type=["TLL"])
 
 if uploaded_file is not None:
@@ -228,8 +224,6 @@ if uploaded_file is not None:
                 old_freq = str(ch.get("frequency", "N/A"))
                 name_up = ch_name.upper()
                 existing_names_upper.add(name_up)
-                
-                # ✅ إضافة category لكل قناة بناءً على ai_classify
                 ch["category"] = ai_classify(ch_name)
 
                 if update_freq and name_up in NILESAT_LIVE_DB:
@@ -254,7 +248,6 @@ if uploaded_file is not None:
                         new_node["frequency"] = db_info["frequency"]
                         new_node["polarization"] = db_info["polarization"]
                         new_node["invisible"] = 0
-                        # ✅ إضافة category للقناة الجديدة
                         new_node["category"] = ai_classify(db_name)
                         
                         channels_to_sort.append({
@@ -299,7 +292,6 @@ if uploaded_file is not None:
 
         channels_to_sort = items_list
 
-    # ── محرك البحث ──
     st.write("---")
     st.write("### {}".format(t['search_header']))
     search_query = st.text_input("", placeholder=t['search_placeholder']).strip().upper()
@@ -316,7 +308,6 @@ if uploaded_file is not None:
         else: 
             st.warning(t['search_no_results'])
 
-    # ── مصفوفة الترتيب ──
     st.write("---")
     st.write("### {}".format(t['config_title']))
     user_priority = st.multiselect(t['multiselect_label'], options=ALL_AVAILABLE_CATEGORIES, default=[])
@@ -327,7 +318,6 @@ if uploaded_file is not None:
 
     channels_sorted = sorted(channels_to_sort, key=lambda x: final_priority.index(ai_classify(x["name"])))
 
-    # المعاينة الحية
     categorized = {}
     for ch in channels_sorted:
         cat = ai_classify(ch["name"])
@@ -344,7 +334,9 @@ if uploaded_file is not None:
             target_col = col1 if i % 2 == 0 else col2
             with target_col:
                 is_user_chosen = "⭐ " if cat_name in user_priority else ""
-                with st.expander("{}{} — ({} {})".format(is_user_chosen, cat_name, len(ch_list), t['channels_count"])):
+                # ✅ التصحيح: استخدام + بدلاً من .format()
+                expander_title = is_user_chosen + cat_name + " — (" + str(len(ch_list)) + " " + t['channels_count'] + ")"
+                with st.expander(expander_title):
                     st.write(", ".join(ch_list))
 
     if report_changes:
@@ -352,12 +344,10 @@ if uploaded_file is not None:
         st.write("### 🔁 سجل التعديلات والزرع والصيانة الذكية:")
         st.table(report_changes)
 
-    # ── التصدير ──
     text_report = "{} ({})\n".format(t['txt_header'], model_name) + "="*50 + "\n"
     text_report += "{} ".format(t['txt_order']) + " -> ".join(final_priority) + "\n" + "="*50 + "\n\n"
 
     if is_modern:
-        # ✅ الشاشات الحديثة — الـ category مُضاف والـ majorNumber محدث
         final_list_modern = []
         for index, ch in enumerate(channels_sorted, start=1):
             node = ch["node_data"]
@@ -407,7 +397,6 @@ if uploaded_file is not None:
         st.download_button(label=t['btn_download_txt'], data=text_report,
                            file_name="Channels_List.txt", mime="text/plain; charset=utf-8")
 
-# ── الفوتر الفني ──
 whatsapp_url = ("https://api.whatsapp.com/send?phone=201280339779"
                 "&text=Hello%20Developer%20Rafik%20Rambo%2C%20"
                 "I%20have%20an%20inquiry%20regarding%20your%20LG%20TV%20Sorter%20script%3A")
