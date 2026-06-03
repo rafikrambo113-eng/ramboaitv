@@ -298,7 +298,9 @@ if uploaded_file is not None:
                 if db_name not in existing_names_upper:
                     new_item = sample_item
                     new_item = re.sub(r'<vchName>.*?</vchName>', f'<vchName>{db_name}</vchName>', new_item)
-                    new_item = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{db_info["frequency']}</frequency>', new_item)
+                    # ✅ التصحيح هنا: استخدام f-string بغلاف مزدوج
+                    freq_value = db_info["frequency"]
+                    new_item = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{freq_value}</frequency>', new_item)
                     
                     channels_to_sort.append({
                         "name": db_name, 
