@@ -228,6 +228,9 @@ if uploaded_file is not None:
                 old_freq = str(ch.get("frequency", "N/A"))
                 name_up = ch_name.upper()
                 existing_names_upper.add(name_up)
+                
+                # ✅ إضافة category لكل قناة بناءً على ai_classify
+                ch["category"] = ai_classify(ch_name)
 
                 if update_freq and name_up in NILESAT_LIVE_DB:
                     live_freq = NILESAT_LIVE_DB[name_up]["frequency"]
@@ -251,6 +254,8 @@ if uploaded_file is not None:
                         new_node["frequency"] = db_info["frequency"]
                         new_node["polarization"] = db_info["polarization"]
                         new_node["invisible"] = 0
+                        # ✅ إضافة category للقناة الجديدة
+                        new_node["category"] = ai_classify(db_name)
                         
                         channels_to_sort.append({
                             "name": db_name, 
@@ -339,7 +344,7 @@ if uploaded_file is not None:
             target_col = col1 if i % 2 == 0 else col2
             with target_col:
                 is_user_chosen = "⭐ " if cat_name in user_priority else ""
-                with st.expander("{}{} — ({} {})".format(is_user_chosen, cat_name, len(ch_list), t['channels_count'])):
+                with st.expander("{}{} — ({} {})".format(is_user_chosen, cat_name, len(ch_list), t['channels_count"])):
                     st.write(", ".join(ch_list))
 
     if report_changes:
@@ -352,9 +357,7 @@ if uploaded_file is not None:
     text_report += "{} ".format(t['txt_order']) + " -> ".join(final_priority) + "\n" + "="*50 + "\n\n"
 
     if is_modern:
-        # ═══════════════════════════════════════════════
-        # 🔧 الشاشات الحديثة — التصحيح: إعادة تعيين الـ JSON
-        # ═══════════════════════════════════════════════
+        # ✅ الشاشات الحديثة — الـ category مُضاف والـ majorNumber محدث
         final_list_modern = []
         for index, ch in enumerate(channels_sorted, start=1):
             node = ch["node_data"]
@@ -364,8 +367,6 @@ if uploaded_file is not None:
             text_report += "No. {:03d} : {:25} | Freq: {}{}\n".format(index, ch['name'], ch['freq'], tag_status)
         
         broadcast_data["channelList"] = final_list_modern
-        
-        # ✅ التصحيح الرئيسي: إعادة تعيين legacy_broadcast_tag.text قبل الـ tostring
         legacy_broadcast_tag.text = json.dumps(broadcast_data, ensure_ascii=False, separators=(',', ':'))
         
         final_xml_bytes = ET.tostring(root, encoding="utf-8")
