@@ -99,24 +99,24 @@ else:
     footer_bg = "#110926"
     footer_text = "#ffffff"
 
-st.markdown(f"""
+st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;900&family=Cairo:wght@400;700&display=swap');
-    .main {{ background: {bg_style} !important; color: {text_color} !important; font-family: { "'Cairo', sans-serif" if st.session_state.lang == 'ar' else "'Orbitron', sans-serif" }; }}
-    h1 {{ color: #ff007f !important; text-shadow: 0 0 10px #ff007f, 0 0 25px rgba(255, 0, 127, 0.4) !important; text-align: center; font-weight: 900; margin-top: 5px; }}
-    h3, p, label, .stMarkdown, .stInfo, div[data-testid="stMarkdownContainer"] p {{ color: {text_color} !important; text-shadow: {text_shadow_glow}; }}
-    .stTextInput>div>div>input {{ background-color: {box_bg} !important; color: {text_color} !important; border: 2px solid {box_border} !important; border-radius: 10px !important; }}
-    .stCheckbox, .stMultiSelect, div[data-testid="stExpander"], div[data-testid="stFileUploader"], .lg-trick-box {{ background: {box_bg} !important; border: 2px solid {box_border} !important; box-shadow: 0px 5px 15px {box_shadow} !important; border-radius: 14px !important; padding: 18px !important; margin-bottom: 20px !important; }}
-    .lg-trick-box {{ border-color: #ff007f !important; box-shadow: 0px 5px 15px rgba(255, 0, 127, 0.25) !important; }}
-    .stButton>button {{ background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important; color: #ffffff !important; border: 2px solid #ff007f !important; border-radius: 12px !important; font-weight: bold; }}
-    .futuristic-cyber-footer {{ background: {footer_bg}; border: 2px solid #00f0ff; color: {footer_text} !important; padding: 35px; text-align: center; border-radius: 20px; margin-top: 65px; font-family: 'Orbitron', sans-serif; }}
-    .footer-dev {{ color: #ff007f; font-size: 26px; font-weight: bold; }}
-    .cyber-whatsapp-btn {{ color: #25d366 !important; padding: 14px 35px; border-radius: 35px; display: inline-block; font-weight: bold; border: 2px solid #25d366; text-decoration: none; margin-top: 20px; }}
+    .main { background: radial-gradient(circle at 50% 0%, #110926 0%, #05020d 100%) !important; color: #00f0ff !important; font-family: 'Cairo', sans-serif; }
+    h1 { color: #ff007f !important; text-shadow: 0 0 10px #ff007f, 0 0 25px rgba(255, 0, 127, 0.4) !important; text-align: center; font-weight: 900; margin-top: 5px; }
+    h3, p, label, .stMarkdown, .stInfo, div[data-testid="stMarkdownContainer"] p { color: #00f0ff !important; text-shadow: 0 0 5px rgba(0, 240, 255, 0.4); }
+    .stTextInput>div>div>input { background-color: rgba(13, 7, 33, 0.85) !important; color: #00f0ff !important; border: 2px solid #00f0ff !important; border-radius: 10px !important; }
+    .stCheckbox, .stMultiSelect, div[data-testid="stExpander"], div[data-testid="stFileUploader"], .lg-trick-box { background: rgba(13, 7, 33, 0.85) !important; border: 2px solid #00f0ff !important; box-shadow: 0px 5px 15px rgba(0, 240, 255, 0.35) !important; border-radius: 14px !important; padding: 18px !important; margin-bottom: 20px !important; }
+    .lg-trick-box { border-color: #ff007f !important; box-shadow: 0px 5px 15px rgba(255, 0, 127, 0.25) !important; }
+    .stButton>button { background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important; color: #ffffff !important; border: 2px solid #ff007f !important; border-radius: 12px !important; font-weight: bold; }
+    .futuristic-cyber-footer { background: #080314; border: 2px solid #00f0ff; color: #ffffff !important; padding: 35px; text-align: center; border-radius: 20px; margin-top: 65px; font-family: 'Orbitron', sans-serif; }
+    .footer-dev { color: #ff007f; font-size: 26px; font-weight: bold; }
+    .cyber-whatsapp-btn { color: #25d366 !important; padding: 14px 35px; border-radius: 35px; display: inline-block; font-weight: bold; border: 2px solid #25d366; text-decoration: none; margin-top: 20px; }
     </style>
 """, unsafe_allow_html=True)
 
 st.title(t['title'])
-st.markdown(f"<h3>{t['subtitle']}</h3>", unsafe_allow_html=True)
+st.markdown("<h3>{}</h3>".format(t['subtitle']), unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════
 # 🛰️ DATABASE — نايل سات
@@ -202,21 +202,21 @@ if uploaded_file is not None:
     legacy_broadcast_tag = root.find(".//legacybroadcast")
     is_modern = legacy_broadcast_tag is not None and legacy_broadcast_tag.text
 
-    st.info(f"{t['success_read']} **{model_name}**")
+    st.info("{} **{}**".format(t['success_read'], model_name))
 
-    st.markdown(f"""
+    st.markdown("""
         <div class="lg-trick-box">
-            <h4 style="color: #ff007f; margin-top:0;">{t['lg_trick_title']}</h4>
-            <p style="white-space: pre-line; margin-bottom:0; font-size:14px;">{t['lg_trick_text']}</p>
+            <h4 style="color: #ff007f; margin-top:0;">{title}</h4>
+            <p style="white-space: pre-line; margin-bottom:0; font-size:14px;">{text}</p>
         </div>
-    """, unsafe_allow_html=True)
+    """.format(title=t['lg_trick_title'], text=t['lg_trick_text']), unsafe_allow_html=True)
 
     # خانات التحكم المفعلة برمجياً
     update_freq = st.checkbox(t['update_freq_label'], value=True)
     add_new_ch = st.checkbox(t['add_new_ch_label'], value=True)
 
     channels_to_sort = []
-    report_changes   = []
+    report_changes = []
     existing_names_upper = set()
 
     if is_modern:
@@ -235,7 +235,7 @@ if uploaded_file is not None:
                     if old_freq != str(live_freq):
                         report_changes.append({
                             "القناة": ch_name, "الفئة (Category)": ai_classify(ch_name),
-                            "التردد القديم": f"{old_freq} MHz", "التردد الجديد": f"{live_freq} MHz"
+                            "التردد القديم": "{} MHz".format(old_freq), "التردد الجديد": "{} MHz".format(live_freq)
                         })
                         ch["frequency"] = int(live_freq)
                         ch["polarization"] = NILESAT_LIVE_DB[name_up]["polarization"]
@@ -243,7 +243,6 @@ if uploaded_file is not None:
 
                 channels_to_sort.append({"name": ch_name, "freq": old_freq, "node_data": ch, "is_injected": False})
 
-            # 🔥 عملية زرع وفحص القنوات الجديدة المفقودة للشاشات الحديثة 🔥
             if add_new_ch and channels_list:
                 sample_node = channels_list[0]
                 for db_name, db_info in NILESAT_LIVE_DB.items():
@@ -262,90 +261,81 @@ if uploaded_file is not None:
                         })
                         report_changes.append({
                             "القناة": db_name, "الفئة (Category)": ai_classify(db_name),
-                            "التردد القديم": "غير موجودة (مضافة)", "التردد الجديد": f"{db_info['frequency']} MHz"
+                            "التردد القديم": "غير موجودة (مضافة)", "التردد الجديد": "{} MHz".format(db_info['frequency'])
                         })
 
         except Exception as json_err:
-            st.error(f"⚠️ خطأ في معالجة الملف: {str(json_err)}")
+            st.error("⚠️ خطأ في معالجة الملف: {}".format(str(json_err)))
     else:
         # معالجة الشاشات القديمة <ITEM>
         item_blocks = re.findall(r'(<ITEM>.*?</ITEM>)', file_text, re.DOTALL)
-
+        
+        items_list = []
         for item_str in item_blocks:
             name_match = re.search(r'<vchName>(.*?)</vchName>', item_str)
             freq_match = re.search(r'<frequency>(.*?)</frequency>', item_str)
-            ch_name  = name_match.group(1) if name_match else "Unknown"
-            old_freq = freq_match.group(1) if freq_match else "N/A"
-            name_up  = ch_name.upper()
-            existing_names_upper.add(name_up)
+            ch_name = name_match.group(1) if name_match else "Unknown"
+            
+            # تحديث التردد
+            if update_freq and ch_name.upper() in NILESAT_LIVE_DB:
+                live_freq = str(NILESAT_LIVE_DB[ch_name.upper()]["frequency"])
+                item_str = re.sub(r'<frequency>\d+</frequency>', '<frequency>{}</frequency>'.format(live_freq), item_str)
+            else:
+                live_freq = freq_match.group(1) if freq_match else "N/A"
+            
+            items_list.append({"name": ch_name, "freq": live_freq, "raw_str": item_str, "is_injected": False})
 
-            if update_freq and name_up in NILESAT_LIVE_DB:
-                live_freq = str(NILESAT_LIVE_DB[name_up]["frequency"])
-                if old_freq != live_freq:
-                    report_changes.append({
-                        "القناة": ch_name, "الفئة (Category)": ai_classify(ch_name),
-                        "التردد القديم": f"{old_freq} MHz", "التردد الجديد": f"{live_freq} MHz"
-                    })
-                    item_str = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{live_freq}</frequency>', item_str)
-                    old_freq = live_freq
-
-            channels_to_sort.append({"name": ch_name, "freq": old_freq, "raw_str": item_str, "is_injected": False})
-
-        # 🔥 زرع القنوات الجديدة للأنظمة القديمة <ITEM> 🔥
+        # إضافة القنوات الجديدة
         if add_new_ch and item_blocks:
             sample_item = item_blocks[0]
+            existing_names_upper = {ch["name"].upper() for ch in items_list}
             for db_name, db_info in NILESAT_LIVE_DB.items():
                 if db_name not in existing_names_upper:
-                    new_item = sample_item
-                    new_item = re.sub(r'<vchName>.*?</vchName>', '<vchName>' + db_name + '</vchName>', new_item)
+                    new_item = re.sub(r'<vchName>.*?</vchName>', '<vchName>{}</vchName>'.format(db_name), sample_item)
                     freq_num = str(db_info["frequency"])
-                    new_item = re.sub(r'<frequency>\d+</frequency>', '<frequency>' + freq_num + '</frequency>', new_item)
-                    
-                    channels_to_sort.append({
-                        "name": db_name, 
-                        "freq": str(db_info["frequency"]), 
-                        "raw_str": new_item,
-                        "is_injected": True
-                    })
-                    report_changes.append({
-                        "القناة": db_name, "الفئة (Category)": ai_classify(db_name),
-                        "التردد القديم": "غير موجودة (مضافة)", "التردد الجديد": f"{db_info['frequency']} MHz"
-                    })
+                    new_item = re.sub(r'<frequency>\d+</frequency>', '<frequency>{}</frequency>'.format(freq_num), new_item)
+                    items_list.append({"name": db_name, "freq": str(db_info["frequency"]), "raw_str": new_item, "is_injected": True})
+
+        channels_sorted = items_list
 
     # ── محرك البحث ──
     st.write("---")
-    st.write(f"### {t['search_header']}")
+    st.write("### {}".format(t['search_header']))
     search_query = st.text_input("", placeholder=t['search_placeholder']).strip().upper()
     if search_query:
         search_results = []
-        for idx, ch in enumerate(channels_to_sort, start=1):
+        for idx, ch in enumerate(channels_sorted, start=1):
             if search_query in ch["name"].upper():
                 search_results.append({
                     t['search_col_num']: idx, t['search_col_name']: ch["name"],
                     t['search_col_cat']: ai_classify(ch["name"]), t['search_col_freq']: ch["freq"]
                 })
-        if search_results: st.table(search_results)
-        else: st.warning(t['search_no_results'])
+        if search_results: 
+            st.table(search_results)
+        else: 
+            st.warning(t['search_no_results'])
 
     # ── مصفوفة الترتيب ──
     st.write("---")
-    st.write(f"### {t['config_title']}")
+    st.write("### {}".format(t['config_title']))
     user_priority = st.multiselect(t['multiselect_label'], options=ALL_AVAILABLE_CATEGORIES, default=[])
     final_priority = list(user_priority)
     for cat in ALL_AVAILABLE_CATEGORIES:
-        if cat not in final_priority: final_priority.append(cat)
+        if cat not in final_priority: 
+            final_priority.append(cat)
 
-    channels_sorted = sorted(channels_to_sort, key=lambda x: final_priority.index(ai_classify(x["name"])))
+    channels_sorted = sorted(channels_sorted, key=lambda x: final_priority.index(ai_classify(x["name"])))
 
     # المعاينة الحية
     categorized = {}
     for ch in channels_sorted:
         cat = ai_classify(ch["name"])
-        if cat not in categorized: categorized[cat] = []
+        if cat not in categorized: 
+            categorized[cat] = []
         categorized[cat].append(ch["name"])
 
     st.write("---")
-    st.write(f"### {t['preview_title']}")
+    st.write("### {}".format(t['preview_title']))
     col1, col2 = st.columns(2)
     for i, cat_name in enumerate(final_priority):
         if cat_name in categorized:
@@ -353,7 +343,7 @@ if uploaded_file is not None:
             target_col = col1 if i % 2 == 0 else col2
             with target_col:
                 is_user_chosen = "⭐ " if cat_name in user_priority else ""
-                with st.expander(f"{is_user_chosen}{cat_name} — ({len(ch_list)} {t['channels_count']})"):
+                with st.expander("{}{} — ({} {})".format(is_user_chosen, cat_name, len(ch_list), t['channels_count'])):
                     st.write(", ".join(ch_list))
 
     if report_changes:
@@ -362,8 +352,8 @@ if uploaded_file is not None:
         st.table(report_changes)
 
     # ── التصدير وبناء الـ TXT والـ TLL بأمان تام ──
-    text_report = f"{t['txt_header']} ({model_name})\n" + "="*50 + "\n"
-    text_report += f"{t['txt_order']} " + " -> ".join(final_priority) + "\n" + "="*50 + "\n\n"
+    text_report = "{} ({}))\n".format(t['txt_header'], model_name) + "="*50 + "\n"
+    text_report += "{} ".format(t['txt_order']) + " -> ".join(final_priority) + "\n" + "="*50 + "\n\n"
 
     if is_modern:
         final_list_modern = []
@@ -372,44 +362,36 @@ if uploaded_file is not None:
             node["majorNumber"] = index
             final_list_modern.append(node)
             tag_status = " [NEW] " if ch["is_injected"] else ""
-            text_report += f"No. {index:03d} : {ch['name']:<25} | Freq: {ch['freq']}{tag_status}\n"
+            text_report += "No. {:03d} : {:25} | Freq: {}{}\n".format(index, ch['name'], ch['freq'], tag_status)
         
         broadcast_data["channelList"] = final_list_modern
         legacy_broadcast_tag.text = json.dumps(broadcast_data, ensure_ascii=False, separators=(',', ':'))
         final_xml_bytes = ET.tostring(root, encoding="utf-8")
     else:
-        # ═══════════════════════════════════════════════════════════
-        # 🔧 التعديل الرئيسي هنا للشاشات القديمة — بناء الملف النهائي
-        # ═══════════════════════════════════════════════════════════
+        # تحديث الأرقام وإعادة البناء للشاشات القديمة
         item_strings_sorted = []
         for index, ch in enumerate(channels_sorted, start=1):
             raw = ch["raw_str"]
-            # تحديث prNum بالرقم الجديد المرتّب
             if "<prNum>" in raw:
-                raw = re.sub(r'<prNum>\d+</prNum>', '<prNum>' + str(index) + '</prNum>', raw)
+                raw = re.sub(r'<prNum>\d+</prNum>', '<prNum>{}</prNum>'.format(index), raw)
             else:
-                # إضافة prNum إذا كان غير موجود
-                raw = raw.replace("<ITEM>", "<ITEM>\r\n<prNum>" + str(index) + "</prNum>")
+                raw = raw.replace("<ITEM>", "<ITEM>\r\n<prNum>{}</prNum>".format(index))
             item_strings_sorted.append(raw)
             tag_status = " [NEW] " if ch["is_injected"] else ""
-            text_report += f"No. {index:03d} : {ch['name']:<25} | Freq: {ch['freq']}{tag_status}\n"
+            text_report += "No. {:03d} : {:25} | Freq: {}{}\n".format(index, ch['name'], ch['freq'], tag_status)
 
-        # دمج جميع عناصر ITEM بالترتيب الجديد
         combined_items_str = "\r\n".join(item_strings_sorted)
-        
-        # استبدال محتوى ITEM القديم بالترتيب الجديد في النص الأصلي
         start_idx = file_text.find("<ITEM>")
-        end_idx   = file_text.rfind("</ITEM>") + len("</ITEM>")
+        end_idx = file_text.rfind("</ITEM>") + len("</ITEM>")
 
         if start_idx != -1 and end_idx != -1:
             final_text_output = file_text[:start_idx] + combined_items_str + file_text[end_idx:]
         else:
             final_text_output = combined_items_str
 
-        # تشفير النص النهائي إلى bytes للتحميل
-        try:
+        try: 
             final_xml_bytes = final_text_output.encode('utf-8')
-        except UnicodeEncodeError:
+        except UnicodeEncodeError: 
             final_xml_bytes = final_text_output.encode('latin-1')
 
     st.write("---")
@@ -427,11 +409,11 @@ if uploaded_file is not None:
 whatsapp_url = ("https://api.whatsapp.com/send?phone=201280339779"
                 "&text=Hello%20Developer%20Rafik%20Rambo%2C%20"
                 "I%20have%20an%20inquiry%20regarding%20your%20LG%20TV%20Sorter%20script%3A")
-st.markdown(f"""
+st.markdown("""
     <div class="futuristic-cyber-footer">
         <div class="footer-dev">🛠️ DEVELOPER ENG: RAFIK RAMBO</div>
         <div class="footer-item">📱 <b>MOBILE / الموبايل:</b> +201280339779</div>
         <div class="footer-item">✉️ <b>E-MAIL / البريد الإلكتروني:</b> rafikrambo113@gmail.com</div>
-        <a href="{whatsapp_url}" target="_blank" class="cyber-whatsapp-btn">WhatsApp Web</a>
+        <a href="{url}" target="_blank" class="cyber-whatsapp-btn">WhatsApp Web</a>
     </div>
-""", unsafe_allow_html=True)
+""".format(url=whatsapp_url), unsafe_allow_html=True)
