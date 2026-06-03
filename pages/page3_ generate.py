@@ -2,111 +2,173 @@ import streamlit as st
 import xml.etree.ElementTree as ET
 import json
 import re
+from collections import OrderedDict
 
 # ─────────────────────────────
-# Session State
+# Session
 # ─────────────────────────────
-if 'lang' not in st.session_state:
-    st.session_state.lang = 'ar'
+if "lang" not in st.session_state:
+    st.session_state.lang = "ar"
 
-UI = {
-    'ar': {
-        'title': "📡 RAMBO - توليد ملف قنوات LG الذكي",
-        'subtitle': "⚡ إدخال بيانات الجهاز لإنشاء ملف مخصص",
-        'satellite': "📡 اختر القمر الصناعي (إجباري)",
-        'country': "🌍 بلد البث (إجباري)",
-        'inch': "📏 البوصة (اختياري)",
-        'model': "📺 الموديل (اختياري)",
-        'year': "📅 سنة الصنع (إجباري)",
-        'btn_generate': "🚀 توليد الملف",
-        'missing': "⚠️ لازم تكمل البيانات الإلزامية",
-        'result': "✅ تم تحديد نوع الملف:",
-        'new': "🆕 ملف حديث",
-        'old': "📼 ملف قديم"
+t = {
+    "ar": {
+        "title": "🤖 RAMBO AI - مولد ملف القنوات الذكي",
+        "sat": "📡 القمر الصناعي (إجباري)",
+        "country": "🌍 بلد البث (إجباري)",
+        "model": "📺 الموديل (اختياري)",
+        "year": "📅 سنة الصنع (إجباري)",
+        "inch": "📏 البوصة (اختياري)",
+        "btn": "🚀 توليد الملف الذكي",
+        "missing": "⚠️ أكمل البيانات الإلزامية",
+        "done": "✅ تم توليد الملف بنجاح",
+        "type_new": "🆕 ملف حديث",
+        "type_old": "📼 ملف قديم"
     }
 }
 
-t = UI[st.session_state.lang]
+UI = t["ar"]
 
-st.set_page_config(page_title="RAMBO Page 3", layout="centered")
+st.set_page_config(page_title="RAMBO AI Generator", layout="centered")
 
-st.title(t['title'])
-st.subheader(t['subtitle'])
+st.title(UI["title"])
 
 # ─────────────────────────────
 # Inputs
 # ─────────────────────────────
-satellite = st.selectbox(
-    t['satellite'],
-    ["Nilesat 7W", "Arabsat 26E", "Hotbird 13E", "Other"]
-)
+satellite = st.selectbox(UI["sat"], ["Nilesat 7W", "Arabsat 26E", "Hotbird 13E"])
+country = st.text_input(UI["country"])
+model = st.text_input(UI["model"])
+inch = st.text_input(UI["inch"])
+year = st.number_input(UI["year"], 1990, 2026, 2024)
 
-country = st.text_input(t['country'])
+# ─────────────────────────────
+# AI Categories Engine
+# ─────────────────────────────
+CATEGORY_ORDER = [
+    "News",
+    "Sports",
+    "Movies",
+    "Drama",
+    "Kids",
+    "Religious",
+    "General"
+]
 
-inch = st.text_input(t['inch'])
+def ai_classify(name):
+    n = name.upper()
 
-model = st.text_input(t['model'])
+    if any(x in n for x in ["NEWS", "BBC", "CNN", "CBC", "JAZEERA"]):
+        return "News"
+    if any(x in n for x in ["SPORT", "ON TIME", "SSC", "BEIN"]):
+        return "Sports"
+    if any(x in n for x in ["MOVIE", "CINEMA", "ROTANA", "MBC2"]):
+        return "Movies"
+    if any(x in n for x in ["DRAMA", "SERIES"]):
+        return "Drama"
+    if any(x in n for x in ["CARTOON", "KIDS", "CN", "TOYOR"]):
+        return "Kids"
+    if any(x in n for x in ["QURAN", "ISLAM", "MOSQUE", "MAKKA"]):
+        return "Religious"
 
-year = st.number_input(
-    t['year'],
-    min_value=1990,
-    max_value=2026,
-    value=2024
-)
+    return "General"
+
+# ─────────────────────────────
+# AI Channel DB (Example)
+# ─────────────────────────────
+CHANNEL_DB = [
+    "MBC 2",
+    "MBC 4",
+    "AL JAZEERA",
+    "BBC NEWS",
+    "ON TIME SPORTS",
+    "ROTANA CINEMA",
+    "CARTOON NETWORK",
+    "IQRAA",
+    "CBC",
+    "FOX MOVIES",
+    "SSC SPORTS",
+    "TOYOR ALJANNAH"
+]
 
 # ─────────────────────────────
 # Generate Logic
 # ─────────────────────────────
-if st.button(t['btn_generate']):
+if st.button(UI["btn"]):
 
     if not satellite or not country or not year:
-        st.warning(t['missing'])
+        st.warning(UI["missing"])
         st.stop()
 
-    # تحديد نوع الملف
-    file_type = "NEW" if year >= 2020 else "OLD"
+    file_type = "MODERN" if year >= 2020 else "LEGACY"
 
-    st.success(t['result'])
-
-    if file_type == "NEW":
-        st.info(f"🆕 {t['new']}")
+    if file_type == "MODERN":
+        st.info(UI["type_new"])
     else:
-        st.info(f"📼 {t['old']}")
+        st.info(UI["type_old"])
 
-    # ─────────────────────────────
-    # هنا نجهز "Metadata" للصفحات 1 و 2
-    # ─────────────────────────────
-    metadata = {
-        "satellite": satellite,
-        "country": country,
-        "inch": inch,
-        "model": model,
-        "year": year,
-        "file_type": file_type
-    }
+    # ────────────────
+    # AI SORT
+    # ────────────────
+    categorized = {}
 
-    st.session_state["page3_metadata"] = metadata
+    for ch in CHANNEL_DB:
+        cat = ai_classify(ch)
+        categorized.setdefault(cat, []).append(ch)
 
-    # عرض البيانات
-    st.json(metadata)
+    sorted_channels = []
+    for cat in CATEGORY_ORDER:
+        if cat in categorized:
+            sorted_channels += categorized[cat]
 
-    # ─────────────────────────────
-    # مثال: توليد ملف إعداد
-    # ─────────────────────────────
-    config_text = f"""
-RAMBO LG CHANNEL CONFIG
+    # ────────────────
+    # Build TLL
+    # ────────────────
+    root = ET.Element("ChannelList")
+
+    for i, name in enumerate(sorted_channels, 1):
+
+        if file_type == "MODERN":
+            node = ET.SubElement(root, "channel")
+            ET.SubElement(node, "channelName").text = name
+            ET.SubElement(node, "majorNumber").text = str(i)
+            ET.SubElement(node, "category").text = ai_classify(name)
+
+        else:
+            item = ET.SubElement(root, "ITEM")
+            ET.SubElement(item, "prNum").text = str(i)
+            ET.SubElement(item, "vchName").text = name
+            ET.SubElement(item, "frequency").text = "0000"
+
+    xml_data = ET.tostring(root, encoding="utf-8")
+
+    # ────────────────
+    # Report
+    # ────────────────
+    report = f"""
+RAMBO AI GENERATED FILE
 ========================
 Satellite: {satellite}
 Country: {country}
-Screen Size: {inch}
-Model: {model}
 Year: {year}
-File Type: {file_type}
+Model: {model}
+Type: {file_type}
+
+ORDER:
+{CATEGORY_ORDER}
 """
 
+    st.success(UI["done"])
+
     st.download_button(
-        "📥 تحميل ملف الإعداد",
-        data=config_text,
-        file_name="RAMBO_CONFIG.txt",
+        "📥 تحميل ملف القنوات",
+        data=xml_data,
+        file_name="GlobalClone00001.TLL",
+        mime="application/octet-stream"
+    )
+
+    st.download_button(
+        "📄 تقرير التوليد",
+        data=report,
+        file_name="AI_Report.txt",
         mime="text/plain"
     )
