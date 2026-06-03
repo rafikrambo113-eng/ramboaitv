@@ -35,7 +35,7 @@ UI_TEXT = {
         'txt_header': "📄 تقرير الترتيب وتحديثات الترددات النهائي لشاشة LG",
         'txt_order': "🛠️ ترتيب الفئات المختار: ",
         'lg_trick_title': "💡 ملحوظة فنية هامة جداً بعد تنزيل الملف على شاشة LG:",
-        'lg_trick_text': "في بعض الحالات، بعد تنزيل ملف القنوات على الشاشة، قد تشعر أن القنوات ليست منظمة كما رتبتها. لحل هذا الأمر فوراً واجبار الشاشة على تفعيل الترتيب الصحيح، قم بالآتي:\n1. من إعدادات التلفزيون اختار **القنوات (Channels)**.\n2. بعد ذلك اختار **مدير القنوات (Channel Manager)**.\n3. اختار **التعديل على كل القنوات (Edit All Channels)**.\n4. ستظهر لك القنوات المرتبة ويكون بعضها في وضع مخفي، قم **بتحديد كل القنوات** واختار **استعادة (Restore)**.\n*ملحوظة: تفعل هذه الخطوة فقط إذا شعرت أن الملف بعد التنزيل غير مرتب كما حددته على الموقع.*"
+        'lg_trick_text': "في بعض الحالات، بعد تنزيل ملف القنوات على الشاشة، قد تشعر أن القنوات ليست منظمة كما رتبتها. لحل هذا الأمر فوراً واجبار الشاشة على تفعيل الترتيب الصحيح، قم بالآتي: 1. من إعدادات التلفزيون اختار القنوات (Channels). 2. بعد ذلك اختار مدير القنوات (Channel Manager). 3. اختار التعديل على كل القنوات (Edit All Channels). 4. ستظهر لك القنوات المرتبة ويكون بعضها في وضع مخفي، قم تحديد كل القنوات واختار استعادة (Restore). تفعل هذه الخطوة فقط إذا شعرت أن الملف بعد التنزيل غير مرتب كما حددته على الموقع."
     },
     'en': {
         'title': "📺 RAMBO - LG Universal AI Channel Sorter",
@@ -62,7 +62,7 @@ UI_TEXT = {
         'txt_header': "📄 Final LG TV Channel Sorting & Updates Report",
         'txt_order': "🛠️ Selected Category Priority: ",
         'lg_trick_title': "💡 Critical Expert Technical Tip After Uploading to LG TV:",
-        'lg_trick_text': "In some cases, after importing the file into your LG TV, you might feel that the channels are not perfectly sorted as configured. To fix this instantly:\n1. Open TV **Settings** -> Go to **Channels**.\n2. Select **Channel Manager**.\n3. Choose **Edit All Channels**.\n4. **Select All Channels** and click **Restore**.\n*Note: Only required if the TV cache mixed the sorting order after USB upload.*"
+        'lg_trick_text': "In some cases, after importing the file into your LG TV, you might feel that the channels are not perfectly sorted as configured. To fix this instantly: 1. Open TV Settings -> Go to Channels. 2. Select Channel Manager. 3. Choose Edit All Channels. 4. Select All Channels and click Restore. Note: Only required if the TV cache mixed the sorting order after USB upload."
     }
 }
 
@@ -118,9 +118,6 @@ st.markdown(f"""
 st.title(t['title'])
 st.markdown(f"<h3>{t['subtitle']}</h3>", unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════
-# 🛰️ DATABASE — نايل سات
-# ══════════════════════════════════════════════
 NILESAT_LIVE_DB = {
     "AL HAYAT":         {"frequency": 12207, "polarization": "Vertical"},
     "AL HAYAT 2":       {"frequency": 12207, "polarization": "Vertical"},
@@ -178,7 +175,6 @@ def ai_classify(channel_name):
     if any(w in name for w in NEWS_KW): return ALL_AVAILABLE_CATEGORIES[6]
     return ALL_AVAILABLE_CATEGORIES[7]
 
-# ── رفع الملف والمعالجة ──
 uploaded_file = st.file_uploader(t['upload_label'], type=["TLL"])
 
 if uploaded_file is not None:
@@ -204,6 +200,11 @@ if uploaded_file is not None:
 
     st.info(f"{t['success_read']} **{model_name}**")
 
-    st.markdown(f"""
+    st.markdown("""
         <div class="lg-trick-box">
-            <h4 style="color:
+            <h4 style="color: #ff007f; margin-top:0;">""" + t['lg_trick_title'] + """</h4>
+            <p style="white-space: pre-line; margin-bottom:0; font-size:14px;">""" + t['lg_trick_text'] + """</p>
+        </div>
+    """, unsafe_allow_html=True)
+
+    update_freq = st.checkbox(t['update_freq_label'],
