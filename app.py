@@ -214,7 +214,8 @@ if uploaded_file is not None:
     update_freq = st.checkbox(t['update_freq_label'], value=True)
     add_new_ch = st.checkbox(t['add_new_ch_label'], value=True)
 
-    channels_to_sort = []
+    channels_to_sort = []   # القنوات الظاهرة فقط — هذه هي التي ستُرتَّب
+    hidden_channels  = []   # القنوات المخفية (skipped/Invisible) — تبقى كما هي
     report_changes   = []
     existing_names_upper = set()
 
@@ -224,11 +225,12 @@ if uploaded_file is not None:
             channels_list = broadcast_data.get("channelList", [])
 
             for ch in channels_list:
-                ch_name = ch.get("channelName", "Unknown")
+                ch_name  = ch.get("channelName", "Unknown")
                 old_freq = str(ch.get("frequency", "N/A"))
-                name_up = ch_name.upper()
+                name_up  = ch_name.upper()
                 existing_names_upper.add(name_up)
 
+                # تحديث التردد إذا كان مفعّلاً
                 if update_freq and name_up in NILESAT_LIVE_DB:
                     live_freq = NILESAT_LIVE_DB[name_up]["frequency"]
                     if old_freq != str(live_freq):
@@ -240,17 +242,29 @@ if uploaded_file is not None:
                         ch["polarization"] = NILESAT_LIVE_DB[name_up]["polarization"]
                         old_freq = str(live_freq)
 
-                channels_to_sort.append({"name": ch_name, "freq": old_freq, "node_data": ch, "is_injected": False})
+                # ✅ الفصل الجوهري: ظاهرة vs مخفية
+                is_hidden = ch.get("skipped", False) or ch.get("Invisible", False)
+                if is_hidden:
+                    hidden_channels.append(ch)          # لا تُرتَّب، تُحفظ كما هي
+                else:
+                    channels_to_sort.append({
+                        "name": ch_name, "freq": old_freq,
+                        "node_data": ch, "is_injected": False
+                    })
 
+            # زرع القنوات الجديدة (تُضاف للظاهرة)
             if add_new_ch and channels_list:
-                sample_node = channels_list[0]
+                # نستخدم أول قناة ظاهرة كقالب إذا وُجدت، وإلا أول قناة عموماً
+                visible_nodes = [c["node_data"] for c in channels_to_sort]
+                sample_node = visible_nodes[0] if visible_nodes else channels_list[0]
                 for db_name, db_info in NILESAT_LIVE_DB.items():
                     if db_name not in existing_names_upper:
                         new_node = sample_node.copy()
                         new_node["channelName"] = db_name
-                        new_node["frequency"] = db_info["frequency"]
-                        new_node["polarization"] = db_info["polarization"]
-                        new_node["invisible"] = 0
+                        new_node["frequency"]   = db_info["frequency"]
+                        new_node["polarization"]= db_info["polarization"]
+                        new_node["skipped"]     = False
+                        new_node["Invisible"]   = False
                         channels_to_sort.append({
                             "name": db_name,
                             "freq": str(db_info["frequency"]),
@@ -388,12 +402,17 @@ if uploaded_file is not None:
 
     if is_modern:
         final_list_modern = []
+
+        # ✅ القنوات الظاهرة: تأخذ أرقاماً جديدة حسب الترتيب المختار
         for index, ch in enumerate(channels_sorted, start=1):
             node = ch["node_data"]
             node["majorNumber"] = index
             final_list_modern.append(node)
             tag_status = " [NEW] " if ch["is_injected"] else ""
             text_report += f"No. {index:03d} : {ch['name']:<25} | Freq: {ch['freq']}{tag_status}\n"
+
+        # ✅ القنوات المخفية: تُضاف في النهاية بأرقامها الأصلية دون تغيير
+        final_list_modern.extend(hidden_channels)
 
         broadcast_data["channelList"] = final_list_modern
         legacy_broadcast_tag.text = json.dumps(broadcast_data, ensure_ascii=False, separators=(',', ':'))
