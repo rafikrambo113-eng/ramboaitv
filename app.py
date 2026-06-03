@@ -13,106 +13,81 @@ UI_TEXT = {
         'title': "RAMBO - المنسق العالمي لشاشات LG",
         'subtitle': "هندسة متطورة لترتيب ملفات القنوات بالتأثيرات السيبرانية مصفوفة (3D)",
         'upload_label': "اختر ملف القنوات (GlobalClone00001.TLL) من الفلاشة:",
-        'update_freq_label': "تفعيل الصيانة الذكية وتحديث الترددات تلقائياً (حسب القمر المكتشف)",
-        'add_new_ch_label': "فحص وزرع القنوات الجديدة المتاحة تلقائياً في القمر الصناعي المكتشف",
+        'update_freq_label': "تفعيل الصيانة الذكية وتحديث الترددات تلقائياً",
+        'add_new_ch_label': "فحص وزرع القنوات الجديدة المتاحة تلقائياً",
         'success_read': "تم قراءة الهيكل بنجاح! الموديل الحالي: ",
         'search_header': "محرك البحث الذكي عن القنوات داخل الملف:",
         'search_placeholder': "اكتب اسم القناة هنا للبحث...",
-        'search_col_num': "الرقم الحالي",
+        'search_col_num': "الرقم",
         'search_col_name': "اسم القناة",
-        'search_col_cat': "الفئة (Category)",
-        'search_col_freq': "التردد (Frequency)",
-        'search_no_results': "لم يتم العثور على أي قنوات مطابقة للبحث.",
-        'config_title': "مصفوفة ترتيب الفئات المخصصة حسب اختيارك اليدوي:",
-        'config_tip': "ملحوظة: اضغط على الفئات بالترتيب الفعلي المفضل لديك.",
-        'multiselect_label': "اضغط هنا لبناء تسلسل خطة العرض التفاعلي للفئات:",
-        'preview_title': "مجسم المعاينة الحية لتوزيع القنوات الحالي:",
+        'search_col_cat': "الفئة",
+        'search_col_freq': "التردد",
+        'search_no_results': "لم يتم العثور على قنوات مطابقة.",
+        'config_title': "مصفوفة ترتيب الفئات المخصصة:",
+        'config_tip': "ملحوظة: اضغط على الفئات بالترتيب المفضل.",
+        'multiselect_label': "اختر ترتيب الفئات:",
+        'preview_title': "معاينة حية لتوزيع القنوات:",
         'channels_count': "قناة",
-        'ready_msg': "تم دمج مصفوفة RAMBO واعادة الهيكلة بنجاح! الملفات جاهزة للتحميل:",
-        'btn_download_tll': "تحميل ملف الشاشة النهائي (GlobalClone00001.TLL)",
-        'btn_download_txt': "تحميل تقرير الترتيب كملف نصي (Channels_List.txt)",
-        'txt_header': "تقرير الترتيب وتحديثات الترددات النهائي لشاشة LG",
-        'txt_order': "ترتيب الفئات المختار: ",
-        'lg_trick_title': "ملحوظة فنية هامة جداً بعد تنزيل الملف على شاشة LG:",
-        'lg_trick_text': "في بعض الحالات، بعد تنزيل ملف القنوات على الشاشة، قد تشعر ان القنوات ليست منظمة كما رتبتها. لحل هذا الاطار فوراً واجبار الشاشة على تفعيل الترتيب الصحيح، قم بالاتي: 1. من اعدادات التلفزيون اختار القنوات (Channels). 2. بعد ذلك اختار مدير القنوات (Channel Manager). 3. اختار التعديل على كل القنوات (Edit All Channels). 4. ستظهر لك القنوات المرتبة ويكون بعضها في وضع مخفي، قم تحديد كل القنوات واختار استعادة (Restore). تفعل هذه الخطوة فقطاذا شعرت ان الملف بعد التنزيل غير مرتب كما حددته على الموقع."
+        'ready_msg': "تم اعادة الهيكلة بنجاح! الملفات جاهزة:",
+        'btn_download_tll': "تحميل ملف الشاشة (TLL)",
+        'btn_download_txt': "تحميل التقرير (TXT)",
+        'txt_header': "تقرير الترتيب النهائي",
+        'txt_order': "ترتيب الفئات: ",
+        'lg_trick_title': "ملحوظة فنية بعد التنزيل على الشاشة:",
+        'lg_trick_text': "لضمان ترتيب القنوات正确 بعد التنزيل: 1. ادخل الاعدادات ثم القنوات 2. مدير القنوات 3. تعديل على كل القنوات 4. حدد الكل واستعادة"
     },
     'en': {
-        'title': "RAMBO - LG Universal AI Channel Sorter",
-        'subtitle': "Next-Gen Cyber-Engineered Architecture for 3D Channel Layouts",
-        'upload_label': "Upload Channel File (GlobalClone00001.TLL) from USB Flash:",
-        'update_freq_label': "Activate Satellite Live Frequency Auto-Update (AI Auto-Detect)",
-        'add_new_ch_label': "Scan and Inject New Satellite Channels Automatically based on Sat Detection",
-        'success_read': "Matrix Structure Decoded Successfully! Model Profile: ",
-        'search_header': "Dynamic Channel Search Engine:",
-        'search_placeholder': "Type channel name to look up...",
+        'title': "RAMBO - LG Universal Channel Sorter",
+        'subtitle': "Next-Gen AI Architecture for Channel Layouts",
+        'upload_label': "Upload Channel File (GlobalClone00001.TLL):",
+        'update_freq_label': "Activate Frequency Auto-Update",
+        'add_new_ch_label': "Scan and Inject New Channels",
+        'success_read': "Structure Decoded! Model: ",
+        'search_header': "Channel Search Engine:",
+        'search_placeholder': "Type channel name...",
         'search_col_num': "No.",
         'search_col_name': "Channel Name",
         'search_col_cat': "Category",
         'search_col_freq': "Frequency",
-        'search_no_results': "No channels matching your search criteria.",
-        'config_title': "Custom Category Priority Control Matrix:",
-        'config_tip': "Hint: Click categories in exact order. The first selection populates the absolute top of your TV.",
-        'multiselect_label': "Select categories one by one to configure your linear priority:",
-        'preview_title': "Channel Grid Live 3D Preview Dashboard:",
+        'search_no_results': "No matches found.",
+        'config_title': "Custom Category Priority:",
+        'config_tip': "Hint: Click categories in order.",
+        'multiselect_label': "Select category order:",
+        'preview_title': "Live Channel Preview:",
         'channels_count': "Channels",
-        'ready_msg': "Quantum Matrix Deployment Successful! Assets ready for transfer:",
-        'btn_download_tll': "Download Final TV Configuration (GlobalClone00001.TLL)",
-        'btn_download_txt': "Download Sorting Text Diagnostics (Channels_List.txt)",
-        'txt_header': "Final LG TV Channel Sorting and Updates Report",
-        'txt_order': "Selected Category Priority: ",
-        'lg_trick_title': "Critical Expert Technical Tip After Uploading to LG TV:",
-        'lg_trick_text': "In some cases, after importing the file into your LG TV, you might feel that the channels are not perfectly sorted as configured. To fix this instantly: 1. Open TV Settings to Channels. 2. Select Channel Manager. 3. Choose Edit All Channels. 4. Select All Channels and click Restore. Note: Only required if the TV cache mixed the sorting order after USB upload."
+        'ready_msg': "Quantum Matrix Ready! Assets:",
+        'btn_download_tll': "Download TV Config (TLL)",
+        'btn_download_txt': "Download Report (TXT)",
+        'txt_header': "Final Sorting Report",
+        'txt_order': "Category Order: ",
+        'lg_trick_title': "Technical Tip After Upload:",
+        'lg_trick_text': "To ensure sorting: 1.Settings 2.Channels 3.Channel Manager 4.Edit All 5.Select All and Restore"
     }
 }
 
 t = UI_TEXT[st.session_state.lang]
-st.set_page_config(page_title="RAMBO - LG Futuristic AI Sorter", page_icon="⚡", layout="wide")
+st.set_page_config(page_title="RAMBO - LG Sorter", page_icon="⚡", layout="wide")
 
-col_lang, col_theme, _ = st.columns([1.2, 1.5, 8])
+col_lang, col_theme = st.columns([1.2, 1.5])
 with col_lang:
-    if st.button("🌐 English" if st.session_state.lang == 'ar' else "🌐 العربية"):
+    if st.button("EN/AR"):
         st.session_state.lang = 'en' if st.session_state.lang == 'ar' else 'ar'
         st.rerun()
 with col_theme:
-    if st.button("☀️ Light Mode" if st.session_state.theme == 'dark' else "🌙 Dark Mode"):
+    if st.button("Light/Dark"):
         st.session_state.theme = 'light' if st.session_state.theme == 'dark' else 'dark'
         st.rerun()
 
-if st.session_state.theme == 'dark':
-    bg_style = "radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%)"
-    text_color = "#00f0ff"
-    box_bg = "rgba(13, 7, 33, 0.85)"
-    box_border = "#00f0ff"
-    box_shadow = "rgba(0, 240, 255, 0.35)"
-    text_shadow_glow = "0 0 5px rgba(0, 240, 255, 0.4)"
-    footer_bg = "#080314"
-    footer_text = "#ffffff"
-else:
-    bg_style = "radial-gradient(circle at 50% 50%, #f4f5f7 0%, #e4e7eb 100%)"
-    text_color = "#0d0722"
-    box_bg = "#ffffff"
-    box_border = "#ff007f"
-    box_shadow = "rgba(255, 0, 127, 0.15)"
-    text_shadow_glow = "none"
-    footer_bg = "#110926"
-    footer_text = "#ffffff"
-
+bg_style = "radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%)" if st.session_state.theme == 'dark' else "radial-gradient(circle at 50% 50%, #f4f5f7 0%, #e4e7eb 100%)"
+text_color = "#00f0ff" if st.session_state.theme == 'dark' else "#0d0722"
+box_bg = "rgba(13, 7, 33, 0.85)" if st.session_state.theme == 'dark' else "#ffffff"
+box_border = "#00f0ff" if st.session_state.theme == 'dark' else "#ff007f"
+box_shadow = "rgba(0, 240, 255, 0.35)" if st.session_state.theme == 'dark' else "rgba(255, 0, 127, 0.15)"
+footer_bg = "#080314" if st.session_state.theme == 'dark' else "#110926"
+footer_text = "#ffffff"
 font_family = "'Cairo', sans-serif" if st.session_state.lang == 'ar' else "'Orbitron', sans-serif"
-st.markdown(f"""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;900&family=Cairo:wght@400;700&display=swap');
-    .main {{ background: {bg_style} !important; color: {text_color} !important; font-family: {font_family}; }}
-    h1 {{ color: #ff007f !important; text-shadow: 0 0 10px #ff007f, 0 0 25px rgba(255, 0, 127, 0.4) !important; text-align: center; font-weight: 900; margin-top: 5px; }}
-    h3, p, label, .stMarkdown, .stInfo {{ color: {text_color} !important; text-shadow: {text_shadow_glow}; }}
-    .stTextInput>div>div>input {{ background-color: {box_bg} !important; color: {text_color} !important; border: 2px solid {box_border} !important; border-radius: 10px !important; }}
-    .stCheckbox, .stMultiSelect, .lg-trick-box {{ background: {box_bg} !important; border: 2px solid {box_border} !important; box-shadow: 0px 5px 15px {box_shadow} !important; border-radius: 14px !important; padding: 18px !important; margin-bottom: 20px !important; }}
-    .lg-trick-box {{ border-color: #ff007f !important; box-shadow: 0px 5px 15px rgba(255, 0, 127, 0.25) !important; }}
-    .stButton>button {{ background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important; color: #ffffff !important; border: 2px solid #ff007f !important; border-radius: 12px !important; font-weight: bold; }}
-    .futuristic-cyber-footer {{ background: {footer_bg}; border: 2px solid #00f0ff; color: {footer_text} !important; padding: 35px; text-align: center; border-radius: 20px; margin-top: 65px; font-family: 'Orbitron', sans-serif; }}
-    .footer-dev {{ color: #ff007f; font-size: 26px; font-weight: bold; }}
-    .cyber-whatsapp-btn {{ color: #25d366 !important; padding: 14px 35px; border-radius: 35px; display: inline-block; font-weight: bold; border: 2px solid #25d366; text-decoration: none; margin-top: 20px; }}
-    </style>
-""", unsafe_allow_html=True)
+
+st.markdown(f"""<style>@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;900&family=Cairo:wght@400;700&display=swap');.main {{ background: {bg_style} !important; color: {text_color} !important; font-family: {font_family}; }}h1 {{ color: #ff007f !important; text-shadow: 0 0 10px #ff007f !important; text-align: center; font-weight: 900; }}h3, p, label {{ color: {text_color} !important; }}.stTextInput>div>div>input {{ background-color: {box_bg} !important; color: {text_color} !important; border: 2px solid {box_border} !important; border-radius: 10px !important; }}.stCheckbox, .stMultiSelect {{ background: {box_bg} !important; border: 2px solid {box_border} !important; box-shadow: 0px 5px 15px {box_shadow} !important; border-radius: 14px !important; padding: 18px !important; margin-bottom: 20px !important; }}.stButton>button {{ background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important; color: #ffffff !important; border: 2px solid #ff007f !important; border-radius: 12px !important; font-weight: bold; }}.footer {{ background: {footer_bg}; border: 2px solid #00f0ff; color: {footer_text} !important; padding: 35px; text-align: center; border-radius: 20px; margin-top: 65px; }}</style>""", unsafe_allow_html=True)
 
 st.title(t['title'])
 st.markdown(f"<h3>{t['subtitle']}</h3>", unsafe_allow_html=True)
@@ -149,11 +124,11 @@ ALL_AVAILABLE_CATEGORIES = [
     "⛪ Christian Channels" if st.session_state.lang == 'en' else "⛪ قنوات مسيحية",
     "🕌 Islamic Channels" if st.session_state.lang == 'en' else "🕌 قنوات إسلامية",
     "🎬 Drama and Series" if st.session_state.lang == 'en' else "🎬 مسلسلات ودراما",
-    "🍿 Movies (Ar/En)" if st.session_state.lang == 'en' else "🍿 أفلام عربية وأجنبية",
+    "🍿 Movies" if st.session_state.lang == 'en' else "🍿 أفلام",
     "👶 Kids and Cartoon" if st.session_state.lang == 'en' else "👶 أطفال وكرتون",
     "⚽ Sports" if st.session_state.lang == 'en' else "⚽ رياضة",
-    "📰 News and Politics" if st.session_state.lang == 'en' else "📰 أخبار وسياسة",
-    "📺 General Channels" if st.session_state.lang == 'en' else "📺 قنوات عامة ومنوعات"
+    "📰 News" if st.session_state.lang == 'en' else "📰 أخبار",
+    "📺 General Channels" if st.session_state.lang == 'en' else "📺 قنوات عامة"
 ]
 
 def ai_classify(channel_name):
@@ -197,13 +172,7 @@ if uploaded_file is not None:
 
     st.info(f"{t['success_read']} **{model_name}**")
 
-    lg_trick_html = f"""
-    <div class="lg-trick-box">
-        <h4 style="color: #ff007f; margin-top:0;">{t['lg_trick_title']}</h4>
-        <p style="white-space: pre-line; margin-bottom:0; font-size:14px;">{t['lg_trick_text']}</p>
-    </div>
-    """
-    st.markdown(lg_trick_html, unsafe_allow_html=True)
+    st.markdown(f"<div style='background:{box_bg};border:2px solid #ff007f;padding:18px;border-radius:14px;margin-bottom:20px;'><h4 style='color:#ff007f;margin-top:0;'>{t['lg_trick_title']}</h4><p style='font-size:14px;'>{t['lg_trick_text']}</p></div>", unsafe_allow_html=True)
 
     update_freq = st.checkbox(t['update_freq_label'], value=True)
     add_new_ch = st.checkbox(t['add_new_ch_label'], value=True)
@@ -219,4 +188,50 @@ if uploaded_file is not None:
 
             for ch in channels_list:
                 ch_name = ch.get("channelName", "Unknown")
-                old_freq = str(ch.get("
+                old_freq = str(ch.get("frequency", "N/A"))
+                name_up = ch_name.upper()
+                existing_names_upper.add(name_up)
+
+                if update_freq and name_up in NILESAT_LIVE_DB:
+                    live_freq = NILESAT_LIVE_DB[name_up]["frequency"]
+                    if old_freq != str(live_freq):
+                        report_changes.append({"Channel": ch_name, "Category": ai_classify(ch_name), "Old Freq": old_freq + " MHz", "New Freq": str(live_freq) + " MHz"})
+                        ch["frequency"] = int(live_freq)
+                        ch["polarization"] = NILESAT_LIVE_DB[name_up]["polarization"]
+                        old_freq = str(live_freq)
+
+                channels_to_sort.append({"name": ch_name, "freq": old_freq, "node_data": ch, "is_injected": False})
+
+            if add_new_ch and channels_list:
+                sample_node = channels_list[0]
+                for db_name, db_info in NILESAT_LIVE_DB.items():
+                    if db_name not in existing_names_upper:
+                        new_node = sample_node.copy()
+                        new_node["channelName"] = db_name
+                        new_node["frequency"] = db_info["frequency"]
+                        new_node["polarization"] = db_info["polarization"]
+                        new_node["invisible"] = 0
+                        channels_to_sort.append({"name": db_name, "freq": str(db_info["frequency"]), "node_data": new_node, "is_injected": True})
+                        report_changes.append({"Channel": db_name, "Category": ai_classify(db_name), "Old Freq": "Not Found", "New Freq": str(db_info["frequency"]) + " MHz"})
+
+        except Exception as json_err:
+            st.error(f"Error: {str(json_err)}")
+    else:
+        item_blocks = re.findall(r'(<ITEM>.*?</ITEM>)', file_text, re.DOTALL)
+
+        for item_str in item_blocks:
+            name_match = re.search(r'<vchName>(.*?)</vchName>', item_str)
+            freq_match = re.search(r'<frequency>(.*?)</frequency>', item_str)
+            ch_name = name_match.group(1) if name_match else "Unknown"
+            old_freq = freq_match.group(1) if freq_match else "N/A"
+            name_up = ch_name.upper()
+            existing_names_upper.add(name_up)
+
+            if update_freq and name_up in NILESAT_LIVE_DB:
+                live_freq = str(NILESAT_LIVE_DB[name_up]["frequency"])
+                if old_freq != live_freq:
+                    report_changes.append({"Channel": ch_name, "Category": ai_classify(ch_name), "Old Freq": old_freq + " MHz", "New Freq": live_freq + " MHz"})
+                    item_str = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{live_freq}</frequency>', item_str)
+                    old_freq = live_freq
+
+            channels_to_sort.append({"name": ch_name, "freq": old_freq, "raw_str": item_str, "is_injected": False
