@@ -274,18 +274,116 @@ def get_channel_db(sat_choice):
 
 
 def generate_legacy_xml(channels, country_code, model_name, sat_choice):
-    """Generate Legacy XML TLL file (pre-2020 style)."""
+    """Generate Legacy XML TLL file (pre-2020 style) — exact LG structure."""
     sat_handle = "4" if ("عرب" in sat_choice or "ArabSat" in sat_choice or "Badr" in sat_choice) else "5"
-    
-    xml_header = f"""<?xml version="1.0" encoding="UTF-8"?>\r\n\r\n<TLLDATA>\r\n<ModelInfo>\r\n<ModelName type="0">{model_name}</ModelName>\r\n<CloneVersion type="1">\r\n<MajorVersion>100</MajorVersion>\r\n<MinorVersion>000</MinorVersion>\r\n<SatelliteDBVersion>400</SatelliteDBVersion>\r\n</CloneVersion>\r\n<DTVInfo type="0">DTV_DVB</DTVInfo>\r\n<BroadcastCountrySetting type="0">{country_code}</BroadcastCountrySetting>\r\n<country type="0">JA</country>\r\n</ModelInfo>\r\n<BroadcastDatabase>\r\n"""
 
-    items_xml = ""
+    # ── ModelInfo ──────────────────────────────────────────────
+    xml_header = (
+        '<?xml version="1.0" encoding="UTF-8"?>\r\n\r\n'
+        '<TLLDATA>\r\n'
+        '<ModelInfo>\r\n'
+        f'<ModelName type="0">{model_name}</ModelName>\r\n'
+        '<CloneVersion type="1">\r\n'
+        '<MajorVersion>100</MajorVersion>\r\n'
+        '<MinorVersion>000</MinorVersion>\r\n'
+        '<SatelliteDBVersion>400</SatelliteDBVersion>\r\n'
+        '</CloneVersion>\r\n'
+        '<DTVInfo type="0">DTV_DVB</DTVInfo>\r\n'
+        f'<BroadcastCountrySetting type="0">{country_code}</BroadcastCountrySetting>\r\n'
+        '<country type="0">JA</country>\r\n'
+        '</ModelInfo>\r\n'
+    )
+
+    # ── Minimal SatelliteDB (required by LG parser) ────────────
+    sat_db = (
+        '<SatelliteDB>\r\n'
+        '<SATDBInfo>\r\n'
+        '<SatHdrInfo>\r\n'
+        '<MagicNo type="0">0</MagicNo>\r\n'
+        '<SatSlotStatusTable>\r\n'
+        '<slot0 type="0">255</slot0>\r\n'
+        '<slot1 type="0">255</slot1>\r\n'
+        '<slot2 type="0">255</slot2>\r\n'
+        '<slot3 type="0">255</slot3>\r\n'
+        '<slot4 type="0">255</slot4>\r\n'
+        '<slot5 type="0">255</slot5>\r\n'
+        '<slot6 type="0">0</slot6>\r\n'
+        '<slot7 type="0">0</slot7>\r\n'
+        '</SatSlotStatusTable>\r\n'
+        '<Reserved type="0">0</Reserved>\r\n'
+        '<CurrEndIndex type="0">0</CurrEndIndex>\r\n'
+        '</SatHdrInfo>\r\n'
+        '</SATDBInfo>\r\n'
+        '<SettingIDDBInfo>\r\n'
+        '<SettingIDInfo>\r\n'
+        '<tbl1>\r\n'
+        '<TPList>\r\n'
+        '</TPList>\r\n'
+        '</tbl1>\r\n'
+        '</SettingIDInfo>\r\n'
+        '</SettingIDDBInfo>\r\n'
+        '</SatelliteDB>\r\n'
+    )
+
+    # ── CHANNEL wrapper — exact LG structure ──────────────────
+    channel_open = '<CHANNEL>\r\n<ATV>\r\n</ATV>\r\n<DTV>\r\n'
+    channel_close = '\r\n</DTV>\r\n</CHANNEL>\r\n</TLLDATA>'
+
+    # ── Build ITEM blocks ──────────────────────────────────────
+    items_parts = []
     for idx, ch in enumerate(channels, start=1):
-        name_bytes = ch["name"].encode("utf-8").hex()
-        items_xml += f"""<ITEM>\r\n<prNum>{idx}</prNum>\r\n<minorNum>0</minorNum>\r\n<original_network_id>110</original_network_id>\r\n<transport_id>23</transport_id>\r\n<network_id>110</network_id>\r\n<service_id>{7000+idx}</service_id>\r\n<physicalNum>135</physicalNum>\r\n<sourceIndex>7</sourceIndex>\r\n<serviceType>1</serviceType>\r\n<special_data>81188906</special_data>\r\n<frequency>{ch["freq"]}</frequency>\r\n<nitVersion>2</nitVersion>\r\n<mapType>1</mapType>\r\n<mapAttr>0</mapAttr>\r\n<programNo>{7000+idx}</programNo>\r\n<favoriteIdxA>250</favoriteIdxA>\r\n<favoriteIdxB>250</favoriteIdxB>\r\n<favoriteIdxC>250</favoriteIdxC>\r\n<favoriteIdxD>250</favoriteIdxD>\r\n<favoriteIdxE>250</favoriteIdxE>\r\n<favoriteIdxF>250</favoriteIdxF>\r\n<favoriteIdxG>250</favoriteIdxG>\r\n<favoriteIdxH>250</favoriteIdxH>\r\n<isInvisable>0</isInvisable>\r\n<isBlocked>0</isBlocked>\r\n<isSkipped>0</isSkipped>\r\n<isNumUnSel>0</isNumUnSel>\r\n<isDeleted>0</isDeleted>\r\n<chNameByte>0</chNameByte>\r\n<isDisabled>0</isDisabled>\r\n<hexVchName>{name_bytes}</hexVchName>\r\n<notConvertedLengthOfVchName>{len(ch["name"])}</notConvertedLengthOfVchName>\r\n<vchName>{ch["name"]}</vchName>\r\n<lengthOfVchName>{len(ch["name"])}</lengthOfVchName>\r\n<hSettingIDHandle>1</hSettingIDHandle>\r\n<usSatelliteHandle>{sat_handle}</usSatelliteHandle>\r\n<isUserSelCHNo>1</isUserSelCHNo>\r\n<videoStreamType>2</videoStreamType>\r\n</ITEM>\r\n"""
+        name_str = ch["name"]
+        name_hex = name_str.encode("utf-8").hex()
+        name_len = len(name_str)
+        service_id = 7000 + idx
+        item = (
+            '<ITEM>\r\n'
+            f'<prNum>{idx}</prNum>\r\n'
+            '<minorNum>0</minorNum>\r\n'
+            '<original_network_id>110</original_network_id>\r\n'
+            '<transport_id>23</transport_id>\r\n'
+            '<network_id>110</network_id>\r\n'
+            f'<service_id>{service_id}</service_id>\r\n'
+            '<physicalNum>135</physicalNum>\r\n'
+            '<sourceIndex>7</sourceIndex>\r\n'
+            '<serviceType>1</serviceType>\r\n'
+            '<special_data>81188906</special_data>\r\n'
+            f'<frequency>{ch["freq"]}</frequency>\r\n'
+            '<nitVersion>2</nitVersion>\r\n'
+            '<mapType>1</mapType>\r\n'
+            '<mapAttr>0</mapAttr>\r\n'
+            f'<programNo>{service_id}</programNo>\r\n'
+            '<favoriteIdxA>250</favoriteIdxA>\r\n'
+            '<favoriteIdxB>250</favoriteIdxB>\r\n'
+            '<favoriteIdxC>250</favoriteIdxC>\r\n'
+            '<favoriteIdxD>250</favoriteIdxD>\r\n'
+            '<favoriteIdxE>250</favoriteIdxE>\r\n'
+            '<favoriteIdxF>250</favoriteIdxF>\r\n'
+            '<favoriteIdxG>250</favoriteIdxG>\r\n'
+            '<favoriteIdxH>250</favoriteIdxH>\r\n'
+            '<isInvisable>0</isInvisable>\r\n'
+            '<isBlocked>0</isBlocked>\r\n'
+            '<isSkipped>0</isSkipped>\r\n'
+            '<isNumUnSel>0</isNumUnSel>\r\n'
+            '<isDeleted>0</isDeleted>\r\n'
+            '<chNameByte>0</chNameByte>\r\n'
+            '<isDisabled>0</isDisabled>\r\n'
+            f'<hexVchName>{name_hex}</hexVchName>\r\n'
+            f'<notConvertedLengthOfVchName>{name_len}</notConvertedLengthOfVchName>\r\n'
+            f'<vchName>{name_str}</vchName>\r\n'
+            f'<lengthOfVchName>{name_len}</lengthOfVchName>\r\n'
+            '<hSettingIDHandle>1</hSettingIDHandle>\r\n'
+            f'<usSatelliteHandle>{sat_handle}</usSatelliteHandle>\r\n'
+            '<isUserSelCHNo>1</isUserSelCHNo>\r\n'
+            '<videoStreamType>2</videoStreamType>\r\n'
+            '</ITEM>'
+        )
+        items_parts.append(item)
 
-    xml_footer = "</BroadcastDatabase>\r\n</TLLDATA>"
-    return (xml_header + items_xml + xml_footer).encode("utf-8")
+    items_xml = '\r\n'.join(items_parts)
+
+    full_content = xml_header + sat_db + channel_open + items_xml + channel_close
+    return full_content.encode("utf-8")
 
 
 def generate_modern_json(channels, country_code, model_name, country_full, sat_info):
