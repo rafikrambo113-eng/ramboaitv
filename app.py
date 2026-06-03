@@ -89,85 +89,135 @@ if st.session_state.theme == 'dark':
     text_shadow_glow = "0 0 5px rgba(0, 240, 255, 0.4)"
     footer_bg = "#080314"
     footer_text = "#ffffff"
-
 else:
-        # معالجة الشاشات القديمة <ITEM>
-        item_blocks = re.findall(r'(<ITEM>.*?</ITEM>)', file_text, re.DOTALL)
-        
-        items_list = []
-        for item_str in item_blocks:
-            name_match = re.search(r'<vchName>(.*?)</vchName>', item_str)
-            freq_match = re.search(r'<frequency>(.*?)</frequency>', item_str)
-            ch_name = name_match.group(1) if name_match else "Unknown"
-            
-            # تحديث التردد
-            if update_freq and ch_name.upper() in NILESAT_LIVE_DB:
-                live_freq = str(NILESAT_LIVE_DB[ch_name.upper()]["frequency"])
-                item_str = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{live_freq}</frequency>', item_str)
-            else:
-                live_freq = freq_match.group(1) if freq_match else "N/A"
-            
-            items_list.append({"name": ch_name, "freq": live_freq, "raw_str": item_str, "is_injected": False})
+    bg_style = "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)"
+    text_color = "#1a73e8"
+    box_bg = "rgba(255, 255, 255, 0.95)"
+    box_border = "#1a73e8"
+    box_shadow = "rgba(26, 115, 232, 0.25)"
+    text_shadow_glow = "none"
+    footer_bg = "#e8eaed"
+    footer_text = "#202124"
 
-        # إضافة القنوات الجديدة
-        if add_new_ch and item_blocks:
-            sample_item = item_blocks[0]
-            existing_names_upper = {ch["name"].upper() for ch in items_list}
-            for db_name, db_info in NILESAT_LIVE_DB.items():
-                if db_name not in existing_names_upper:
-                    new_item = re.sub(r'<vchName>.*?</vchName>', f'<vchName>{db_name}</vchName>', sample_item)
-                    new_item = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{db_info["frequency"]}</frequency>', new_item)
-                    items_list.append({"name": db_name, "freq": str(db_info["frequency"]), "raw_str": new_item, "is_injected": True})
-
-        # الترتيب حسب الفئات المختارة
-        channels_sorted = sorted(items_list, key=lambda x: final_priority.index(ai_classify(x["name"])))
-
-        # تحديث الأرقام وإعادة البناء
-        item_strings_sorted = []
-        for index, ch in enumerate(channels_sorted, start=1):
-            raw = ch["raw_str"]
-            if "<prNum>" in raw:
-                raw = re.sub(r'<prNum>\d+</prNum>', f'<prNum>{index}</prNum>', raw)
-            else:
-                raw = raw.replace("<ITEM>", f"<ITEM>\r\n<prNum>{index}</prNum>")
-            item_strings_sorted.append(raw)
-            tag_status = " [NEW] " if ch["is_injected"] else ""
-            text_report += f"No. {index:03d} : {ch['name']:<25} | Freq: {ch['freq']}{tag_status}\n"
-
-        combined_items_str = "\r\n".join(item_strings_sorted)
-        start_idx = file_text.find("<ITEM>")
-        end_idx = file_text.rfind("</ITEM>") + len("</ITEM>")
-
-        if start_idx != -1 and end_idx != -1:
-            final_text_output = file_text[:start_idx] + combined_items_str + file_text[end_idx:]
-        else:
-            final_text_output = combined_items_str
-
-        try: final_xml_bytes = final_text_output.encode('utf-8')
-        except UnicodeEncodeError: final_xml_bytes = final_text_output.encode('latin-1')
-
-
-
-    st.write("---")
-    st.success(t['ready_msg'])
-
-    col_btn1, col_btn2 = st.columns(2)
-    with col_btn1:
-        st.download_button(label=t['btn_download_tll'], data=final_xml_bytes,
-                           file_name="GlobalClone00001.TLL", mime="application/octet-stream")
-    with col_btn2:
-        st.download_button(label=t['btn_download_txt'], data=text_report,
-                           file_name="Channels_List.txt", mime="text/plain; charset=utf-8")
-
-# ── الفوتر الفني ──
-whatsapp_url = ("https://api.whatsapp.com/send?phone=201280339779"
-                "&text=Hello%20Developer%20Rafik%20Rambo%2C%20"
-                "I%20have%20an%20inquiry%20regarding%20your%20LG%20TV%20Sorter%20script%3A")
+# Inject CSS
 st.markdown(f"""
-    <div class="futuristic-cyber-footer">
-        <div class="footer-dev">🛠️ DEVELOPER ENG: RAFIK RAMBO</div>
-        <div class="footer-item">📱 <b>MOBILE / الموبايل:</b> +201280339779</div>
-        <div class="footer-item">✉️ <b>E-MAIL / البريد الإلكتروني:</b> rafikrambo113@gmail.com</div>
-        <a href="{whatsapp_url}" target="_blank" class="cyber-whatsapp-btn">WhatsApp Web</a>
-    </div>
+    <style>
+        .stApp {{ background: {bg_style}; }}
+        h1, h2, h3, .title-text {{ color: {text_color}; text-shadow: {text_shadow_glow}; }}
+        .cyber-box {{ background: {box_bg}; border: 1px solid {box_border}; border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px {box_shadow}; }}
+        .stTextInput > div > div > input {{ background: {box_bg}; color: {text_color}; border: 1px solid {box_border}; }}
+        .futuristic-cyber-footer {{ background: {footer_bg}; padding: 20px; border-radius: 10px; margin-top: 30px; text-align: center; color: {footer_text}; }}
+        .cyber-whatsapp-btn {{ display: inline-block; background: #25D366; color: white; padding: 10px 20px; border-radius: 25px; text-decoration: none; margin-top: 10px; font-weight: bold; }}
+    </style>
 """, unsafe_allow_html=True)
+
+st.markdown(f"<h1 class='title-text'>{t['title']}</h1>", unsafe_allow_html=True)
+st.markdown(f"<p style='color:{text_color}; font-size:18px;'>{t['subtitle']}</p>", unsafe_allow_html=True)
+
+# ── قاعدة بيانات الأقمار الحية ──
+NILESAT_LIVE_DB = {
+    "AL NILET": {"frequency": 11766, "category": "News"},
+    "AL NILET NEWS": {"frequency": 11766, "category": "News"},
+    "NILE TV": {"frequency": 11766, "category": "National"},
+    "AL OULA": {"frequency": 11488, "category": "National"},
+    "AL OULA 2": {"frequency": 11488, "category": "National"},
+    "AL MASRYIA": {"frequency": 11488, "category": "National"},
+    "ON TV": {"frequency": 11823, "category": "Private"},
+    "ON E": {"frequency": 11823, "category": "Private"},
+    "DMC": {"frequency": 11296, "category": "Private"},
+    "DMC DRAMA": {"frequency": 11296, "category": "Drama"},
+    "CBC": {"frequency": 11938, "category": "Private"},
+    "CBC SOFRA": {"frequency": 11938, "category": "Drama"},
+    "EXTRA NEWS": {"frequency": 12149, "category": "News"},
+    "AL ARABIYA": {"frequency": 12149, "category": "News"},
+    "AL-HADATH": {"frequency": 12149, "category": "News"},
+    "AL JAZEERA": {"frequency": 12284, "category": "News"},
+    "AL JAZEERA DOCUMENTARY": {"frequency": 12284, "category": "Documentary"},
+    "MBC": {"frequency": 11476, "category": "Private"},
+    "MBC DRAMA": {"frequency": 11476, "category": "Drama"},
+    "MBC MAX": {"frequency": 11476, "category": "Drama"},
+    "ROTANA": {"frequency": 11585, "category": "Music"},
+    "ROTANA DRAMA": {"frequency": 11585, "category": "Drama"},
+    "ROTANA CLIP": {"frequency": 11585, "category": "Music"},
+    "MEKAMLEK": {"frequency": 12034, "category": "Drama"},
+    "ALHAYA": {"frequency": 12034, "category": "Drama"},
+    "STAR MOVIES": {"frequency": 11938, "category": "Movies"},
+    "MOVIE PL": {"frequency": 11938, "category": "Movies"},
+    "FOX": {"frequency": 11296, "category": "Movies"},
+    "FX": {"frequency": 11296, "category": "Movies"},
+    "HBO": {"frequency": 11179, "category": "Movies"},
+    "NETFLIX": {"frequency": 11179, "category": "Movies"},
+    "STARZ": {"frequency": 11179, "category": "Movies"},
+    "OSN": {"frequency": 11179, "category": "Movies"},
+    "WEEN": {"frequency": 11823, "category": "Comedy"},
+    "AL-MORF": {"frequency": 11823, "category": "Comedy"},
+    "TEAM TOO": {"frequency": 11823, "category": "Kids"},
+    "TOYOR AL JANAA": {"frequency": 11823, "category": "Kids"},
+    "SPACETOON": {"frequency": 11823, "category": "Kids"},
+    "CARTOON NETWORK": {"frequency": 11823, "category": "Kids"},
+    "NICKELODEON": {"frequency": 11823, "category": "Kids"},
+    "BEJUNIOR": {"frequency": 11823, "category": "Kids"},
+    "MASSRER": {"frequency": 11958, "category": "Sports"},
+    "ON SPORT": {"frequency": 11958, "category": "Sports"},
+    "BEIN SPORTS": {"frequency": 11013, "category": "Sports"},
+    "BEIN SPORTS XTRA": {"frequency": 11013, "category": "Sports"},
+    "KORA": {"frequency": 11804, "category": "Sports"},
+    "ALKASS": {"frequency": 11804, "category": "Sports"},
+}
+
+def ai_classify(ch_name):
+    ch_upper = ch_name.upper()
+    for db_name, info in NILESAT_LIVE_DB.items():
+        if db_name in ch_upper or ch_upper in db_name:
+            return info.get("category", "Other")
+    return "Other"
+
+# ── واجهة التحميل ──
+st.markdown("---")
+col_upload1, col_upload2 = st.columns([3, 1])
+with col_upload1:
+    st.markdown(f"<div style='color:{text_color}; font-size:16px; margin-bottom:5px;'>{t['upload_label']}</div>", unsafe_allow_html=True)
+    uploaded_file = st.file_uploader("Upload", type=["tll", "xml", "txt"], label_visibility="collapsed")
+
+if uploaded_file is not None:
+    file_bytes = uploaded_file.getvalue()
+    try:
+        file_text = file_bytes.decode('utf-8')
+    except UnicodeDecodeError:
+        file_text = file_bytes.decode('latin-1')
+
+    item_blocks = re.findall(r'(<ITEM>.*?</ITEM>)', file_text, re.DOTALL)
+    items_list_preview = []
+    for item_str in item_blocks:
+        name_match = re.search(r'<vchName>(.*?)</vchName>', item_str)
+        freq_match = re.search(r'<frequency>(.*?)</frequency>', item_str)
+        cat_match = re.search(r'<category>(.*?)</category>', item_str)
+        if name_match:
+            ch_name = name_match.group(1)
+            cat = cat_match.group(1) if cat_match else ai_classify(ch_name)
+            freq = freq_match.group(1) if freq_match else "N/A"
+            items_list_preview.append({"num": len(items_list_preview) + 1, "name": ch_name, "cat": cat, "freq": freq})
+
+    st.success(t['success_read'] + f" {len(items_list_preview)} {t['channels_count']}")
+
+    # ── محركات البحث ──
+    st.markdown("---")
+    st.markdown(f"<div class='cyber-box' style='margin: 15px 0;'><h3 style='color:{text_color}; margin-bottom:15px;'>{t['search_header']}</h3>", unsafe_allow_html=True)
+    with st.container():
+        search_query = st.text_input(t['search_placeholder'], label_visibility="collapsed", key="search_input_main")
+
+    if search_query:
+        filtered = [ch for ch in items_list_preview if search_query.upper() in ch["name"].upper()]
+        if filtered:
+            st.dataframe(filtered, use_container_width=True)
+        else:
+            st.warning(t['search_no_results'])
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # ── الإعدادات ──
+    st.markdown("---")
+    st.markdown(f"<div class='cyber-box' style='margin: 15px 0;'><h3 style='color:{text_color}; margin-bottom:10px;'>{t['config_title']}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<p style='color:{text_color}; font-size:14px;'>{t['config_tip']}</p>", unsafe_allow_html=True)
+
+    default_order = ["News", "National", "Private", "Drama", "Movies", "Sports
