@@ -461,7 +461,7 @@ font-family:Arial;
 ">
 
 <div style="color:#ff007f;font-size:26px;font-weight:bold;">
-🛠️ DEVELOPER ENG: RAFIK RAMBO
+🛠️ DEVELOPER ENG: RAFIK NATHAN
 </div>
 
 <div style="margin-top:10px;">
