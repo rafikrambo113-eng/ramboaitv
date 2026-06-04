@@ -184,7 +184,7 @@ color:white;
 font-family:Arial;
 ">
 
-<h2>📺 RAMBO — المُرتب اليدوي المطور</h2>
+<h2>📺 RAMBO — المُرتب الذكي بالفئات</h2>
 
 <p style="font-size:16px;">
 ⚡ 
