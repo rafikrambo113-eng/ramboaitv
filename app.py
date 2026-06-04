@@ -3,17 +3,27 @@ import xml.etree.ElementTree as ET
 import json
 import re
 
-# =========================
-# Session State
-# =========================
 if 'lang' not in st.session_state:
     st.session_state.lang = 'ar'
 if 'theme' not in st.session_state:
     st.session_state.theme = 'dark'
+if 'loaded_file_name' not in st.session_state:
+    st.session_state.loaded_file_name = ""
+if 'channels' not in st.session_state:
+    st.session_state.channels = []
+if 'is_modern' not in st.session_state:
+    st.session_state.is_modern = False
+if 'root' not in st.session_state:
+    st.session_state.root = None
+if 'broadcast_data' not in st.session_state:
+    st.session_state.broadcast_data = None
+if 'file_text_original' not in st.session_state:
+    st.session_state.file_text_original = ""
+if 'model_name' not in st.session_state:
+    st.session_state.model_name = ""
+if 'legacy_tag' not in st.session_state:
+    st.session_state.legacy_tag = None
 
-# =========================
-# UI Text
-# =========================
 UI_TEXT = {
     'ar': {
         'title': "📺 RAMBO - المُرتب العالمي لشاشات LG",
@@ -78,15 +88,8 @@ UI_TEXT = {
 }
 
 t = UI_TEXT[st.session_state.lang]
-
-# =========================
-# Page Config
-# =========================
 st.set_page_config(page_title="RAMBO - LG Sorter", page_icon="⚡", layout="wide")
 
-# =========================
-# Top Controls
-# =========================
 col_lang, col_theme, _ = st.columns([1.2, 1.5, 8])
 with col_lang:
     if st.button("🌐 English" if st.session_state.lang == 'ar' else "🌐 العربية"):
@@ -97,9 +100,6 @@ with col_theme:
         st.session_state.theme = 'light' if st.session_state.theme == 'dark' else 'dark'
         st.rerun()
 
-# =========================
-# Theme Styling
-# =========================
 if st.session_state.theme == 'dark':
     bg_style = "radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%)"
     text_color = "#00f0ff"
@@ -148,15 +148,9 @@ div[data-testid="stFileUploader"], .rambo-box {{
 </style>
 """, unsafe_allow_html=True)
 
-# =========================
-# Title
-# =========================
 st.title(t['title'])
 st.markdown(f"<h3>{t['subtitle']}</h3>", unsafe_allow_html=True)
 
-# =========================
-# Data
-# =========================
 NILESAT_LIVE_DB = {
     "AL HAYAT": {"frequency": 12207, "polarization": "Vertical"},
     "AL HAYAT 2": {"frequency": 12207, "polarization": "Vertical"},
@@ -244,7 +238,6 @@ def parse_tll(file_bytes):
         file_text = file_bytes.decode('latin-1')
 
     file_text_cleaned = re.sub(r'^\s+', '', file_text)
-
     try:
         root = ET.fromstring(file_text_cleaned.encode('utf-8'))
     except Exception:
@@ -258,9 +251,8 @@ def parse_tll(file_bytes):
         broadcast_data = json.loads(legacy_broadcast_tag.text.strip())
         channels_list = broadcast_data.get("channelList", [])
         for ch in channels_list:
-            ch_name = ch.get("channelName", "Unknown")
             channels.append({
-                "name": ch_name,
+                "name": ch.get("channelName", "Unknown"),
                 "freq": str(ch.get("frequency", "N/A")),
                 "node_data": ch
             })
@@ -278,24 +270,19 @@ def parse_tll(file_bytes):
             })
         return channels, False, root, None, file_text, None
 
-# =========================
-# Upload
-# =========================
-uploaded_file = st.file_uploader(t['upload_label'], type=["TLL"])
+uploaded_file = st.file_uploader(t['upload_label'], type=["TLL"], key="tll_uploader")
 
-if uploaded_file is not None:
+if uploaded_file is not None and st.session_state.get("loaded_file_name") != uploaded_file.name:
     file_bytes = uploaded_file.read()
-    if st.session_state.loaded_file_name != uploaded_file.name:
-        channels, is_modern, root, broadcast_data, file_text_original, legacy_tag = parse_tll(file_bytes)
-        st.session_state.loaded_file_name = uploaded_file.name
-        st.session_state.channels = channels
-        st.session_state.is_modern = is_modern
-        st.session_state.root = root
-        st.session_state.broadcast_data = broadcast_data
-        st.session_state.file_text_original = file_text_original
-        st.session_state.legacy_tag = legacy_tag
-        st.session_state.model_name = root.findtext(".//ModelName", default="Unknown LG TV")
-        st.session_state.edit_finished = False
+    channels, is_modern, root, broadcast_data, file_text_original, legacy_tag = parse_tll(file_bytes)
+    st.session_state.loaded_file_name = uploaded_file.name
+    st.session_state.channels = channels
+    st.session_state.is_modern = is_modern
+    st.session_state.root = root
+    st.session_state.broadcast_data = broadcast_data
+    st.session_state.file_text_original = file_text_original
+    st.session_state.legacy_tag = legacy_tag
+    st.session_state.model_name = root.findtext(".//ModelName", default="Unknown LG TV")
 
 if not st.session_state.channels:
     st.info(t['no_file'])
@@ -308,9 +295,6 @@ st.success(
     f"{t['total_label']} **{len(st.session_state.channels)}**"
 )
 
-# =========================
-# Processing Options
-# =========================
 update_freq = st.checkbox(t['update_freq_label'], value=True)
 add_new_ch = st.checkbox(t['add_new_ch_label'], value=True)
 
@@ -410,13 +394,9 @@ else:
                     "is_injected": True
                 })
 
-# =========================
-# Search
-# =========================
 st.write("---")
 st.write(f"### {t['search_header']}")
 search_query = st.text_input("", placeholder=t['search_placeholder']).strip().upper()
-
 if search_query:
     search_results = []
     for idx, ch in enumerate(channels_to_sort, start=1):
@@ -432,13 +412,9 @@ if search_query:
     else:
         st.warning(t['search_no_results'])
 
-# =========================
-# Category Sorting
-# =========================
 st.write("---")
 st.write(f"### {t['config_title']}")
 user_priority = st.multiselect(t['multiselect_label'], options=ALL_AVAILABLE_CATEGORIES, default=[])
-
 final_priority = list(user_priority)
 for cat in ALL_AVAILABLE_CATEGORIES:
     if cat not in final_priority:
@@ -454,13 +430,9 @@ for ch in channels_sorted:
     cat = ai_classify(ch["name"])
     categorized.setdefault(cat, []).append(ch["name"])
 
-# =========================
-# Preview
-# =========================
 st.write("---")
 st.write(f"### {t['preview_title']}")
 col1, col2 = st.columns(2)
-
 for i, cat_name in enumerate(final_priority):
     if cat_name in categorized:
         ch_list = categorized[cat_name]
@@ -476,9 +448,6 @@ if report_changes:
     st.write("### 🔁 التعديلات")
     st.table(report_changes)
 
-# =========================
-# Build Output
-# =========================
 text_report = f"{t['txt_header']} ({st.session_state.model_name})\n" + "=" * 50 + "\n"
 text_report += t['txt_order'] + " -> ".join(final_priority) + "\n" + "=" * 50 + "\n\n"
 
@@ -504,7 +473,6 @@ else:
     combined_items_str = "\r\n".join(item_strings_sorted)
     start_idx = st.session_state.file_text_original.find("<ITEM>")
     end_idx = st.session_state.file_text_original.rfind("</ITEM>") + len("</ITEM>")
-
     if start_idx != -1 and end_idx != -1:
         final_text_output = st.session_state.file_text_original[:start_idx] + combined_items_str + st.session_state.file_text_original[end_idx:]
     else:
@@ -515,9 +483,6 @@ else:
     except UnicodeEncodeError:
         final_xml_bytes = final_text_output.encode('latin-1')
 
-# =========================
-# Download
-# =========================
 st.write("---")
 st.success(t['ready_msg'])
 
@@ -537,9 +502,6 @@ with col_btn2:
         mime="text/plain; charset=utf-8"
     )
 
-# =========================
-# Note
-# =========================
 st.markdown(f"""
 <div style="background-color: rgba(255, 165, 0, 0.12); border-left: 5px solid #ffa500; padding: 20px; border-radius: 12px; margin-top: 25px;">
     <h4 style="color: #ffa500; margin-top: 0; font-weight: bold;">{t['lg_trick_title']} {t['lg_trick_text']}</h4>
