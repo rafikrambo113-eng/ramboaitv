@@ -27,20 +27,6 @@ if 'model_name' not in st.session_state:
     st.session_state.model_name = ""
 if 'edit_finished' not in st.session_state:
     st.session_state.edit_finished = False 
-if 'last_file_name' not in st.session_state:
-    st.session_state.last_file_name = ""
-if 'scan_done_p2' not in st.session_state:
-    st.session_state.scan_done_p2 = False
-if 'maint_done_p2' not in st.session_state:
-    st.session_state.maint_done_p2 = False
-if 'inserted_list_p2' not in st.session_state:
-    st.session_state.inserted_list_p2 = []
-if 'maint_details_p2' not in st.session_state:
-    st.session_state.maint_details_p2 = []
-if 'legacy_tag' not in st.session_state:
-    st.session_state.legacy_tag = None
-if 'file_uploaded' not in st.session_state:
-    st.session_state.file_uploaded = False
 
 # ─────────────────────────────────────────────
 # 2. قواميس النصوص (عربي / إنجليزي)
@@ -52,7 +38,7 @@ UI = {
         'upload_label':    "🚀 ارفع ملف القنوات (GlobalClone00001.TLL):",
         'success_read':    "🛸 تم قراءة الملف بنجاح! الموديل: ",
         'search_ph':       "🔍 ابحث عن قناة بالاسم في الملف الأصلي...",
-        'all_ch_title':    "📋 1. جدول القنوات الكلي المتوفر",
+        'all_ch_title':    "📋 1. جدول القنوات الكلي المتوفرة",
         'ordered_title':   "📊 2. جدول الترتيب النهائي (اكتب أرقام الترتيب هنا واضغط حفظ بالأسفل)",
         'col_action':      "إجراء",
         'btn_add_to_order': "➕ زرع",
@@ -172,73 +158,48 @@ def parse_tll(file_bytes):
         return channels, False, root, None, file_text, None
 
 # ─────────────────────────────────────────────
-# 5. دالة لمعالجة الملف (تُستدعى عند الرفع)
+# 5. رفع ومعالجة الملف الأصلي
 # ─────────────────────────────────────────────
-def process_uploaded_file():
-    uploaded = st.session_state.get('uploaded_file')
-    if uploaded is None:
-        return
-    
-    # مسح البيانات القديمة
-    st.session_state.channels = []
-    st.session_state.ordered_channels = []
-    st.session_state.root = None
-    st.session_state.broadcast_data = None
-    st.session_state.file_text_original = ""
-    st.session_state.model_name = ""
-    st.session_state.edit_finished = False
-    st.session_state.is_modern = False
-    st.session_state.scan_done_p2 = False
-    st.session_state.maint_done_p2 = False
-    st.session_state.inserted_list_p2 = []
-    st.session_state.maint_details_p2 = []
-    st.session_state.legacy_tag = None
-    
-    try:
-        file_bytes = uploaded.read()
-        (
-            st.session_state.channels,
-            st.session_state.is_modern,
-            st.session_state.root,
-            st.session_state.broadcast_data,
-            st.session_state.file_text_original,
-            st.session_state.legacy_tag
-        ) = parse_tll(file_bytes)
+uploaded = st.file_uploader(t['upload_label'], type=["TLL"], key="tll_uploader_p2")
 
-        model_node = st.session_state.root.find(".//ModelName")
-        st.session_state.model_name = model_node.text if model_node is not None else "LG TV Custom"
-        st.session_state.ordered_channels = []
-        st.session_state.edit_finished = False
-        
-        st.session_state.last_file_name = uploaded.name
-        st.session_state.file_uploaded = True
-        
-        st.toast(f"🛸 تم قراءة الملف بنجاح: {uploaded.name}", icon="✅")
-        st.rerun()
-    except Exception as e:
-        st.error(f"❌ خطأ في معالجة الملف. تأكد أن الملف سليم. تفاصيل: {e}")
-        st.stop()
-
-# ─────────────────────────────────────────────
-# 6. رفع ومعالجة الملف الأصلي (معدّل لقراءة فورية)
-# ─────────────────────────────────────────────
-uploaded = st.file_uploader(
-    t['upload_label'], 
-    type=["TLL"], 
-    key="tll_uploader_p2",
-    on_change=process_uploaded_file
-)
-
-# تخزين الملف في session_state عشان نقرأه في الـ callback
 if uploaded is not None:
-    st.session_state.uploaded_file = uploaded
+    if st.session_state.get("last_file_name") != uploaded.name:
+        st.session_state.channels = []
+        st.session_state.ordered_channels = []
+        st.session_state.root = None
+        st.session_state.broadcast_data = None
+        st.session_state.file_text_original = ""
+        st.session_state.model_name = ""
+        st.session_state.edit_finished = False
+        st.session_state.is_modern = False
+        st.session_state.scan_done_p2 = False
+        st.session_state.maint_done_p2 = False
 
-# ─────────────────────────────────────────────
-# 7. رسالة إذا لم يتم رفع ملف
-# ─────────────────────────────────────────────
+    st.session_state.last_file_name = uploaded.name
+    if not st.session_state.channels:
+        try:
+            file_bytes = uploaded.read()
+            (
+                st.session_state.channels,
+                st.session_state.is_modern,
+                st.session_state.root,
+                st.session_state.broadcast_data,
+                st.session_state.file_text_original,
+                st.session_state.legacy_tag
+            ) = parse_tll(file_bytes)
+
+            model_node = st.session_state.root.find(".//ModelName")
+            st.session_state.model_name = model_node.text if model_node is not None else "LG TV Custom"
+            st.session_state.ordered_channels = []
+            st.session_state.edit_finished = False 
+        except Exception as e:
+            st.error(f"❌ خطأ في معالجة بناء الملف. تأكد أن الملف سليم وغير تالف. تفاصيل: {e}")
+            st.stop()
+
 if not st.session_state.channels:
     st.info(t['no_file'])
 
+    # 👇 حط الفوتر هنا
     st.markdown("""
     <div style="
     background:#0f172a;
@@ -260,13 +221,10 @@ if not st.session_state.channels:
 
     st.stop()
 
-# ─────────────────────────────────────────────
-# 8. رسالة نجاح قراءة الملف
-# ─────────────────────────────────────────────
 st.success(f"{t['success_read']} **{st.session_state.model_name}** | 📡 {'Modern JSON' if st.session_state.is_modern else 'Legacy XML'} | الإجمالي: {len(st.session_state.channels)} قناة.")
 
 # ─────────────────────────────────────────────
-# 9. خيارات الفحص والصيانة التلقائية
+# 6. خيارات الفحص والصيانة التلقائية
 # ─────────────────────────────────────────────
 st.write(f"### {t['auto_features_title']}")
 col_chk1, col_chk2 = st.columns(2)
@@ -302,13 +260,13 @@ with col_chk1:
         st.session_state.scan_done_p2 = True
         st.session_state.inserted_list_p2 = new_inserted_names
         if added_count > 0:
-            st.toast("📡 تم زرع القنوات الجديدة في جدول المتوفر!", icon="✅")
+            st.toast("📡 تم زرع القنوات الجديدة في جدول المتوفر!")
             st.rerun()
 
     if scan_active:
         if st.session_state.get('inserted_list_p2'):
             st.markdown("<div style='background:rgba(0, 240, 255, 0.1); padding:12px; border-radius:10px; border-left:4px solid #00f0ff; margin-top:10px;'>", unsafe_allow_html=True)
-            st.markdown("**✨ قنوات جديدة تم زرعها في **(1. جدول القنوات الكلي المتوفر):")
+            st.markdown("**✨ قنوات جديدة تم زرعها في (1. جدول القنوات الكلي المتوفرة):**")
             for item in st.session_state.inserted_list_p2:
                 st.markdown(f"<span style='color:#00f0ff;'>{item}</span>", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
@@ -341,13 +299,13 @@ with col_chk2:
         st.session_state.maint_done_p2 = True
         st.session_state.maint_details_p2 = maint_details
         if updated_count > 0:
-            st.toast("🔧 تم تحديث الترددات في جدول المتوفر بنجاح!", icon="✅")
+            st.toast("🔧 تم تحديث الترددات في جدول المتوفر بنجاح!")
             st.rerun()
 
     if maint_active:
         if st.session_state.get('maint_details_p2'):
             st.markdown("<div style='background:rgba(255, 0, 127, 0.1); padding:12px; border-radius:10px; border-left:4px solid #ff007f; margin-top:10px;'>", unsafe_allow_html=True)
-            st.markdown("**🔧 تقرير الترددات المعدلة في **(1. جدول القنوات الكلي المتوفر):")
+            st.markdown("**🔧 تقرير الترددات المعدلة في (1. جدول القنوات الكلي المتوفرة):**")
             for detail in st.session_state.maint_details_p2:
                 st.markdown(f"<span style='color:#ff007f;'>{detail}</span>", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
@@ -355,14 +313,14 @@ with col_chk2:
             st.markdown("<div style='color:#888; margin-top:10px;'>ℹ️ جميع الترددات الحالية بجدول المتوفر مطابقة لأحدث نسخة.</div>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# 10. دوال الـ Callbacks لضمان ثبات البيانات
+# 7. دوال الـ Callbacks لضمان ثبات البيانات
 # ─────────────────────────────────────────────
 def add_channel_callback(ch_obj):
     st.session_state.ordered_channels.append(ch_obj.copy())
     st.session_state.edit_finished = False
 
 # ─────────────────────────────────────────────
-# 11. واجهة نظام الجدولين المتجاورين
+# 8. واجهة نظام الجدولين المتجاورين
 # ─────────────────────────────────────────────
 st.write("---")
 col_table1, col_table2 = st.columns(2)
@@ -436,7 +394,7 @@ with col_table2:
                     if st.button("🗑️", key=f"del_btn_{i}_{ch['id']}", help="حذف القناة فوراً من قائمة الترتيب"):
                         st.session_state.ordered_channels.pop(i)
                         st.session_state.edit_finished = False
-                        st.toast(f"🗑️ تم حذف قناة [{ch.get('name')}] من الترتيب!", icon="✅")
+                        st.toast(f"🗑️ تم حذف قناة [{ch.get('name')}] من الترتيب!")
                         st.rerun()
         
         st.write("")
@@ -447,7 +405,7 @@ with col_table2:
             
             st.session_state.ordered_channels = [item[1] for item in indexed_channels]
             st.session_state.edit_finished = False
-            st.toast("🎯 تم فرز وتحديث جدول الترتيب بنجاح طبقاً للأرقام المكتوبة!", icon="✅")
+            st.toast("🎯 تم فرز وتحديث جدول الترتيب بنجاح طبقاً للأرقام المكتوبة!")
             st.rerun()
             
     else:
@@ -456,7 +414,7 @@ with col_table2:
 st.write("---")
 
 # ─────────────────────────────────────────────
-# 12. التجهيز النهائي والتحميل والملحوظة الفنية
+# 9. التجهيز النهائي والتحميل والملحوظة الفنية
 # ─────────────────────────────────────────────
 st.write(f"### {t['preview_title']}")
 
@@ -541,7 +499,7 @@ else:
         """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# 13. الفوتر السيبراني (FIXED)
+# 10. الفوتر السيبراني (FIXED)
 # ─────────────────────────────────────────────
 
 whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
@@ -589,3 +547,5 @@ WhatsApp
 
 </div>
 """, unsafe_allow_html=True)
+عاوز اعدل فالكود لما ارفع ملف بيقراء الملف ولو مسحت الملف او رفعت واحد جديد يقرا الجديد
+بدل معمل رفريش للصفحه
