@@ -52,6 +52,8 @@ UI = {
         'btn_txt':         "📄 تحميل تقرير لستة الترتيب (Channels_List.txt)",
         'txt_header':      "📄 تقرير الترتيب اليدوي المطور — RAMBO Page 2",
         'no_file':         "⬆️ ارفع ملف TLL أولاً لتبدأ العمل.",
+        'btn_reset':       "🔄 إعادة تهيئة الصفحة",
+        'reset_msg':       "✅ تم إعادة تهيئة الصفحة بالكامل! ارفع ملف جديد لتبدأ من الصفر.",
     },
     'en': {
         'title':           "📺 RAMBO — Advanced Manual Sorter",
@@ -72,6 +74,8 @@ UI = {
         'btn_txt':         "📄 Download Sorted List Report (Channels_List.txt)",
         'txt_header':      "📄 Manual Sorting Advanced Report — RAMBO Page 2",
         'no_file':         "⬆️ Upload a TLL file to start.",
+        'btn_reset':       "🔄 Reset Page",
+        'reset_msg':       "✅ Page fully reset! Upload a new file to start from scratch.",
     }
 }
 
@@ -81,6 +85,28 @@ t = UI[st.session_state.lang]
 # 3. إعداد الصفحة والـ CSS السيبراني
 # ─────────────────────────────────────────────
 st.set_page_config(page_title="RAMBO P2 — Advanced Sorter", page_icon="🎛️", layout="wide")
+
+def reset_all_session_state():
+    """مسح جميع بيانات الجلسة لإعادة التهيئة الكاملة"""
+    keys_to_keep = ['lang', 'theme']  # نحافظ على اللغة والسمة فقط
+    keys_to_delete = [k for k in st.session_state.keys() if k not in keys_to_keep]
+    for key in keys_to_delete:
+        del st.session_state[key]
+    
+    # إعادة تهيئة القيم الافتراضية
+    st.session_state.channels = []
+    st.session_state.ordered_channels = []
+    st.session_state.is_modern = False
+    st.session_state.root = None
+    st.session_state.broadcast_data = None
+    st.session_state.file_text_original = ""
+    st.session_state.model_name = ""
+    st.session_state.edit_finished = False
+    st.session_state.last_file_name = None
+    st.session_state.scan_done_p2 = False
+    st.session_state.maint_done_p2 = False
+    st.session_state.inserted_list_p2 = []
+    st.session_state.maint_details_p2 = []
 
 col_lang, col_theme, _ = st.columns([1.2, 1.5, 8])
 with col_lang:
@@ -112,6 +138,7 @@ st.markdown(f"""
     .stTextInput>div>div>input, .stNumberInput>div>div>input {{ background-color: {box_bg} !important; color: {text_color} !important; border: 2px solid {box_border} !important; border-radius: 10px !important; }}
     div[data-testid="stFileUploader"], .rambo-box {{ background: {box_bg} !important; border: 2px solid {box_border} !important; box-shadow: 0px 5px 15px {box_shadow} !important; border-radius: 14px !important; padding: 18px !important; margin-bottom: 20px !important; }}
     .stButton>button {{ background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important; color: #ffffff !important; border: 2px solid #ff007f !important; border-radius: 12px !important; font-weight: bold; width: 100%; }}
+    #btn_reset_footer {{ background: linear-gradient(135deg, #ff6b35 0%, #d43f00 100%) !important; font-size: 16px !important; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -498,6 +525,17 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
+# ── زر إعادة التهيئة قبل الفوتر ───────────────────────────────────────────────
+st.write("---")
+st.write(f"### ⚙️ خيارات التحكم")
+
+col_reset_center, _ = st.columns([1, 8])
+with col_reset_center:
+    if st.button(t['btn_reset'], key="btn_reset_footer", help="إعادة تهيئة الصفحة بالكامل وحذف جميع البيانات والبدء من جديد"):
+        reset_all_session_state()
+        st.success(t['reset_msg'])
+        st.rerun()
+
 # ── FOOTER ────────────────────────────────────────────────────
 whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
 st.markdown(f"""
@@ -518,7 +556,7 @@ font-family:Arial;
 📱 <b>MOBILE / الموبايل:</b> +201280339779
 </div>
 <div style="margin-top:10px;">
-✉️ <b>E-MAIL:</b> rafikrambo113@gmail.com
+✉️ <b>E-MAIL:</b> [rafikrambo113@gmail.com](mailto:rafikrambo113@gmail.com)
 </div>
 <a href="{whatsapp_url}" target="_blank"
 style="
