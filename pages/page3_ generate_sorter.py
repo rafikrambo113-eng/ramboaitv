@@ -56,6 +56,21 @@ UI = {
         'ch_count_lbl': "إجمالي القنوات:",
         'sat_lbl':      "القمر الصناعي:",
         'country_lbl':  "بلد البث:",
+        'ai_section': "🤖 ميزات الذكاء الاصطناعي",
+        'ai_key_label': "🔑 Anthropic API Key",
+        'ai_key_ph': "sk-ant-...",
+        'ai_update_freq': "⚛️ تحديث الترددات بالذكاء الاصطناعي",
+        'ai_new_ch': "🛰️ اكتشاف قنوات جديدة على القمر",
+        'ai_running': "🤖 الذكاء الاصطناعي يعمل...",
+        'ai_freq_done': "✅ تم تحديث الترددات",
+        'ai_newch_done': "✅ تم اكتشاف قنوات جديدة",
+        'ai_no_key': "⚠️ أدخل API Key لاستخدام ميزات AI",
+        'ai_freq_updated': "قنوات تم تحديث ترددها",
+        'ai_new_found': "قنوات جديدة تم إضافتها",
+        'cat_section': "🎛️ ترتيب الفئات",
+        'cat_multiselect': "اختر الفئات بالترتيب المطلوب (الأول = الأعلى):",
+        'cat_preview': "📊 معاينة توزيع القنوات:",
+        'cat_channels': "قناة",
     },
     'en': {
         'title':        "📺 RAMBO — Channel File Generator",
@@ -90,6 +105,21 @@ UI = {
         'ch_count_lbl': "Total channels:",
         'sat_lbl':      "Satellite:",
         'country_lbl':  "Country:",
+        'ai_section': "🤖 AI Features",
+        'ai_key_label': "🔑 Anthropic API Key",
+        'ai_key_ph': "sk-ant-...",
+        'ai_update_freq': "⚛️ AI Frequency Updater",
+        'ai_new_ch': "🛰️ Discover New Satellite Channels",
+        'ai_running': "🤖 AI is working...",
+        'ai_freq_done': "✅ Frequencies updated",
+        'ai_newch_done': "✅ New channels discovered",
+        'ai_no_key': "⚠️ Enter API Key to use AI features",
+        'ai_freq_updated': "channels frequency updated",
+        'ai_new_found': "new channels added",
+        'cat_section': "🎛️ Category Order",
+        'cat_multiselect': "Select categories in priority order (first = top):",
+        'cat_preview': "📊 Channel distribution preview:",
+        'cat_channels': "channels",
     }
 }
 
@@ -1354,6 +1384,106 @@ def is_modern_year(year_str):
     return "2024" in year_str or "2022" in year_str or "2020" in year_str
 
 # ──────────────────────────────────────────────────────
+# AI HELPER FUNCTIONS
+# ──────────────────────────────────────────────────────
+import requests as _req
+import json as _json
+
+def _clean_json(raw):
+    text = raw.strip()
+    if "```" in text:
+        parts = text.split("```")
+        text = parts[1] if len(parts) > 1 else text
+        if text.startswith("json"):
+            text = text[4:]
+    for starter in ["{", "["]:
+        idx = text.find(starter)
+        if idx != -1:
+            text = text[idx:]
+            break
+    return text.strip()
+
+def ai_call(api_key, prompt, use_web_search=False):
+    """Call Claude API with optional web search. Returns (text, error)."""
+    body = {
+        "model": "claude-sonnet-4-5",
+        "max_tokens": 4000,
+        "system": (
+            "You are a satellite TV expert specializing in Arabic channels. "
+            "When searching for frequencies or channel lists, use trusted sources: "
+            "lyngsat.com, flysat.com, kingofsat.net, satellites.xml. "
+            "Always reply with pure JSON only — no markdown, no explanation."
+        ),
+        "messages": [{"role": "user", "content": prompt}]
+    }
+    if use_web_search:
+        body["tools"] = [{"type": "web_search_20250305", "name": "web_search"}]
+    try:
+        headers = {
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "anthropic-beta": "web-search-2025-03-05",
+            "content-type": "application/json"
+        }
+        resp = _req.post("https://api.anthropic.com/v1/messages",
+                         headers=headers, json=body, timeout=90)
+        if resp.status_code != 200:
+            return None, f"API Error {resp.status_code}: {resp.text[:300]}"
+        data = resp.json()
+        text_parts = [b.get("text","") for b in data.get("content",[]) if b.get("type") == "text"]
+        return " ".join(text_parts).strip(), None
+    except Exception as e:
+        return None, str(e)
+
+def ai_update_frequencies(api_key, channels, sat_name):
+    """Search lyngsat/flysat for current frequencies of known channels."""
+    names = [ch["name"] for ch in channels[:80]]
+    prompt = (
+        f"Search lyngsat.com, flysat.com, and kingofsat.net for the current broadcast frequencies "
+        f"(in MHz) of these Arabic TV channels on {sat_name} satellite as of 2024-2025.\n"
+        f"Channels list: {', '.join(names)}\n\n"
+        'Reply ONLY with a valid JSON object mapping channel name to frequency integer. Example:\n'
+        '{"Al Jazeera HD": 10853, "MBC 1": 11938, "beIN Sports 1": 11596}\n'
+        "Include only channels where you found a confirmed frequency. No markdown, no text."
+    )
+    text, err = ai_call(api_key, prompt, use_web_search=True)
+    if err or not text:
+        return {}, err or "No response"
+    try:
+        freq_map = _json.loads(_clean_json(text))
+        return {k.upper(): int(v) for k, v in freq_map.items() if isinstance(v, (int, float))}, None
+    except Exception as e:
+        return {}, f"Parse error: {e} | raw: {text[:150]}"
+
+
+def ai_discover_new_channels(api_key, sat_name, existing_names):
+    """Search for new Arabic channels on the satellite not already in DB."""
+    existing_upper = {n.upper() for n in existing_names}
+    prompt = (
+        f"Search lyngsat.com, flysat.com, and kingofsat.net for Arabic TV channels currently "
+        f"broadcasting on {sat_name} satellite in 2024-2025, especially channels launched in the last 2 years.\n"
+        "Reply ONLY with a valid JSON array of channel objects. Example:\n"
+        '[{"name": "New Channel HD", "freq": 11234, "pol": "Vertical"}, '
+        '{"name": "Another TV", "freq": 12054, "pol": "Horizontal"}]\n'
+        "Include at least 15 channels. No markdown, no explanation, pure JSON only."
+    )
+    text, err = ai_call(api_key, prompt, use_web_search=True)
+    if err or not text:
+        return [], err or "No response"
+    try:
+        found = _json.loads(_clean_json(text))
+        new_only = [
+            ch for ch in found
+            if isinstance(ch, dict)
+            and ch.get("name", "").strip()
+            and ch.get("name", "").upper() not in existing_upper
+        ]
+        return new_only, None
+    except Exception as e:
+        return [], f"Parse error: {e} | raw: {text[:150]}"
+
+
+# ──────────────────────────────────────────────────────
 # 4. FILE GENERATORS
 # ──────────────────────────────────────────────────────
 
@@ -1683,6 +1813,17 @@ st.write("---")
 # ──────────────────────────────────────────────────────
 # 7. STEP 1 — FORM
 # ──────────────────────────────────────────────────────
+ALL_CATS_AR = ["⛪ مسيحية", "🕌 إسلامية", "🎬 دراما", "🍿 أفلام", "👶 أطفال", "⚽ رياضة", "📰 أخبار", "📺 عامة"]
+ALL_CATS_EN = ["⛪ Christian", "🕌 Islamic", "🎬 Drama", "🍿 Movies", "👶 Kids", "⚽ Sports", "📰 News", "📺 General"]
+CAT_MAP = dict(zip(ALL_CATS_AR, ALL_CATS_EN))
+CAT_MAP_R = dict(zip(ALL_CATS_EN, ALL_CATS_AR))
+ALL_CATS = ALL_CATS_AR if st.session_state.lang == "ar" else ALL_CATS_EN
+
+# ai_classify returns Arabic label — map to current lang
+def cat_label(name):
+    ar = ai_classify(name)
+    return ar if st.session_state.lang == "ar" else CAT_MAP.get(ar, ar)
+
 if st.session_state.p3_step == 1:
     st.markdown(f"### {t['step1_header']}")
 
@@ -1691,121 +1832,160 @@ if st.session_state.p3_step == 1:
 
         with col1:
             st.markdown('<div class="rambo-card">', unsafe_allow_html=True)
-
-            sat_choice = st.selectbox(
-                t['q_sat'],
-                options=[""] + t['sat_opts'],
-                key="p3_sat"
-            )
-
-            country_choice = st.selectbox(
-                t['q_country'],
-                options=[""] + t['country_opts'],
-                key="p3_country"
-            )
-
-            year_choice = st.selectbox(
-                t['q_year'],
-                options=[""] + t['year_opts'],
-                key="p3_year"
-            )
-
+            sat_choice = st.selectbox(t['q_sat'], options=[""] + t['sat_opts'], key="p3_sat")
+            country_choice = st.selectbox(t['q_country'], options=[""] + t['country_opts'], key="p3_country")
+            year_choice = st.selectbox(t['q_year'], options=[""] + t['year_opts'], key="p3_year")
             st.markdown('</div>', unsafe_allow_html=True)
 
         with col2:
             st.markdown('<div class="rambo-card">', unsafe_allow_html=True)
-
-            inch_choice = st.selectbox(
-                t['q_inch'],
-                options=[""] + t['inch_opts'],
-                key="p3_inch"
-            )
-
+            inch_choice = st.selectbox(t['q_inch'], options=[""] + t['inch_opts'], key="p3_inch")
             model_choice = st.text_input(
                 t['q_model'],
-                placeholder="مثال: 55UN7340PVA" if st.session_state.lang == 'ar' else "e.g. 55UN7340PVA",
+                placeholder="مثال: 55UN7340PVA" if st.session_state.lang == "ar" else "e.g. 55UN7340PVA",
                 key="p3_model"
             )
-
-            # Live preview of file type
             if year_choice:
-                is_mod = is_modern_year(year_choice)
-                if is_mod:
-                    st.info(t['info_modern'])
-                else:
-                    st.info(t['info_legacy'])
-
+                st.info(t['info_modern'] if is_modern_year(year_choice) else t['info_legacy'])
             st.markdown('</div>', unsafe_allow_html=True)
+
+    st.write("---")
+
+    # ── Category Sorting ──────────────────────────────────────
+    st.markdown(f"### {t['cat_section']}")
+    user_priority = st.multiselect(t['cat_multiselect'], options=ALL_CATS, default=[], key="p3_cat_order")
+    final_priority = list(user_priority)
+    for c in ALL_CATS:
+        if c not in final_priority:
+            final_priority.append(c)
+
+    if sat_choice:
+        ch_db_preview = get_channel_db(sat_choice)
+        from collections import defaultdict
+        cats_preview = defaultdict(list)
+        for ch in ch_db_preview:
+            cats_preview[cat_label(ch["name"])].append(ch["name"])
+        col_p1, col_p2 = st.columns(2)
+        for i, cat in enumerate(final_priority):
+            if cat in cats_preview:
+                lst = cats_preview[cat]
+                star = "⭐ " if cat in user_priority else ""
+                title = f"{star}{cat} — ({len(lst)} {t['cat_channels']})"
+                with (col_p1 if i % 2 == 0 else col_p2):
+                    with st.expander(title):
+                        st.caption(", ".join(lst[:30]) + ("..." if len(lst) > 30 else ""))
+
+    st.write("---")
+
+    # ── AI Features ───────────────────────────────────────────
+    st.markdown(f"### {t['ai_section']}")
+    api_key = st.text_input(t['ai_key_label'], type="password", placeholder=t['ai_key_ph'], key="p3_api_key")
+
+    col_ai1, col_ai2 = st.columns(2)
+    with col_ai1:
+        do_update_freq = st.checkbox(t['ai_update_freq'], value=False, key="p3_do_freq")
+    with col_ai2:
+        do_new_ch = st.checkbox(t['ai_new_ch'], value=False, key="p3_do_newch")
+
+    if (do_update_freq or do_new_ch) and not api_key:
+        st.warning(t['ai_no_key'])
 
     st.write("")
     col_btn, _, _ = st.columns([2, 1, 1])
     with col_btn:
         if st.button(t['btn_next'], use_container_width=True):
-            # Validate
             errors = []
-            if not sat_choice:
-                errors.append(t['warn_sat'])
-            if not country_choice:
-                errors.append(t['warn_country'])
-            if not year_choice:
-                errors.append(t['warn_year'])
-
-            if errors:
-                for e in errors:
-                    st.warning(e)
-            else:
-                # Build model name
-                inch_str = inch_choice if inch_choice else "55"
-                model_name = model_choice.strip() if model_choice.strip() else f"LG{inch_str}XXXXX"
+            if not sat_choice:   errors.append(t['warn_sat'])
+            if not country_choice: errors.append(t['warn_country'])
+            if not year_choice:  errors.append(t['warn_year'])
+            for e in errors:
+                st.warning(e)
+            if not errors:
+                inch_str    = inch_choice if inch_choice else "55"
+                model_name  = model_choice.strip() if model_choice.strip() else f"LG{inch_str}XXXXX"
                 country_code = COUNTRY_CODE_MAP.get(country_choice, "EGY")
-                is_mod = is_modern_year(year_choice)
+                is_mod      = is_modern_year(year_choice)
+                ch_db       = [dict(ch) for ch in get_channel_db(sat_choice)]
 
-                # Get channel DB
-                ch_db = get_channel_db(sat_choice)
-
-                # Determine sat info for modern file
                 if "نايل" in sat_choice or "Nile" in sat_choice:
                     sat_info = {"name": "NILESAT 7.0W", "loc": "7.0W"}
+                    sat_display = "NileSat 7°W"
                 elif "عرب" in sat_choice or "Arab" in sat_choice or "Badr" in sat_choice:
                     sat_info = {"name": "ARABSAT 26.0E", "loc": "26.0E"}
+                    sat_display = "ArabSat 26°E"
                 elif "هوت" in sat_choice or "HotBird" in sat_choice:
                     sat_info = {"name": "HOTBIRD 13.0E", "loc": "13.0E"}
+                    sat_display = "HotBird 13°E"
                 else:
                     sat_info = {"name": "EUTELSAT 8.0W", "loc": "8.0W"}
+                    sat_display = "Eutelsat 8°W"
+
+                ai_freq_log  = []
+                ai_newch_log = []
+
+                # ── AI: Update Frequencies ──
+                if do_update_freq and api_key:
+                    with st.spinner(t['ai_running']):
+                        freq_map, err = ai_update_frequencies(api_key, ch_db, sat_display)
+                        if freq_map:
+                            for ch in ch_db:
+                                key = ch["name"].upper()
+                                if key in freq_map and int(ch["freq"]) != freq_map[key]:
+                                    ai_freq_log.append({"channel": ch["name"], "old": ch["freq"], "new": freq_map[key]})
+                                    ch["freq"] = freq_map[key]
+                            st.toast(f"✅ {t['ai_freq_done']}: {len(ai_freq_log)} {t['ai_freq_updated']}")
+                        if err:
+                            st.warning(f"AI freq error: {err}")
+
+                # ── AI: Discover New Channels ──
+                if do_new_ch and api_key:
+                    with st.spinner(t['ai_running']):
+                        existing_names = [ch["name"] for ch in ch_db]
+                        new_chs, err = ai_discover_new_channels(api_key, sat_display, existing_names)
+                        sat_id = ch_db[0].get("sat_id", "3530") if ch_db else "3530"
+                        for nc in new_chs:
+                            nc["sat_id"] = sat_id
+                            nc["pol"] = nc.get("pol", "Vertical")
+                            ch_db.append(nc)
+                            ai_newch_log.append(nc["name"])
+                        if new_chs:
+                            st.toast(f"✅ {t['ai_newch_done']}: {len(new_chs)} {t['ai_new_found']}")
+                        if err:
+                            st.warning(f"AI new ch error: {err}")
+
+                # ── Sort by Category Priority ──
+                def sort_key_cat(ch):
+                    lbl = cat_label(ch["name"])
+                    return final_priority.index(lbl) if lbl in final_priority else len(final_priority)
+                ch_db.sort(key=sort_key_cat)
 
                 country_full_map = {
-                    "EGY": "Egypt", "SAU": "Saudi Arabia", "ARE": "United Arab Emirates",
-                    "JOR": "Jordan", "LBN": "Lebanon", "SDN": "Sudan", "DZA": "Algeria",
-                    "MAR": "Morocco", "TUN": "Tunisia", "LBY": "Libya", "IRQ": "Iraq",
-                    "SYR": "Syria", "YEM": "Yemen", "KWT": "Kuwait", "QAT": "Qatar",
-                    "BHR": "Bahrain", "OMN": "Oman"
+                    "EGY":"Egypt","SAU":"Saudi Arabia","ARE":"United Arab Emirates",
+                    "JOR":"Jordan","LBN":"Lebanon","SDN":"Sudan","DZA":"Algeria",
+                    "MAR":"Morocco","TUN":"Tunisia","LBY":"Libya","IRQ":"Iraq",
+                    "SYR":"Syria","YEM":"Yemen","KWT":"Kuwait","QAT":"Qatar",
+                    "BHR":"Bahrain","OMN":"Oman"
                 }
                 country_full = country_full_map.get(country_code, "Egypt")
 
-                # Generate file
                 if is_mod:
-                    out_bytes = generate_modern_json(ch_db, country_code, model_name, country_full, sat_info)
+                    out_bytes      = generate_modern_json(ch_db, country_code, model_name, country_full, sat_info)
                     file_type_label = "Modern JSON (2020+)"
                 else:
-                    out_bytes = generate_legacy_xml(ch_db, country_code, model_name, sat_choice)
+                    out_bytes      = generate_legacy_xml(ch_db, country_code, model_name, sat_choice)
                     file_type_label = "Legacy XML (pre-2020)"
 
-                report_txt = generate_report(ch_db, {
-                    "sat": sat_choice, "country": country_choice
-                }, file_type_label, st.session_state.lang)
+                report_txt = generate_report(ch_db, {"sat": sat_choice, "country": country_choice}, file_type_label, st.session_state.lang)
 
                 st.session_state.p3_answers = {
-                    "sat": sat_choice,
-                    "country": country_choice,
-                    "inch": inch_str,
-                    "model": model_name,
-                    "year": year_choice,
-                    "file_type": file_type_label,
-                    "ch_count": len(ch_db),
-                    "is_modern": is_mod,
+                    "sat": sat_choice, "country": country_choice, "inch": inch_str,
+                    "model": model_name, "year": year_choice,
+                    "file_type": file_type_label, "ch_count": len(ch_db), "is_modern": is_mod,
+                    "ai_freq_log": ai_freq_log, "ai_newch_log": ai_newch_log,
+                    "cat_priority": final_priority,
                 }
-                st.session_state.p3_output_bytes = out_bytes
-                st.session_state.p3_report_txt = report_txt
+                st.session_state.p3_output_bytes  = out_bytes
+                st.session_state.p3_report_txt    = report_txt
                 st.session_state.p3_channels_preview = ch_db
                 st.session_state.p3_step = 2
                 st.rerun()
@@ -1833,7 +2013,51 @@ elif st.session_state.p3_step == 2:
 
     st.write("---")
 
-    # Preview table (first 30 channels)
+    # ── AI logs ──────────────────────────────────────────────
+    freq_log  = ans.get('ai_freq_log', [])
+    newch_log = ans.get('ai_newch_log', [])
+    cat_prio  = ans.get('cat_priority', [])
+
+    if freq_log or newch_log:
+        col_log1, col_log2 = st.columns(2)
+        with col_log1:
+            if freq_log:
+                st.markdown(f"**{t['ai_freq_done']} — {len(freq_log)} {t['ai_freq_updated']}:**")
+                for entry in freq_log[:15]:
+                    st.caption(f"📡 {entry['channel']}: {entry['old']} → {entry['new']}")
+        with col_log2:
+            if newch_log:
+                st.markdown(f"**{t['ai_newch_done']} — {len(newch_log)} {t['ai_new_found']}:**")
+                for name in newch_log[:15]:
+                    st.caption(f"✨ {name}")
+        st.write("---")
+
+    # ── Category distribution preview ────────────────────────
+    from collections import defaultdict as _dd
+    ALL_CATS_AR2 = ["⛪ مسيحية","🕌 إسلامية","🎬 دراما","🍿 أفلام","👶 أطفال","⚽ رياضة","📰 أخبار","📺 عامة"]
+    ALL_CATS_EN2 = ["⛪ Christian","🕌 Islamic","🎬 Drama","🍿 Movies","👶 Kids","⚽ Sports","📰 News","📺 General"]
+    CAT_MAP2 = dict(zip(ALL_CATS_AR2, ALL_CATS_EN2))
+    def cat_lbl2(name):
+        ar = ai_classify(name)
+        return ar if st.session_state.lang == "ar" else CAT_MAP2.get(ar, ar)
+
+    cats_dist = _dd(list)
+    for ch in st.session_state.p3_channels_preview:
+        cats_dist[cat_lbl2(ch["name"])].append(ch["name"])
+
+    st.markdown(f"#### {t['cat_preview']}")
+    col_p1, col_p2 = st.columns(2)
+    display_order = cat_prio if cat_prio else (ALL_CATS_AR2 if st.session_state.lang == "ar" else ALL_CATS_EN2)
+    for i, cat in enumerate(display_order):
+        if cat in cats_dist:
+            lst = cats_dist[cat]
+            with (col_p1 if i % 2 == 0 else col_p2):
+                with st.expander(f"{cat} — ({len(lst)} {t['cat_channels']})"):
+                    st.caption(", ".join(lst[:40]) + ("..." if len(lst) > 40 else ""))
+
+    st.write("---")
+
+    # ── Preview table (first 30) ──────────────────────────────
     st.markdown(f"#### {t['preview_ch']}")
     preview_data = []
     for idx, ch in enumerate(st.session_state.p3_channels_preview[:30], start=1):
@@ -1841,17 +2065,16 @@ elif st.session_state.p3_step == 2:
             t['col_num']: idx,
             t['col_name']: ch['name'],
             t['col_freq']: ch['freq'],
-            t['col_cat']: ai_classify(ch['name']),
+            t['col_cat']: cat_lbl2(ch['name']),
         })
     st.table(preview_data)
-
     if len(st.session_state.p3_channels_preview) > 30:
         remaining = len(st.session_state.p3_channels_preview) - 30
         st.caption(f"... و {remaining} قناة أخرى في الملف الكامل." if st.session_state.lang == 'ar' else f"... and {remaining} more channels in the full file.")
 
     st.write("---")
 
-    # Download buttons
+    # ── Download buttons ──────────────────────────────────────
     col_d1, col_d2, col_d3 = st.columns([2, 2, 1])
     with col_d1:
         st.download_button(
@@ -1876,52 +2099,3 @@ elif st.session_state.p3_step == 2:
             st.session_state.p3_report_txt = None
             st.session_state.p3_channels_preview = []
             st.rerun()
-# ─────────────────────────────────────────────
-# 10. الفوتر السيبراني (FIXED)
-# ─────────────────────────────────────────────
-
-whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
-
-footer_bg = "#0f172a"
-footer_text = "#ffffff"
-
-st.markdown(f"""
-<div style="
-background:{footer_bg};
-border:2px solid #00f0ff;
-color:{footer_text};
-padding:35px;
-text-align:center;
-border-radius:20px;
-margin-top:65px;
-font-family:Arial;
-">
-
-<div style="color:#ff007f;font-size:26px;font-weight:bold;">
-🛠️ DEVELOPER ENG: RAFIK NATHAN
-</div>
-
-<div style="margin-top:10px;">
-📱 <b>MOBILE / الموبايل:</b> +201280339779
-</div>
-
-<div style="margin-top:10px;">
-✉️ <b>E-MAIL:</b> rafikrambo113@gmail.com
-</div>
-
-<a href="{whatsapp_url}" target="_blank"
-style="
-color:#25d366;
-padding:14px 35px;
-border-radius:35px;
-display:inline-block;
-font-weight:bold;
-border:2px solid #25d366;
-text-decoration:none;
-margin-top:20px;
-">
-WhatsApp
-</a>
-
-</div>
-""", unsafe_allow_html=True)
