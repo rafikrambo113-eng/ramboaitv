@@ -465,14 +465,50 @@ else:
         """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# 10. الفوتر السيبراني
+# 10. الفوتر النهائي الموحد (Cyber Clean)
 # ─────────────────────────────────────────────
+
 whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
+
 st.markdown(f"""
-<div class="futuristic-cyber-footer" style="background:{footer_bg}; border:2px solid #00f0ff; color:{footer_text} !important; padding:35px; text-align:center; border-radius:20px; margin-top:65px; font-family:'Orbitron', sans-serif;">
-    <div class="footer-dev" style="color:#ff007f; font-size:26px; font-weight:bold;">🛠️ DEVELOPER ENG: RAFIK RAMBO</div>
-    <div>📱 <b>MOBILE / الموبايل:</b> +201280339779</div>
-    <div>✉️ <b>E-MAIL:</b> rafikrambo113@gmail.com</div>
-    <a href="{whatsapp_url}" target="_blank" class="cyber-whatsapp-btn" style="color:#25d366 !important; padding:14px 35px; border-radius:35px; display:inline-block; font-weight:bold; border:2px solid #25d366; text-decoration:none; margin-top:20px;">WhatsApp Web</a>
+<div style="
+background: linear-gradient(135deg, #0f172a, #05020d);
+border:2px solid #00f0ff;
+color:#ffffff;
+padding:35px;
+text-align:center;
+border-radius:20px;
+margin-top:65px;
+font-family: 'Orbitron', sans-serif;
+box-shadow: 0 0 25px rgba(0,240,255,0.2);
+">
+
+<div style="color:#ff007f;font-size:26px;font-weight:bold;">
+🛠️ DEVELOPER ENG: RAFIK RAMBO
+</div>
+
+<div style="margin-top:12px; font-size:14px;">
+📱 <b>MOBILE:</b> +201280339779
+</div>
+
+<div style="margin-top:8px; font-size:14px;">
+✉️ <b>E-MAIL:</b> rafikrambo113@gmail.com
+</div>
+
+<a href="{whatsapp_url}" target="_blank"
+style="
+margin-top:18px;
+display:inline-block;
+color:#25d366;
+padding:12px 30px;
+border-radius:30px;
+font-weight:bold;
+border:2px solid #25d366;
+text-decoration:none;
+transition:0.3s;
+">
+💬 WhatsApp Contact
+</a>
+
 </div>
 """, unsafe_allow_html=True)
