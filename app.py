@@ -174,13 +174,38 @@ font-family:Arial;
 """, unsafe_allow_html=True)
 
 
+st.markdown("""
+<div style="
+background:#0f172a;
+padding:25px;
+border-radius:18px;
+border:1px solid #00f0ff;
+color:white;
+font-family:Arial;
+">
+
+<h2>📺 RAMBO — المُرتب اليدوي المطور</h2>
+
+<p style="font-size:16px;">
+⚡ نظام الترتيب الذكي المستقر: اضغط زر ارفع، عدل أرقامك، ثم اضغط حفظ التعديلات
+</p>
+
+</div>
+""", unsafe_allow_html=True)
+
+
 uploaded_file = st.file_uploader(
     "🚀 ارفع ملف القنوات (GlobalClone00001.TLL):",
     type=["TLL"]
 )
 
-st.caption("⬆️ ارفع ملف TLL أولاً لتبدأ العمل.")
-st.caption("200MB per file • TLL")
+st.markdown("""
+<div style="margin-top:10px; color:#aaa;">
+⬆️ ارفع ملف TLL أولاً لتبدأ العمل.
+<br>
+<small>200MB per file • TLL</small>
+</div>
+""", unsafe_allow_html=True)
 
 if uploaded_file is not None:
     file_bytes = uploaded_file.read()
