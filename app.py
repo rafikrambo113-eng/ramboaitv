@@ -469,7 +469,7 @@ font-family:Arial;
 </div>
 
 <div style="margin-top:10px;">
-✉️ <b>E-MAIL:</b> [rafikrambo113@gmail.com](mailto:rafikrambo113@gmail.com)
+✉️ <b>E-MAIL:</b> :rafikrambo113@gmail.com)
 </div>
 
 <a href="{whatsapp_url}" target="_blank"
