@@ -2,7 +2,6 @@ import streamlit as st
 import xml.etree.ElementTree as ET
 import json
 import re
-from collections import OrderedDict
 
 if 'lang' not in st.session_state:
     st.session_state.lang = 'ar'
@@ -11,12 +10,15 @@ if 'theme' not in st.session_state:
 
 UI_TEXT = {
     'ar': {
-        'title': "📺 RAMBO - المنسق العالمي لشاشات LG",
+        'title': "📺 RAMBO - المُرتب العالمي لشاشات LG",
         'subtitle': "⚡ ترتيب ذكي لملفات قنوات LG",
         'upload_label': "🚀 اختر ملف القنوات (GlobalClone00001.TLL) من الفلاشة:",
         'update_freq_label': "⚛️ تحديث الترددات تلقائياً",
         'add_new_ch_label': "✨ إضافة القنوات الجديدة المتاحة تلقائياً",
-        'success_read': "🛸 تم قراءة الهيكل بنجاح! الموديل الحالي: ",
+        'success_read': "🛸 تم قراءة الملف بنجاح!",
+        'model_label': "الموديل:",
+        'system_label': "النظام:",
+        'total_label': "إجمالي القنوات:",
         'search_header': "🔍 البحث عن قناة داخل الملف:",
         'search_placeholder': "اكتب اسم القناة هنا...",
         'search_col_num': "الرقم",
@@ -42,7 +44,10 @@ UI_TEXT = {
         'upload_label': "🚀 Upload Channel File (GlobalClone00001.TLL) from USB:",
         'update_freq_label': "⚛️ Auto update frequencies",
         'add_new_ch_label': "✨ Auto inject missing channels",
-        'success_read': "🛸 Structure decoded successfully! Current model: ",
+        'success_read': "🛸 File parsed successfully!",
+        'model_label': "Model:",
+        'system_label': "System:",
+        'total_label': "Total channels:",
         'search_header': "🔍 Search inside file:",
         'search_placeholder': "Type channel name...",
         'search_col_num': "No.",
@@ -76,6 +81,34 @@ with col_theme:
     if st.button("☀️ Light Mode" if st.session_state.theme == 'dark' else "🌙 Dark Mode"):
         st.session_state.theme = 'light' if st.session_state.theme == 'dark' else 'dark'
         st.rerun()
+
+if st.session_state.theme == 'dark':
+    bg_style, text_color, box_bg, box_border = "radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%)", "#00f0ff", "rgba(13, 7, 33, 0.85)", "#00f0ff"
+    box_shadow, text_shadow = "rgba(0, 240, 255, 0.35)", "0 0 5px rgba(0, 240, 255, 0.4)"
+    footer_bg, footer_text = "#080314", "#ffffff"
+    table_head_bg, table_row_bg, table_row_alt, table_border = "#0d0722", "rgba(0,240,255,0.04)", "rgba(255,0,127,0.05)", "#00f0ff33"
+else:
+    bg_style, text_color, box_bg, box_border = "radial-gradient(circle at 50% 50%, #f4f5f7 0%, #e4e7eb 100%)", "#0d0722", "#ffffff", "#ff007f"
+    box_shadow, text_shadow = "rgba(255, 0, 127, 0.15)", "none"
+    footer_bg, footer_text = "#110926", "#ffffff"
+    table_head_bg, table_row_bg, table_row_alt, table_border = "#0d0722", "#f9f9ff", "#fff0f7", "#ff007f33"
+
+font_family = "'Cairo', sans-serif" if st.session_state.lang == 'ar' else "'Orbitron', sans-serif"
+
+st.markdown(f"""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;900&family=Cairo:wght@400;700&display=swap');
+    .main {{ background: {bg_style} !important; color: {text_color} !important; font-family: {font_family}; }}
+    h1 {{ color: #ff007f !important; text-shadow: 0 0 10px #ff007f, 0 0 25px rgba(255,0,127,0.4) !important; text-align: center; font-weight: 900; margin-top: 5px; }}
+    h3, p, label, .stMarkdown, div[data-testid="stMarkdownContainer"] p {{ color: {text_color} !important; text-shadow: {text_shadow}; }}
+    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stMultiSelect>div>div>div {{ background-color: {box_bg} !important; color: {text_color} !important; border: 2px solid {box_border} !important; border-radius: 10px !important; }}
+    div[data-testid="stFileUploader"], .rambo-box {{ background: {box_bg} !important; border: 2px solid {box_border} !important; box-shadow: 0px 5px 15px {box_shadow} !important; border-radius: 14px !important; padding: 18px !important; margin-bottom: 20px !important; }}
+    .stButton>button {{ background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important; color: #ffffff !important; border: 2px solid #ff007f !important; border-radius: 12px !important; font-weight: bold; width: 100%; }}
+    </style>
+""", unsafe_allow_html=True)
+
+st.title(t['title'])
+st.markdown(f"<h3>{t['subtitle']}</h3>", unsafe_allow_html=True)
 
 NILESAT_LIVE_DB = {
     "AL HAYAT": {"frequency": 12207, "polarization": "Vertical"},
@@ -171,53 +204,71 @@ if uploaded_file is not None:
 
     legacy_broadcast_tag = root.find(".//legacybroadcast")
     is_modern = legacy_broadcast_tag is not None and legacy_broadcast_tag.text
-
-    st.info(f"{t['success_read']} **{model_name}**")
-
-    update_freq = st.checkbox(t['update_freq_label'], value=True)
-    add_new_ch = st.checkbox(t['add_new_ch_label'], value=True)
-
-    channels_to_sort = []
-    report_changes = []
-    existing_names_upper = set()
+    system_name = "Modern JSON" if is_modern else "Legacy XML"
 
     if is_modern:
         broadcast_data = json.loads(legacy_broadcast_tag.text.strip())
         channels_list = broadcast_data.get("channelList", [])
+        channels_to_sort = []
+        existing_names_upper = set()
 
         for ch in channels_list:
             ch_name = ch.get("channelName", "Unknown")
             old_freq = str(ch.get("frequency", "N/A"))
-            name_up = ch_name.upper()
-            existing_names_upper.add(name_up)
-
+            existing_names_upper.add(ch_name.upper())
             if "category" not in ch or not ch["category"]:
                 ch["category"] = ai_classify(ch_name)
-
-            if update_freq and name_up in NILESAT_LIVE_DB:
-                live_freq = NILESAT_LIVE_DB[name_up]["frequency"]
-                if old_freq != str(live_freq):
-                    report_changes.append({
-                        "channel": ch_name,
-                        "category": ai_classify(ch_name),
-                        "old_freq": old_freq,
-                        "new_freq": str(live_freq)
-                    })
-                    ch["frequency"] = int(live_freq)
-                    ch["polarization"] = NILESAT_LIVE_DB[name_up]["polarization"]
-                    old_freq = str(live_freq)
-
             channels_to_sort.append({
                 "name": ch_name,
                 "freq": old_freq,
                 "node_data": ch,
                 "is_injected": False
             })
+    else:
+        item_blocks = re.findall(r'(<ITEM>.*?</ITEM>)', file_text, re.DOTALL)
+        channels_to_sort = []
+        existing_names_upper = set()
 
-        if add_new_ch and channels_list:
-            sample_node = channels_list[0]
+        for item_str in item_blocks:
+            name_match = re.search(r'<vchName>(.*?)</vchName>', item_str)
+            freq_match = re.search(r'<frequency>(.*?)</frequency>', item_str)
+            ch_name = name_match.group(1) if name_match else "Unknown"
+            existing_names_upper.add(ch_name.upper())
+            channels_to_sort.append({
+                "name": ch_name,
+                "freq": freq_match.group(1) if freq_match else "N/A",
+                "raw_str": item_str,
+                "is_injected": False
+            })
+
+    total_channels = len(channels_to_sort)
+    st.success(f"{t['success_read']} **{model_name}** | {t['system_label']} **{system_name}** | {t['total_label']} **{total_channels}**")
+
+    update_freq = st.checkbox(t['update_freq_label'], value=True)
+    add_new_ch = st.checkbox(t['add_new_ch_label'], value=True)
+
+    report_changes = []
+
+    if is_modern:
+        for ch in channels_to_sort:
+            name_up = ch["name"].upper()
+            if update_freq and name_up in NILESAT_LIVE_DB:
+                live_freq = NILESAT_LIVE_DB[name_up]["frequency"]
+                if ch["freq"] != str(live_freq):
+                    report_changes.append({
+                        "channel": ch["name"],
+                        "category": ai_classify(ch["name"]),
+                        "old_freq": ch["freq"],
+                        "new_freq": str(live_freq)
+                    })
+                    ch["freq"] = str(live_freq)
+                    ch["node_data"]["frequency"] = int(live_freq)
+                    ch["node_data"]["polarization"] = NILESAT_LIVE_DB[name_up]["polarization"]
+
+        if add_new_ch:
+            sample_node = channels_list[0] if channels_list else None
             for db_name, db_info in NILESAT_LIVE_DB.items():
-                if db_name not in existing_names_upper:
+                if db_name not in existing_names_upper and sample_node is not None:
                     new_node = json.loads(json.dumps(sample_node))
                     new_node["channelName"] = db_name
                     new_node["frequency"] = db_info["frequency"]
@@ -227,63 +278,44 @@ if uploaded_file is not None:
                     new_node["deleted"] = False
                     new_node["userSelCHNo"] = True
                     new_node["category"] = ai_classify(db_name)
-
                     channels_to_sort.append({
                         "name": db_name,
                         "freq": str(db_info["frequency"]),
                         "node_data": new_node,
                         "is_injected": True
                     })
-
-                    report_changes.append({
-                        "channel": db_name,
-                        "category": ai_classify(db_name),
-                        "old_freq": "missing",
-                        "new_freq": str(db_info["frequency"])
-                    })
-
     else:
-        item_blocks = re.findall(r'(<ITEM>.*?</ITEM>)', file_text, re.DOTALL)
-        items_list = []
-
-        for item_str in item_blocks:
-            name_match = re.search(r'<vchName>(.*?)</vchName>', item_str)
-            freq_match = re.search(r'<frequency>(.*?)</frequency>', item_str)
-            ch_name = name_match.group(1) if name_match else "Unknown"
-            name_up = ch_name.upper()
-            existing_names_upper.add(name_up)
-
+        for ch in channels_to_sort:
+            name_up = ch["name"].upper()
             if update_freq and name_up in NILESAT_LIVE_DB:
                 live_freq = str(NILESAT_LIVE_DB[name_up]["frequency"])
-                item_str = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{live_freq}</frequency>', item_str)
-            else:
-                live_freq = freq_match.group(1) if freq_match else "N/A"
+                if ch["freq"] != live_freq:
+                    report_changes.append({
+                        "channel": ch["name"],
+                        "category": ai_classify(ch["name"]),
+                        "old_freq": ch["freq"],
+                        "new_freq": live_freq
+                    })
+                    ch["freq"] = live_freq
+                    ch["raw_str"] = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{live_freq}</frequency>', ch["raw_str"])
 
-            items_list.append({
-                "name": ch_name,
-                "freq": live_freq,
-                "raw_str": item_str,
-                "is_injected": False
-            })
-
-        if add_new_ch and item_blocks:
-            sample_item = item_blocks[0]
+        if add_new_ch and channels_to_sort:
+            sample_item = channels_to_sort[0]["raw_str"]
             for db_name, db_info in NILESAT_LIVE_DB.items():
                 if db_name not in existing_names_upper:
                     new_item = re.sub(r'<vchName>.*?</vchName>', f'<vchName>{db_name}</vchName>', sample_item)
                     new_item = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{db_info["frequency"]}</frequency>', new_item)
-                    items_list.append({
+                    channels_to_sort.append({
                         "name": db_name,
                         "freq": str(db_info["frequency"]),
                         "raw_str": new_item,
                         "is_injected": True
                     })
 
-        channels_to_sort = items_list
-
     st.write("---")
     st.write(f"### {t['search_header']}")
     search_query = st.text_input("", placeholder=t['search_placeholder']).strip().upper()
+
     if search_query:
         search_results = []
         for idx, ch in enumerate(channels_to_sort, start=1):
@@ -320,6 +352,7 @@ if uploaded_file is not None:
     st.write("---")
     st.write(f"### {t['preview_title']}")
     col1, col2 = st.columns(2)
+
     for i, cat_name in enumerate(final_priority):
         if cat_name in categorized:
             ch_list = categorized[cat_name]
@@ -349,7 +382,6 @@ if uploaded_file is not None:
         broadcast_data["channelList"] = final_list_modern
         legacy_broadcast_tag.text = json.dumps(broadcast_data, ensure_ascii=False, separators=(',', ':'))
         final_xml_bytes = ET.tostring(root, encoding="utf-8")
-
     else:
         item_strings_sorted = []
         for index, ch in enumerate(channels_sorted, start=1):
@@ -390,3 +422,9 @@ if uploaded_file is not None:
             file_name="Channels_List.txt",
             mime="text/plain; charset=utf-8"
         )
+
+    st.markdown(f"""
+    <div style="background-color: rgba(255, 165, 0, 0.12); border-left: 5px solid #ffa500; padding: 20px; border-radius: 12px; margin-top: 25px;">
+        <h4 style="color: #ffa500; margin-top: 0; font-weight: bold;">{t['lg_trick_title']} {t['lg_trick_text']}</h4>
+    </div>
+    """, unsafe_allow_html=True)
