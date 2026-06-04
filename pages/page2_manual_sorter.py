@@ -1,4 +1,3 @@
-
 import streamlit as st
 import xml.etree.ElementTree as ET
 import json
@@ -28,6 +27,18 @@ if 'model_name' not in st.session_state:
     st.session_state.model_name = ""
 if 'edit_finished' not in st.session_state:
     st.session_state.edit_finished = False 
+if 'last_file_name' not in st.session_state:
+    st.session_state.last_file_name = ""
+if 'scan_done_p2' not in st.session_state:
+    st.session_state.scan_done_p2 = False
+if 'maint_done_p2' not in st.session_state:
+    st.session_state.maint_done_p2 = False
+if 'inserted_list_p2' not in st.session_state:
+    st.session_state.inserted_list_p2 = []
+if 'maint_details_p2' not in st.session_state:
+    st.session_state.maint_details_p2 = []
+if 'legacy_tag' not in st.session_state:
+    st.session_state.legacy_tag = None
 
 # ─────────────────────────────────────────────
 # 2. قواميس النصوص (عربي / إنجليزي)
@@ -159,12 +170,14 @@ def parse_tll(file_bytes):
         return channels, False, root, None, file_text, None
 
 # ─────────────────────────────────────────────
-# 5. رفع ومعالجة الملف الأصلي
+# 5. رفع ومعالجة الملف الأصلي (معدّل لقراءة الملف الجديد تلقائياً)
 # ─────────────────────────────────────────────
 uploaded = st.file_uploader(t['upload_label'], type=["TLL"], key="tll_uploader_p2")
 
 if uploaded is not None:
-    if st.session_state.get("last_file_name") != uploaded.name:
+    # التحقق من أن الملف الجديد مختلف عن الملف السابق
+    if uploaded.name != st.session_state.last_file_name:
+        # مسح جميع البيانات القديمة
         st.session_state.channels = []
         st.session_state.ordered_channels = []
         st.session_state.root = None
@@ -175,9 +188,13 @@ if uploaded is not None:
         st.session_state.is_modern = False
         st.session_state.scan_done_p2 = False
         st.session_state.maint_done_p2 = False
-
-    st.session_state.last_file_name = uploaded.name
-    if not st.session_state.channels:
+        st.session_state.inserted_list_p2 = []
+        st.session_state.maint_details_p2 = []
+        
+        # حفظ اسم الملف الجديد
+        st.session_state.last_file_name = uploaded.name
+        
+        # قراءة الملف الجديد مباشرة
         try:
             file_bytes = uploaded.read()
             (
@@ -192,15 +209,21 @@ if uploaded is not None:
             model_node = st.session_state.root.find(".//ModelName")
             st.session_state.model_name = model_node.text if model_node is not None else "LG TV Custom"
             st.session_state.ordered_channels = []
-            st.session_state.edit_finished = False 
+            st.session_state.edit_finished = False
+            st.session_state.scan_done_p2 = False
+            st.session_state.maint_done_p2 = False
+            
+            st.toast(f"🛸 تم قراءة الملف الجديد: {uploaded.name}", icon="✅")
         except Exception as e:
             st.error(f"❌ خطأ في معالجة بناء الملف. تأكد أن الملف سليم وغير تالف. تفاصيل: {e}")
             st.stop()
 
+# ─────────────────────────────────────────────
+# 6. رسالة إذا لم يتم رفع ملف
+# ─────────────────────────────────────────────
 if not st.session_state.channels:
     st.info(t['no_file'])
 
-    # 👇 حط الفوتر هنا
     st.markdown("""
     <div style="
     background:#0f172a;
@@ -222,10 +245,13 @@ if not st.session_state.channels:
 
     st.stop()
 
+# ─────────────────────────────────────────────
+# 7. رسالة نجاح قراءة الملف
+# ─────────────────────────────────────────────
 st.success(f"{t['success_read']} **{st.session_state.model_name}** | 📡 {'Modern JSON' if st.session_state.is_modern else 'Legacy XML'} | الإجمالي: {len(st.session_state.channels)} قناة.")
 
 # ─────────────────────────────────────────────
-# 6. خيارات الفحص والصيانة التلقائية
+# 8. خيارات الفحص والصيانة التلقائية
 # ─────────────────────────────────────────────
 st.write(f"### {t['auto_features_title']}")
 col_chk1, col_chk2 = st.columns(2)
@@ -261,13 +287,13 @@ with col_chk1:
         st.session_state.scan_done_p2 = True
         st.session_state.inserted_list_p2 = new_inserted_names
         if added_count > 0:
-            st.toast("📡 تم زرع القنوات الجديدة في جدول المتوفر!")
+            st.toast("📡 تم زرع القنوات الجديدة في جدول المتوفر!", icon="✅")
             st.rerun()
 
     if scan_active:
         if st.session_state.get('inserted_list_p2'):
             st.markdown("<div style='background:rgba(0, 240, 255, 0.1); padding:12px; border-radius:10px; border-left:4px solid #00f0ff; margin-top:10px;'>", unsafe_allow_html=True)
-            st.markdown("**✨ قنوات جديدة تم زرعها في (1. جدول القنوات الكلي المتوفرة):**")
+            st.markdown("**✨ قنوات جديدة تم زرعها في (1. جدول القنوات الكلي المتوفر):**")
             for item in st.session_state.inserted_list_p2:
                 st.markdown(f"<span style='color:#00f0ff;'>{item}</span>", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
@@ -300,13 +326,13 @@ with col_chk2:
         st.session_state.maint_done_p2 = True
         st.session_state.maint_details_p2 = maint_details
         if updated_count > 0:
-            st.toast("🔧 تم تحديث الترددات في جدول المتوفر بنجاح!")
+            st.toast("🔧 تم تحديث الترددات في جدول المتوفر بنجاح!", icon="✅")
             st.rerun()
 
     if maint_active:
         if st.session_state.get('maint_details_p2'):
             st.markdown("<div style='background:rgba(255, 0, 127, 0.1); padding:12px; border-radius:10px; border-left:4px solid #ff007f; margin-top:10px;'>", unsafe_allow_html=True)
-            st.markdown("**🔧 تقرير الترددات المعدلة في (1. جدول القنوات الكلي المتوفرة):**")
+            st.markdown("**🔧 تقرير الترددات المعدلة في (1. جدول القنوات الكلي المتوفر):**")
             for detail in st.session_state.maint_details_p2:
                 st.markdown(f"<span style='color:#ff007f;'>{detail}</span>", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
@@ -314,14 +340,14 @@ with col_chk2:
             st.markdown("<div style='color:#888; margin-top:10px;'>ℹ️ جميع الترددات الحالية بجدول المتوفر مطابقة لأحدث نسخة.</div>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# 7. دوال الـ Callbacks لضمان ثبات البيانات
+# 9. دوال الـ Callbacks لضمان ثبات البيانات
 # ─────────────────────────────────────────────
 def add_channel_callback(ch_obj):
     st.session_state.ordered_channels.append(ch_obj.copy())
     st.session_state.edit_finished = False
 
 # ─────────────────────────────────────────────
-# 8. واجهة نظام الجدولين المتجاورين
+# 10. واجهة نظام الجدولين المتجاورين
 # ─────────────────────────────────────────────
 st.write("---")
 col_table1, col_table2 = st.columns(2)
@@ -395,7 +421,7 @@ with col_table2:
                     if st.button("🗑️", key=f"del_btn_{i}_{ch['id']}", help="حذف القناة فوراً من قائمة الترتيب"):
                         st.session_state.ordered_channels.pop(i)
                         st.session_state.edit_finished = False
-                        st.toast(f"🗑️ تم حذف قناة [{ch.get('name')}] من الترتيب!")
+                        st.toast(f"🗑️ تم حذف قناة [{ch.get('name')}] من الترتيب!", icon="✅")
                         st.rerun()
         
         st.write("")
@@ -406,7 +432,7 @@ with col_table2:
             
             st.session_state.ordered_channels = [item[1] for item in indexed_channels]
             st.session_state.edit_finished = False
-            st.toast("🎯 تم فرز وتحديث جدول الترتيب بنجاح طبقاً للأرقام المكتوبة!")
+            st.toast("🎯 تم فرز وتحديث جدول الترتيب بنجاح طبقاً للأرقام المكتوبة!", icon="✅")
             st.rerun()
             
     else:
@@ -415,7 +441,7 @@ with col_table2:
 st.write("---")
 
 # ─────────────────────────────────────────────
-# 9. التجهيز النهائي والتحميل والملحوظة الفنية
+# 11. التجهيز النهائي والتحميل والملحوظة الفنية
 # ─────────────────────────────────────────────
 st.write(f"### {t['preview_title']}")
 
@@ -500,7 +526,7 @@ else:
         """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# 10. الفوتر السيبراني (FIXED)
+# 12. الفوتر السيبراني (FIXED)
 # ─────────────────────────────────────────────
 
 whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
@@ -529,7 +555,7 @@ font-family:Arial;
 </div>
 
 <div style="margin-top:10px;">
-✉️ <b>E-MAIL:</b> rafikrambo113@gmail.com
+✉️ <b>E-MAIL:</b> [rafikrambo113@gmail.com](mailto:rafikrambo113@gmail.com)
 </div>
 
 <a href="{whatsapp_url}" target="_blank"
