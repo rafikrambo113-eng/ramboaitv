@@ -1877,49 +1877,50 @@ elif st.session_state.p3_step == 2:
             st.session_state.p3_channels_preview = []
             st.rerun()
 # ─────────────────────────────────────────────
-# 10. الفوتر النهائي الموحد (Cyber Clean)
+# 10. الفوتر السيبراني (FIXED)
 # ─────────────────────────────────────────────
 
 whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
 
+footer_bg = "#0f172a"
+footer_text = "#ffffff"
+
 st.markdown(f"""
 <div style="
-background: linear-gradient(135deg, #0f172a, #05020d);
+background:{footer_bg};
 border:2px solid #00f0ff;
-color:#ffffff;
+color:{footer_text};
 padding:35px;
 text-align:center;
 border-radius:20px;
 margin-top:65px;
-font-family: 'Orbitron', sans-serif;
-box-shadow: 0 0 25px rgba(0,240,255,0.2);
+font-family:Arial;
 ">
 
 <div style="color:#ff007f;font-size:26px;font-weight:bold;">
-🛠️ DEVELOPER ENG: RAFIK RAMBO
+🛠️ DEVELOPER ENG: RAFIK NATHAN
 </div>
 
-<div style="margin-top:12px; font-size:14px;">
-📱 <b>MOBILE:</b> +201280339779
+<div style="margin-top:10px;">
+📱 <b>MOBILE / الموبايل:</b> +201280339779
 </div>
 
-<div style="margin-top:8px; font-size:14px;">
+<div style="margin-top:10px;">
 ✉️ <b>E-MAIL:</b> rafikrambo113@gmail.com
 </div>
 
 <a href="{whatsapp_url}" target="_blank"
 style="
-margin-top:18px;
-display:inline-block;
 color:#25d366;
-padding:12px 30px;
-border-radius:30px;
+padding:14px 35px;
+border-radius:35px;
+display:inline-block;
 font-weight:bold;
 border:2px solid #25d366;
 text-decoration:none;
-transition:0.3s;
+margin-top:20px;
 ">
-💬 WhatsApp
+WhatsApp
 </a>
 
 </div>
