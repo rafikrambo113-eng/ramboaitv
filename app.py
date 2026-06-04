@@ -496,7 +496,34 @@ with col_btn1:
     )
 with col_btn2:
     st.download_button(
-        label=t['btn_download_txt'],
+st.markdown(f"""
+<div style="background-color: rgba(255, 165, 0, 0.12); border-left: 5px solid #ffa500; padding: 20px; border-radius: 12px; margin-top: 25px;">
+    <h4 style="color: #ffa500; margin-top: 0; font-weight: bold;">💡 ملحوظة فنية هامة جداً بعد تنزيل الملف على شاشة LG:</h4>
+    <p style="font-size: 15px; line-height: 1.6; color: {text_color};">
+    في بعض الحالات، بعد تنزيل ملف القنوات على الشاشة، قد تشعر أن القنوات ليست منظمة كما رتبتها. لحل هذا الأمر فوراً واجبار الشاشة على تفعيل الترتيب الصحيح، قم بالآتي:
+    </p>
+    <ol style="font-size: 15px; line-height: 1.7; margin-right: 20px; color: {text_color};">
+        <li>من إعدادات التلفزيون اختار <b>القنوات (Channels)</b>.</li>
+        <li>بعد ذلك اختار <b>مدير القنوات (Channel Manager)</b>.</li>
+        <li>اختار <b>التعديل على كل القنوات (Edit All Channels)</b>.</li>
+        <li>ستظهر لك القنوات المرتبة ويكون بعضها في وضع مخفي، قم <b>بتحديد كل القنوات</b> واختار <b>استعادة (Restore)</b>.</li>
+    </ol>
+    <p style="font-size: 13px; color: #ffaa55; font-style: italic; margin-bottom: 0; margin-top: 10px;">
+    *ملحوظة: تفعل هذه الخطوة فقط إذا شعرت أن الملف بعد التنزيل غير مرتب كما حددته على الموقع.
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
+whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
+
+st.markdown(f"""
+<div style="background:{footer_bg}; border:2px solid #00f0ff; color:{footer_text} !important; padding:35px; text-align:center; border-radius:20px; margin-top:65px; font-family:'Orbitron', sans-serif;">
+    <div style="color:#ff007f; font-size:26px; font-weight:bold;">🛠️ DEVELOPER ENG: RAFIK RAMBO</div>
+    <div>📱 <b>MOBILE / الموبايل:</b> +201280339779</div>
+    <div>✉️ <b>E-MAIL:</b> <a href="mailto:rafikrambo113@gmail.com" style="color:#00f0ff; text-decoration:none;">rafikrambo113@gmail.com</a></div>
+    <a href="{whatsapp_url}" target="_blank" style="color:#25d366 !important; padding:14px 35px; border-radius:35px; display:inline-block; font-weight:bold; border:2px solid #25d366; text-decoration:none; margin-top:20px;">WhatsApp Web</a>
+</div>
+""", unsafe_allow_html=True)        label=t['btn_download_txt'],
         data=text_report,
         file_name="Channels_List.txt",
         mime="text/plain; charset=utf-8"
