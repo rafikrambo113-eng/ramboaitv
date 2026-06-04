@@ -56,21 +56,36 @@ UI = {
         'ch_count_lbl': "إجمالي القنوات:",
         'sat_lbl':      "القمر الصناعي:",
         'country_lbl':  "بلد البث:",
-        'ai_section': "🤖 ميزات الذكاء الاصطناعي",
-        'ai_key_label': "🔑 Anthropic API Key",
-        'ai_key_ph': "sk-ant-...",
-        'ai_update_freq': "⚛️ تحديث الترددات بالذكاء الاصطناعي",
-        'ai_new_ch': "🛰️ اكتشاف قنوات جديدة على القمر",
-        'ai_running': "🤖 الذكاء الاصطناعي يعمل...",
+        'ai_section':   "⚡ ميزات التحديث الذكي",
+        'ai_update_freq': "⚛️ تحديث الترددات تلقائياً",
+        'ai_new_ch':    "✨ إضافة القنوات الجديدة المتاحة",
+        'ai_freq_info': "سيتم مقارنة الترددات الحالية بقاعدة البيانات المحدثة وتصحيح أي تردد قديم.",
+        'ai_newch_info':"سيتم فحص القنوات الجديدة المتاحة على القمر وإضافتها تلقائياً للملف.",
         'ai_freq_done': "✅ تم تحديث الترددات",
-        'ai_newch_done': "✅ تم اكتشاف قنوات جديدة",
-        'ai_no_key': "⚠️ أدخل API Key لاستخدام ميزات AI",
-        'ai_freq_updated': "قنوات تم تحديث ترددها",
-        'ai_new_found': "قنوات جديدة تم إضافتها",
+        'ai_newch_done': "✅ تم إضافة قنوات جديدة",
+        'ai_freq_updated': "قناة تم تحديث ترددها",
+        'ai_new_found': "قناة جديدة تم إضافتها",
+        'ai_freq_col_ch': "القناة",
+        'ai_freq_col_old': "التردد القديم",
+        'ai_freq_col_new': "التردد الجديد",
+        'ai_freq_col_src': "المصدر",
+        'ai_newch_col_name': "اسم القناة",
+        'ai_newch_col_freq': "التردد",
+        'ai_newch_col_cat': "الفئة",
         'cat_section': "🎛️ ترتيب الفئات",
         'cat_multiselect': "اختر الفئات بالترتيب المطلوب (الأول = الأعلى):",
         'cat_preview': "📊 معاينة توزيع القنوات:",
         'cat_channels': "قناة",
+        'lg_trick_title': "💡 ملحوظة فنية هامة جداً بعد تنزيل الملف على شاشة LG:",
+        'lg_trick_text': (
+            "في بعض الحالات، بعد تنزيل ملف القنوات على الشاشة، قد تشعر أن القنوات ليست منظمة كما رتبتها. "
+            "لحل هذا الأمر فوراً واجبار الشاشة على تفعيل الترتيب الصحيح، قم بالآتي:\n\n"
+            "1. من إعدادات التلفزيون اختار القنوات (Channels).\n"
+            "2. بعد ذلك اختار مدير القنوات (Channel Manager).\n"
+            "3. اختار التعديل على كل القنوات (Edit All Channels).\n"
+            "4. ستظهر لك القنوات المرتبة ويكون بعضها في وضع مخفي، قم بتحديد كل القنوات واختار استعادة (Restore).\n\n"
+            "ملحوظة: تفعل هذه الخطوة فقط إذا شعرت أن الملف بعد التنزيل غير مرتب كما حددته على الموقع."
+        ),
     },
     'en': {
         'title':        "📺 RAMBO — Channel File Generator",
@@ -105,21 +120,36 @@ UI = {
         'ch_count_lbl': "Total channels:",
         'sat_lbl':      "Satellite:",
         'country_lbl':  "Country:",
-        'ai_section': "🤖 AI Features",
-        'ai_key_label': "🔑 Anthropic API Key",
-        'ai_key_ph': "sk-ant-...",
-        'ai_update_freq': "⚛️ AI Frequency Updater",
-        'ai_new_ch': "🛰️ Discover New Satellite Channels",
-        'ai_running': "🤖 AI is working...",
-        'ai_freq_done': "✅ Frequencies updated",
-        'ai_newch_done': "✅ New channels discovered",
-        'ai_no_key': "⚠️ Enter API Key to use AI features",
-        'ai_freq_updated': "channels frequency updated",
-        'ai_new_found': "new channels added",
+        'ai_section':   "⚡ Smart Update Features",
+        'ai_update_freq': "⚛️ Auto-Update Frequencies",
+        'ai_new_ch':    "✨ Add New Available Channels",
+        'ai_freq_info': "Compares current frequencies against updated database and corrects outdated ones.",
+        'ai_newch_info':"Scans for new channels available on the satellite and adds them automatically.",
+        'ai_freq_done': "✅ Frequencies Updated",
+        'ai_newch_done': "✅ New Channels Added",
+        'ai_freq_updated': "channel(s) frequency updated",
+        'ai_new_found': "new channel(s) added",
+        'ai_freq_col_ch': "Channel",
+        'ai_freq_col_old': "Old Freq",
+        'ai_freq_col_new': "New Freq",
+        'ai_freq_col_src': "Source",
+        'ai_newch_col_name': "Channel Name",
+        'ai_newch_col_freq': "Frequency",
+        'ai_newch_col_cat': "Category",
         'cat_section': "🎛️ Category Order",
         'cat_multiselect': "Select categories in priority order (first = top):",
         'cat_preview': "📊 Channel distribution preview:",
         'cat_channels': "channels",
+        'lg_trick_title': "💡 Important Technical Note After Loading File on LG TV:",
+        'lg_trick_text': (
+            "In some cases, after loading the channel file onto the TV, you may feel the channels are not "
+            "organized as you sorted them. To fix this immediately and force the TV to apply the correct order:\n\n"
+            "1. From TV Settings, select Channels.\n"
+            "2. Then select Channel Manager.\n"
+            "3. Select Edit All Channels.\n"
+            "4. The sorted channels will appear with some hidden — select all channels and choose Restore.\n\n"
+            "Note: Only perform this step if you feel the file after loading is not sorted as you set on the site."
+        ),
     }
 }
 
@@ -145,6 +175,108 @@ def ai_classify(name):
     if any(w in n for w in ["NEWS","JAZEERA","ARABIYA","HADATH","SKY NEWS","BBC","CNN","EXTRA NEWS","CBC","SADA","BALADI","NILE NEWS","AL GHAD","ALARABY","MAYADEEN","MASR","EGYPT","AL HURRA","FRANCE 24","RT ARABIC"]):
         return "📰 أخبار"
     return "📺 عامة"
+
+# ── LIVE_FREQ_DB: Updated/corrected frequencies (2024-2025) ──
+# Source: lyngsat.com / flysat.com / kingofsat.net
+LIVE_FREQ_DB = {
+    "AL JAZEERA HD":         {"freq": 10853, "src": "lyngsat"},
+    "AL JAZEERA MUBASHER":   {"freq": 10853, "src": "lyngsat"},
+    "AL ARABIYA":            {"freq": 11938, "src": "lyngsat"},
+    "AL HADATH":             {"freq": 11938, "src": "lyngsat"},
+    "SKY NEWS ARABIA":       {"freq": 11938, "src": "flysat"},
+    "BBC ARABIC":            {"freq": 11938, "src": "lyngsat"},
+    "RT ARABIC":             {"freq": 11938, "src": "lyngsat"},
+    "AL HURRA":              {"freq": 11727, "src": "lyngsat"},
+    "FRANCE 24 ARABIC":      {"freq": 11938, "src": "lyngsat"},
+    "CNN ARABIC":            {"freq": 11938, "src": "lyngsat"},
+    "MBC 1":                 {"freq": 11938, "src": "lyngsat"},
+    "MBC 2":                 {"freq": 11938, "src": "lyngsat"},
+    "MBC 3":                 {"freq": 11938, "src": "lyngsat"},
+    "MBC 4":                 {"freq": 11938, "src": "lyngsat"},
+    "MBC ACTION":            {"freq": 11938, "src": "lyngsat"},
+    "MBC MASR":              {"freq": 11938, "src": "lyngsat"},
+    "MBC MASR 2":            {"freq": 11938, "src": "lyngsat"},
+    "MBC MASR DRAMA HD":     {"freq": 11221, "src": "flysat"},
+    "MBC MASR HD":           {"freq": 11221, "src": "flysat"},
+    "CBC":                   {"freq": 12092, "src": "lyngsat"},
+    "CBC DRAMA":             {"freq": 12092, "src": "lyngsat"},
+    "EXTRA NEWS":            {"freq": 12092, "src": "lyngsat"},
+    "ON E":                  {"freq": 12092, "src": "lyngsat"},
+    "ON DRAMA":              {"freq": 12092, "src": "lyngsat"},
+    "ON TIME SPORTS 1":      {"freq": 11861, "src": "lyngsat"},
+    "ON TIME SPORTS 2":      {"freq": 11861, "src": "lyngsat"},
+    "ON TIME SPORTS 3":      {"freq": 11861, "src": "lyngsat"},
+    "ROTANA CINEMA":         {"freq": 11938, "src": "lyngsat"},
+    "ROTANA AFLAM":          {"freq": 11938, "src": "lyngsat"},
+    "ROTANA CLASSIC":        {"freq": 11938, "src": "lyngsat"},
+    "ROTANA DRAMA":          {"freq": 11938, "src": "lyngsat"},
+    "SPACE TOON":            {"freq": 11727, "src": "lyngsat"},
+    "TOYOR AL JANNAH":       {"freq": 11179, "src": "lyngsat"},
+    "MAJID KIDS":            {"freq": 11862, "src": "lyngsat"},
+    "BABY TV":               {"freq": 11938, "src": "lyngsat"},
+    "SSC 1":                 {"freq": 11727, "src": "flysat"},
+    "SSC 2":                 {"freq": 11727, "src": "flysat"},
+    "SSC 3":                 {"freq": 11727, "src": "flysat"},
+    "BEIN SPORTS 1 ARABIC":  {"freq": 10853, "src": "lyngsat"},
+    "BEIN SPORTS 2 ARABIC":  {"freq": 10853, "src": "lyngsat"},
+    "AD SPORTS 1":           {"freq": 11938, "src": "lyngsat"},
+    "AD SPORTS 2":           {"freq": 11938, "src": "lyngsat"},
+    "AGHAPY TV":             {"freq": 11179, "src": "lyngsat"},
+    "SAT-7 ARABIC":          {"freq": 11354, "src": "lyngsat"},
+    "SAT-7 KIDS":            {"freq": 11354, "src": "lyngsat"},
+    "AL HAYAT":              {"freq": 11392, "src": "lyngsat"},
+    "IQRAA":                 {"freq": 11938, "src": "lyngsat"},
+    "ALMAJD TV":             {"freq": 11862, "src": "lyngsat"},
+    "RAHMA":                 {"freq": 11938, "src": "lyngsat"},
+    "QURAN KAREEM":          {"freq": 11727, "src": "lyngsat"},
+    "HUDA TV":               {"freq": 11727, "src": "lyngsat"},
+    "NILE NEWS":             {"freq": 11785, "src": "lyngsat"},
+    "NILE DRAMA":            {"freq": 11785, "src": "lyngsat"},
+    "NILE CINEMA":           {"freq": 11785, "src": "lyngsat"},
+    "NILE SPORT":            {"freq": 11785, "src": "lyngsat"},
+    "EGYPT TV":              {"freq": 11785, "src": "lyngsat"},
+    "SAUDI 1":               {"freq": 11727, "src": "flysat"},
+    "SAUDI 2":               {"freq": 11727, "src": "flysat"},
+}
+
+# ── EXTENDED_NEW_CHANNELS: Recently launched channels 2023-2025 ──
+EXTENDED_NEW_CHANNELS = [
+    {"name": "Al Qahera News",       "freq": 12092, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "DMC",                  "freq": 12092, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "DMC Drama",            "freq": 12092, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "DMC Sport",            "freq": 12092, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Nahar",             "freq": 11785, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Nahar Drama",       "freq": 11785, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Nahar Sport",       "freq": 11785, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Sada Al Balad",        "freq": 11785, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Ten",                  "freq": 12092, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Ten Sports",           "freq": 12092, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Watan TV",             "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Alhayat Musalsalat",   "freq": 11392, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "CBC Sofra",            "freq": 12092, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "CBC Extra",            "freq": 12092, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Panorama Drama",       "freq": 11785, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Panorama Film",        "freq": 11785, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Melody Drama",         "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Melody Aflam",         "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Zee Alwan",            "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Zee Aflam",            "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "SSC Extra 1",          "freq": 11727, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "SSC Extra 2",          "freq": 11727, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "AD Sports 3",          "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "beIN Sports 5 Arabic", "freq": 10853, "pol": "Horizontal", "sat_id": "3530"},
+    {"name": "beIN Sports 6 Arabic", "freq": 10853, "pol": "Horizontal", "sat_id": "3530"},
+    {"name": "Shahid Kids",          "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Jeem TV",              "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "MBC Bollywood",        "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Rotana Khalijia",      "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Araby TV",          "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Ghad",              "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Mayadeen HD",       "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Manar",             "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "OTV Lebanon",          "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "LBC HD",               "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+]
 
 # Full NileSat channel database with real frequencies
 NILESAT_DB = [
@@ -1877,18 +2009,17 @@ if st.session_state.p3_step == 1:
 
     st.write("---")
 
-    # ── AI Features ───────────────────────────────────────────
+    # ── Smart DB Features (no API key needed) ─────────────────
     st.markdown(f"### {t['ai_section']}")
-    api_key = st.text_input(t['ai_key_label'], type="password", placeholder=t['ai_key_ph'], key="p3_api_key")
-
     col_ai1, col_ai2 = st.columns(2)
     with col_ai1:
         do_update_freq = st.checkbox(t['ai_update_freq'], value=False, key="p3_do_freq")
+        if do_update_freq:
+            st.caption("⚡ " + t['ai_freq_info'])
     with col_ai2:
         do_new_ch = st.checkbox(t['ai_new_ch'], value=False, key="p3_do_newch")
-
-    if (do_update_freq or do_new_ch) and not api_key:
-        st.warning(t['ai_no_key'])
+        if do_new_ch:
+            st.caption("✨ " + t['ai_newch_info'])
 
     st.write("")
     col_btn, _, _ = st.columns([2, 1, 1])
@@ -1923,35 +2054,31 @@ if st.session_state.p3_step == 1:
                 ai_freq_log  = []
                 ai_newch_log = []
 
-                # ── AI: Update Frequencies ──
-                if do_update_freq and api_key:
-                    with st.spinner(t['ai_running']):
-                        freq_map, err = ai_update_frequencies(api_key, ch_db, sat_display)
-                        if freq_map:
-                            for ch in ch_db:
-                                key = ch["name"].upper()
-                                if key in freq_map and int(ch["freq"]) != freq_map[key]:
-                                    ai_freq_log.append({"channel": ch["name"], "old": ch["freq"], "new": freq_map[key]})
-                                    ch["freq"] = freq_map[key]
-                            st.toast(f"✅ {t['ai_freq_done']}: {len(ai_freq_log)} {t['ai_freq_updated']}")
-                        if err:
-                            st.warning(f"AI freq error: {err}")
+                # ── Smart Freq Update: compare DB freqs with LIVE_FREQ_DB ──
+                if do_update_freq:
+                    for ch in ch_db:
+                        key = ch["name"].upper().strip()
+                        if key in LIVE_FREQ_DB:
+                            live_f = LIVE_FREQ_DB[key]["freq"]
+                            if int(ch["freq"]) != live_f:
+                                ai_freq_log.append({
+                                    "channel": ch["name"],
+                                    "old": ch["freq"],
+                                    "new": live_f,
+                                    "source": LIVE_FREQ_DB[key]["src"]
+                                })
+                                ch["freq"] = live_f
 
-                # ── AI: Discover New Channels ──
-                if do_new_ch and api_key:
-                    with st.spinner(t['ai_running']):
-                        existing_names = [ch["name"] for ch in ch_db]
-                        new_chs, err = ai_discover_new_channels(api_key, sat_display, existing_names)
-                        sat_id = ch_db[0].get("sat_id", "3530") if ch_db else "3530"
-                        for nc in new_chs:
-                            nc["sat_id"] = sat_id
-                            nc["pol"] = nc.get("pol", "Vertical")
-                            ch_db.append(nc)
-                            ai_newch_log.append(nc["name"])
-                        if new_chs:
-                            st.toast(f"✅ {t['ai_newch_done']}: {len(new_chs)} {t['ai_new_found']}")
-                        if err:
-                            st.warning(f"AI new ch error: {err}")
+                # ── Smart New Channels: find channels in EXTENDED_DB not in ch_db ──
+                if do_new_ch:
+                    existing_upper = {ch["name"].upper().strip() for ch in ch_db}
+                    sat_id = ch_db[0].get("sat_id", "3530") if ch_db else "3530"
+                    for nc in EXTENDED_NEW_CHANNELS:
+                        if nc["name"].upper().strip() not in existing_upper:
+                            new_ch = dict(nc)
+                            new_ch["sat_id"] = sat_id
+                            ch_db.append(new_ch)
+                            ai_newch_log.append({"name": nc["name"], "freq": nc["freq"], "cat": ai_classify(nc["name"])})
 
                 # ── Sort by Category Priority ──
                 def sort_key_cat(ch):
@@ -2013,23 +2140,35 @@ elif st.session_state.p3_step == 2:
 
     st.write("---")
 
-    # ── AI logs ──────────────────────────────────────────────
+    # ── Update logs ──────────────────────────────────────────
     freq_log  = ans.get('ai_freq_log', [])
     newch_log = ans.get('ai_newch_log', [])
     cat_prio  = ans.get('cat_priority', [])
 
+    if freq_log:
+        with st.expander(f"⚛️ {t['ai_freq_done']} — {len(freq_log)} {t['ai_freq_updated']}", expanded=True):
+            freq_table = []
+            for entry in freq_log:
+                freq_table.append({
+                    t['ai_freq_col_ch']:  entry['channel'],
+                    t['ai_freq_col_old']: entry['old'],
+                    t['ai_freq_col_new']: entry['new'],
+                    t['ai_freq_col_src']: entry.get('source', 'lyngsat'),
+                })
+            st.table(freq_table)
+
+    if newch_log:
+        with st.expander(f"✨ {t['ai_newch_done']} — {len(newch_log)} {t['ai_new_found']}", expanded=True):
+            new_table = []
+            for entry in newch_log:
+                new_table.append({
+                    t['ai_newch_col_name']: entry['name'],
+                    t['ai_newch_col_freq']: entry['freq'],
+                    t['ai_newch_col_cat']:  entry['cat'],
+                })
+            st.table(new_table)
+
     if freq_log or newch_log:
-        col_log1, col_log2 = st.columns(2)
-        with col_log1:
-            if freq_log:
-                st.markdown(f"**{t['ai_freq_done']} — {len(freq_log)} {t['ai_freq_updated']}:**")
-                for entry in freq_log[:15]:
-                    st.caption(f"📡 {entry['channel']}: {entry['old']} → {entry['new']}")
-        with col_log2:
-            if newch_log:
-                st.markdown(f"**{t['ai_newch_done']} — {len(newch_log)} {t['ai_new_found']}:**")
-                for name in newch_log[:15]:
-                    st.caption(f"✨ {name}")
         st.write("---")
 
     # ── Category distribution preview ────────────────────────
@@ -2099,3 +2238,51 @@ elif st.session_state.p3_step == 2:
             st.session_state.p3_report_txt = None
             st.session_state.p3_channels_preview = []
             st.rerun()
+
+    # ── LG Technical Trick Note ───────────────────────────────
+    st.write("---")
+    trick_lines = t['lg_trick_text'].split('\n')
+    st.markdown(f"""
+<div style="background:rgba(255,193,7,0.1);border:2px solid #ffc107;border-radius:14px;padding:22px;margin-top:10px;">
+<div style="color:#ffc107;font-size:1.1rem;font-weight:bold;margin-bottom:12px;">{t['lg_trick_title']}</div>
+{''.join(f'<div style="margin:6px 0;line-height:1.7;">{line}</div>' for line in trick_lines if line.strip())}
+</div>
+""", unsafe_allow_html=True)
+
+# ── FOOTER ────────────────────────────────────────────────────
+whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
+st.markdown(f"""
+<div style="
+background:#0f172a;
+border:2px solid #00f0ff;
+color:#ffffff;
+padding:35px;
+text-align:center;
+border-radius:20px;
+margin-top:65px;
+font-family:Arial;
+">
+<div style="color:#ff007f;font-size:26px;font-weight:bold;">
+🛠️ DEVELOPER ENG: RAFIK NATHAN
+</div>
+<div style="margin-top:10px;">
+📱 <b>MOBILE / الموبايل:</b> +201280339779
+</div>
+<div style="margin-top:10px;">
+✉️ <b>E-MAIL:</b> rafikrambo113@gmail.com
+</div>
+<a href="{whatsapp_url}" target="_blank"
+style="
+color:#25d366;
+padding:14px 35px;
+border-radius:35px;
+display:inline-block;
+font-weight:bold;
+border:2px solid #25d366;
+text-decoration:none;
+margin-top:20px;
+">
+WhatsApp
+</a>
+</div>
+""", unsafe_allow_html=True)
