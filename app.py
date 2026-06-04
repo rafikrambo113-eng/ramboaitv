@@ -150,7 +150,37 @@ def normalize_modern_node(node, index):
     node["userSelCHNo"] = True
     return node
 
-uploaded_file = st.file_uploader(t['upload_label'], type=["TLL"])
+# ─────────────────────────────────────────────
+# ⚡ نظام الترتيب الذكي المستقر + رفع الملف
+# ─────────────────────────────────────────────
+
+st.markdown("""
+<div style="
+background:#0f172a;
+padding:20px;
+border-radius:15px;
+border:1px solid #00f0ff;
+color:white;
+font-family:Arial;
+">
+
+<h3>⚡ نظام الترتيب الذكي المستقر</h3>
+
+<p>
+اضغط زر ارفع، عدل أرقامك، ثم اضغط حفظ التعديلات
+</p>
+
+</div>
+""", unsafe_allow_html=True)
+
+
+uploaded_file = st.file_uploader(
+    "🚀 ارفع ملف القنوات (GlobalClone00001.TLL):",
+    type=["TLL"]
+)
+
+st.caption("⬆️ ارفع ملف TLL أولاً لتبدأ العمل.")
+st.caption("200MB per file • TLL")
 
 if uploaded_file is not None:
     file_bytes = uploaded_file.read()
