@@ -163,6 +163,19 @@ def parse_tll(file_bytes):
 uploaded = st.file_uploader(t['upload_label'], type=["TLL"], key="tll_uploader_p2")
 
 if uploaded is not None:
+    if st.session_state.get("last_file_name") != uploaded.name:
+        st.session_state.channels = []
+        st.session_state.ordered_channels = []
+        st.session_state.root = None
+        st.session_state.broadcast_data = None
+        st.session_state.file_text_original = ""
+        st.session_state.model_name = ""
+        st.session_state.edit_finished = False
+        st.session_state.is_modern = False
+        st.session_state.scan_done_p2 = False
+        st.session_state.maint_done_p2 = False
+
+    st.session_state.last_file_name = uploaded.name
     if not st.session_state.channels:
         try:
             file_bytes = uploaded.read()
