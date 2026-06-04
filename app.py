@@ -483,7 +483,7 @@ border:2px solid #25d366;
 text-decoration:none;
 margin-top:20px;
 ">
-WhatsApp Web
+WhatsApp
 </a>
 
 </div>
