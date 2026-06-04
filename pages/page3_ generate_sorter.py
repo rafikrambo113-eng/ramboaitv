@@ -1919,7 +1919,7 @@ border:2px solid #25d366;
 text-decoration:none;
 transition:0.3s;
 ">
-💬 WhatsApp Contact
+💬 WhatsApp
 </a>
 
 </div>
