@@ -390,3 +390,15 @@ if uploaded_file is not None:
             file_name="Channels_List.txt",
             mime="text/plain; charset=utf-8"
         )
+# ─────────────────────────────────────────────
+# 10. الفوتر السيبراني
+# ─────────────────────────────────────────────
+whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
+st.markdown(f"""
+<div class="futuristic-cyber-footer" style="background:{footer_bg}; border:2px solid #00f0ff; color:{footer_text} !important; padding:35px; text-align:center; border-radius:20px; margin-top:65px; font-family:'Orbitron', sans-serif;">
+    <div class="footer-dev" style="color:#ff007f; font-size:26px; font-weight:bold;">🛠️ DEVELOPER ENG: RAFIK RAMBO</div>
+    <div>📱 <b>MOBILE / الموبايل:</b> +201280339779</div>
+    <div>✉️ <b>E-MAIL:</b> rafikrambo113@gmail.com</div>
+    <a href="{whatsapp_url}" target="_blank" class="cyber-whatsapp-btn" style="color:#25d366 !important; padding:14px 35px; border-radius:35px; display:inline-block; font-weight:bold; border:2px solid #25d366; text-decoration:none; margin-top:20px;">WhatsApp Web</a>
+</div>
+""", unsafe_allow_html=True)
