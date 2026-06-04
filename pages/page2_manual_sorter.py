@@ -498,39 +498,28 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
-# 10. الفوتر السيبراني (FIXED)
-# ─────────────────────────────────────────────
-
+# ── FOOTER ────────────────────────────────────────────────────
 whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
-
-footer_bg = "#0f172a"
-footer_text = "#ffffff"
-
 st.markdown(f"""
 <div style="
-background:{footer_bg};
+background:#0f172a;
 border:2px solid #00f0ff;
-color:{footer_text};
+color:#ffffff;
 padding:35px;
 text-align:center;
 border-radius:20px;
 margin-top:65px;
 font-family:Arial;
 ">
-
 <div style="color:#ff007f;font-size:26px;font-weight:bold;">
 🛠️ DEVELOPER ENG: RAFIK NATHAN
 </div>
-
 <div style="margin-top:10px;">
 📱 <b>MOBILE / الموبايل:</b> +201280339779
 </div>
-
 <div style="margin-top:10px;">
-✉️ <b>E-MAIL:</b> [rafikrambo113@gmail.com](mailto:rafikrambo113@gmail.com)
+✉️ <b>E-MAIL:</b> rafikrambo113@gmail.com
 </div>
-
 <a href="{whatsapp_url}" target="_blank"
 style="
 color:#25d366;
@@ -544,6 +533,5 @@ margin-top:20px;
 ">
 WhatsApp
 </a>
-
 </div>
 """, unsafe_allow_html=True)
