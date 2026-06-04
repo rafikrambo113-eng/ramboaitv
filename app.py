@@ -164,9 +164,6 @@ color:white;
 font-family:Arial;
 ">
 
-
-</p>
-
 </div>
 """, unsafe_allow_html=True)
 
