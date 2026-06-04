@@ -138,7 +138,7 @@ st.markdown(f"""
     .stTextInput>div>div>input, .stNumberInput>div>div>input {{ background-color: {box_bg} !important; color: {text_color} !important; border: 2px solid {box_border} !important; border-radius: 10px !important; }}
     div[data-testid="stFileUploader"], .rambo-box {{ background: {box_bg} !important; border: 2px solid {box_border} !important; box-shadow: 0px 5px 15px {box_shadow} !important; border-radius: 14px !important; padding: 18px !important; margin-bottom: 20px !important; }}
     .stButton>button {{ background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important; color: #ffffff !important; border: 2px solid #ff007f !important; border-radius: 12px !important; font-weight: bold; width: 100%; }}
-    #btn_reset_footer {{ background: linear-gradient(135deg, #ff6b35 0%, #d43f00 100%) !important; font-size: 16px !important; }}
+    #btn_reset_download {{ background: linear-gradient(135deg, #ff6b35 0%, #d43f00 100%) !important; }}
     </style>
 """, unsafe_allow_html=True)
 
@@ -499,12 +499,17 @@ else:
             try: final_tll_bytes = final_text.encode('utf-8')
             except UnicodeEncodeError: final_tll_bytes = final_text.encode('latin-1')
 
-        # أزرار التحميل
-        col_d1, col_d2 = st.columns(2)
+        # أزرار التحميل - 3 أزرار جنب بعض
+        col_d1, col_d2, col_d3 = st.columns(3)
         with col_d1:
             st.download_button(label=t['btn_tll'], data=final_tll_bytes, file_name="GlobalClone00001.TLL", mime="application/octet-stream")
         with col_d2:
             st.download_button(label=t['btn_txt'], data=txt_report, file_name="Channels_List_Manual.txt", mime="text/plain; charset=utf-8")
+        with col_d3:
+            if st.button(t['btn_reset'], key="btn_reset_download", help="إعادة تهيئة الصفحة بالكامل والبدء من جديد"):
+                reset_all_session_state()
+                st.success(t['reset_msg'])
+                st.rerun()
 
         # ── إضافة الملحوظة الفنية الهامة المخصصة لشاشات LG ──
         st.markdown("""
@@ -524,17 +529,6 @@ else:
             </p>
         </div>
         """, unsafe_allow_html=True)
-
-# ── زر إعادة التهيئة قبل الفوتر ───────────────────────────────────────────────
-st.write("---")
-st.write(f"### ⚙️ خيارات التحكم")
-
-col_reset_center, _ = st.columns([1, 8])
-with col_reset_center:
-    if st.button(t['btn_reset'], key="btn_reset_footer", help="إعادة تهيئة الصفحة بالكامل وحذف جميع البيانات والبدء من جديد"):
-        reset_all_session_state()
-        st.success(t['reset_msg'])
-        st.rerun()
 
 # ── FOOTER ────────────────────────────────────────────────────
 whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
