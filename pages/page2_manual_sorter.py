@@ -39,6 +39,8 @@ if 'maint_details_p2' not in st.session_state:
     st.session_state.maint_details_p2 = []
 if 'legacy_tag' not in st.session_state:
     st.session_state.legacy_tag = None
+if 'file_uploaded' not in st.session_state:
+    st.session_state.file_uploaded = False
 
 # ─────────────────────────────────────────────
 # 2. قواميس النصوص (عربي / إنجليزي)
@@ -50,7 +52,7 @@ UI = {
         'upload_label':    "🚀 ارفع ملف القنوات (GlobalClone00001.TLL):",
         'success_read':    "🛸 تم قراءة الملف بنجاح! الموديل: ",
         'search_ph':       "🔍 ابحث عن قناة بالاسم في الملف الأصلي...",
-        'all_ch_title':    "📋 1. جدول القنوات الكلي المتوفرة",
+        'all_ch_title':    "📋 1. جدول القنوات الكلي المتوفر",
         'ordered_title':   "📊 2. جدول الترتيب النهائي (اكتب أرقام الترتيب هنا واضغط حفظ بالأسفل)",
         'col_action':      "إجراء",
         'btn_add_to_order': "➕ زرع",
@@ -170,56 +172,69 @@ def parse_tll(file_bytes):
         return channels, False, root, None, file_text, None
 
 # ─────────────────────────────────────────────
-# 5. رفع ومعالجة الملف الأصلي (معدّل لقراءة الملف الجديد تلقائياً)
+# 5. دالة لمعالجة الملف (تُستدعى عند الرفع)
 # ─────────────────────────────────────────────
-uploaded = st.file_uploader(t['upload_label'], type=["TLL"], key="tll_uploader_p2")
+def process_uploaded_file():
+    uploaded = st.session_state.get('uploaded_file')
+    if uploaded is None:
+        return
+    
+    # مسح البيانات القديمة
+    st.session_state.channels = []
+    st.session_state.ordered_channels = []
+    st.session_state.root = None
+    st.session_state.broadcast_data = None
+    st.session_state.file_text_original = ""
+    st.session_state.model_name = ""
+    st.session_state.edit_finished = False
+    st.session_state.is_modern = False
+    st.session_state.scan_done_p2 = False
+    st.session_state.maint_done_p2 = False
+    st.session_state.inserted_list_p2 = []
+    st.session_state.maint_details_p2 = []
+    st.session_state.legacy_tag = None
+    
+    try:
+        file_bytes = uploaded.read()
+        (
+            st.session_state.channels,
+            st.session_state.is_modern,
+            st.session_state.root,
+            st.session_state.broadcast_data,
+            st.session_state.file_text_original,
+            st.session_state.legacy_tag
+        ) = parse_tll(file_bytes)
 
-if uploaded is not None:
-    # التحقق من أن الملف الجديد مختلف عن الملف السابق
-    if uploaded.name != st.session_state.last_file_name:
-        # مسح جميع البيانات القديمة
-        st.session_state.channels = []
+        model_node = st.session_state.root.find(".//ModelName")
+        st.session_state.model_name = model_node.text if model_node is not None else "LG TV Custom"
         st.session_state.ordered_channels = []
-        st.session_state.root = None
-        st.session_state.broadcast_data = None
-        st.session_state.file_text_original = ""
-        st.session_state.model_name = ""
         st.session_state.edit_finished = False
-        st.session_state.is_modern = False
-        st.session_state.scan_done_p2 = False
-        st.session_state.maint_done_p2 = False
-        st.session_state.inserted_list_p2 = []
-        st.session_state.maint_details_p2 = []
         
-        # حفظ اسم الملف الجديد
         st.session_state.last_file_name = uploaded.name
+        st.session_state.file_uploaded = True
         
-        # قراءة الملف الجديد مباشرة
-        try:
-            file_bytes = uploaded.read()
-            (
-                st.session_state.channels,
-                st.session_state.is_modern,
-                st.session_state.root,
-                st.session_state.broadcast_data,
-                st.session_state.file_text_original,
-                st.session_state.legacy_tag
-            ) = parse_tll(file_bytes)
-
-            model_node = st.session_state.root.find(".//ModelName")
-            st.session_state.model_name = model_node.text if model_node is not None else "LG TV Custom"
-            st.session_state.ordered_channels = []
-            st.session_state.edit_finished = False
-            st.session_state.scan_done_p2 = False
-            st.session_state.maint_done_p2 = False
-            
-            st.toast(f"🛸 تم قراءة الملف الجديد: {uploaded.name}", icon="✅")
-        except Exception as e:
-            st.error(f"❌ خطأ في معالجة بناء الملف. تأكد أن الملف سليم وغير تالف. تفاصيل: {e}")
-            st.stop()
+        st.toast(f"🛸 تم قراءة الملف بنجاح: {uploaded.name}", icon="✅")
+        st.rerun()
+    except Exception as e:
+        st.error(f"❌ خطأ في معالجة الملف. تأكد أن الملف سليم. تفاصيل: {e}")
+        st.stop()
 
 # ─────────────────────────────────────────────
-# 6. رسالة إذا لم يتم رفع ملف
+# 6. رفع ومعالجة الملف الأصلي (معدّل لقراءة فورية)
+# ─────────────────────────────────────────────
+uploaded = st.file_uploader(
+    t['upload_label'], 
+    type=["TLL"], 
+    key="tll_uploader_p2",
+    on_change=process_uploaded_file
+)
+
+# تخزين الملف في session_state عشان نقرأه في الـ callback
+if uploaded is not None:
+    st.session_state.uploaded_file = uploaded
+
+# ─────────────────────────────────────────────
+# 7. رسالة إذا لم يتم رفع ملف
 # ─────────────────────────────────────────────
 if not st.session_state.channels:
     st.info(t['no_file'])
@@ -246,12 +261,12 @@ if not st.session_state.channels:
     st.stop()
 
 # ─────────────────────────────────────────────
-# 7. رسالة نجاح قراءة الملف
+# 8. رسالة نجاح قراءة الملف
 # ─────────────────────────────────────────────
 st.success(f"{t['success_read']} **{st.session_state.model_name}** | 📡 {'Modern JSON' if st.session_state.is_modern else 'Legacy XML'} | الإجمالي: {len(st.session_state.channels)} قناة.")
 
 # ─────────────────────────────────────────────
-# 8. خيارات الفحص والصيانة التلقائية
+# 9. خيارات الفحص والصيانة التلقائية
 # ─────────────────────────────────────────────
 st.write(f"### {t['auto_features_title']}")
 col_chk1, col_chk2 = st.columns(2)
@@ -293,7 +308,7 @@ with col_chk1:
     if scan_active:
         if st.session_state.get('inserted_list_p2'):
             st.markdown("<div style='background:rgba(0, 240, 255, 0.1); padding:12px; border-radius:10px; border-left:4px solid #00f0ff; margin-top:10px;'>", unsafe_allow_html=True)
-            st.markdown("**✨ قنوات جديدة تم زرعها في (1. جدول القنوات الكلي المتوفر):**")
+            st.markdown("**✨ قنوات جديدة تم زرعها في **(1. جدول القنوات الكلي المتوفر):")
             for item in st.session_state.inserted_list_p2:
                 st.markdown(f"<span style='color:#00f0ff;'>{item}</span>", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
@@ -332,7 +347,7 @@ with col_chk2:
     if maint_active:
         if st.session_state.get('maint_details_p2'):
             st.markdown("<div style='background:rgba(255, 0, 127, 0.1); padding:12px; border-radius:10px; border-left:4px solid #ff007f; margin-top:10px;'>", unsafe_allow_html=True)
-            st.markdown("**🔧 تقرير الترددات المعدلة في (1. جدول القنوات الكلي المتوفر):**")
+            st.markdown("**🔧 تقرير الترددات المعدلة في **(1. جدول القنوات الكلي المتوفر):")
             for detail in st.session_state.maint_details_p2:
                 st.markdown(f"<span style='color:#ff007f;'>{detail}</span>", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
@@ -340,14 +355,14 @@ with col_chk2:
             st.markdown("<div style='color:#888; margin-top:10px;'>ℹ️ جميع الترددات الحالية بجدول المتوفر مطابقة لأحدث نسخة.</div>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# 9. دوال الـ Callbacks لضمان ثبات البيانات
+# 10. دوال الـ Callbacks لضمان ثبات البيانات
 # ─────────────────────────────────────────────
 def add_channel_callback(ch_obj):
     st.session_state.ordered_channels.append(ch_obj.copy())
     st.session_state.edit_finished = False
 
 # ─────────────────────────────────────────────
-# 10. واجهة نظام الجدولين المتجاورين
+# 11. واجهة نظام الجدولين المتجاورين
 # ─────────────────────────────────────────────
 st.write("---")
 col_table1, col_table2 = st.columns(2)
@@ -441,7 +456,7 @@ with col_table2:
 st.write("---")
 
 # ─────────────────────────────────────────────
-# 11. التجهيز النهائي والتحميل والملحوظة الفنية
+# 12. التجهيز النهائي والتحميل والملحوظة الفنية
 # ─────────────────────────────────────────────
 st.write(f"### {t['preview_title']}")
 
@@ -526,7 +541,7 @@ else:
         """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# 12. الفوتر السيبراني (FIXED)
+# 13. الفوتر السيبراني (FIXED)
 # ─────────────────────────────────────────────
 
 whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
