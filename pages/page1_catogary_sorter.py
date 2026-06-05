@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 import json
 import re
 import requests
-from bs4 import BeautifulSoup
+
 from datetime import datetime
 
 # ──────────────────────────────────────────────────────
@@ -281,26 +281,27 @@ def fetch_nilesat_live_db():
         )
         resp.raise_for_status()
 
-        soup = BeautifulSoup(resp.text, "html.parser")
-        tables = soup.find_all("table")
-
+        # استخراج صفوف <tr> من كل جداول HTML باستخدام regex فقط
         live_db = {}
-        for table in tables:
-            rows = table.find_all("tr")
-            for row in rows[1:]:  # تخطي الـ header
-                cols = [td.get_text(strip=True) for td in row.find_all("td")]
-                if len(cols) >= 3:
-                    ch_name = cols[0].strip().upper()
-                    try:
-                        freq = int(cols[1].strip())
-                    except ValueError:
-                        continue
-                    polarity = cols[2].strip().upper()  # H أو V
-                    if ch_name and freq > 1000:
-                        live_db[ch_name] = {
-                            "frequency": freq,
-                            "polarization": "Horizontal" if polarity == "H" else "Vertical"
-                        }
+        # نجيب كل الصفوف من الصفحة
+        rows = re.findall(r'<tr[^>]*>(.*?)</tr>', resp.text, re.DOTALL | re.IGNORECASE)
+        for row in rows:
+            # نجيب كل الخلايا <td>
+            cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
+            # تنظيف من HTML tags
+            cols = [re.sub(r'<[^>]+>', '', c).strip() for c in cells]
+            if len(cols) >= 3:
+                ch_name = cols[0].upper().strip()
+                try:
+                    freq = int(re.sub(r'\D', '', cols[1]))
+                except (ValueError, IndexError):
+                    continue
+                polarity = cols[2].strip().upper()
+                if ch_name and freq > 1000:
+                    live_db[ch_name] = {
+                        "frequency": freq,
+                        "polarization": "Horizontal" if polarity == "H" else "Vertical"
+                    }
 
         return live_db if live_db else None
 
