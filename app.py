@@ -1,3 +1,6 @@
+bash
+
+cat > /mnt/user-data/outputs/page1_updated.py << 'PYEOF'
 import streamlit as st
 import xml.etree.ElementTree as ET
 import json
@@ -11,6 +14,12 @@ for key, val in {
     'lang': 'ar',
     'theme': 'dark',
     'p1_file_loaded': False,
+    'scan_done_p1': False,
+    'maint_done_p1': False,
+    'inserted_list_p1': [],
+    'maint_details_p1': [],
+    'p1_channels_extra': [],   # قنوات مزروعة من الفحص
+    'p1_freq_patched': False,  # تم تطبيق صيانة الترددات
 }.items():
     if key not in st.session_state:
         st.session_state[key] = val
@@ -23,9 +32,12 @@ UI_TEXT = {
         'title':             "📺 RAMBO — المُرتِّب الذكي بالفئات",
         'subtitle':          "⚡ ارفع ملف القنوات، رتّب الفئات، وحمّل الملف المعدَّل",
         'upload_label':      "🚀 اختر ملف القنوات (GlobalClone00001.TLL) من الفلاشة:",
+        'success_read':      "🛸 تم قراءة الملف بنجاح! الموديل: ",
+        'auto_features_title': "⚙️ خيارات الفحص الذكي والصيانة الفورية للملف",
+        'chk_scan_inject':   "📡 تفعيل الفحص التلقائي وزرع القنوات الجديدة المتاحة على القمر فوراً",
+        'chk_modern_maint':  "🔧 تفعيل الصيانة الحديثة وتحديث الترددات الميتة والقديمة تلقائياً",
         'update_freq_label': "⚛️ تحديث الترددات تلقائياً",
         'add_new_ch_label':  "✨ إضافة القنوات الجديدة المتاحة تلقائياً",
-        'success_read':      "🛸 تم قراءة الهيكل بنجاح! الموديل الحالي: ",
         'search_header':     "🔍 البحث عن قناة داخل الملف:",
         'search_placeholder':"اكتب اسم القناة هنا...",
         'search_col_num':    "الرقم",
@@ -59,9 +71,12 @@ UI_TEXT = {
         'title':             "📺 RAMBO — Smart Category Sorter",
         'subtitle':          "⚡ Upload your channel file, sort categories, download the result",
         'upload_label':      "🚀 Upload Channel File (GlobalClone00001.TLL) from USB:",
+        'success_read':      "🛸 File Parsed Successfully! Model: ",
+        'auto_features_title': "⚙️ Smart Auto-Maintenance & Scanning Options",
+        'chk_scan_inject':   "📡 Enable Auto-Scan & Inject newly available Satellite Channels",
+        'chk_modern_maint':  "🔧 Enable Modern Maintenance & Auto-Update dead frequencies",
         'update_freq_label': "⚛️ Auto update frequencies",
         'add_new_ch_label':  "✨ Auto inject missing channels",
-        'success_read':      "🛸 Structure decoded successfully! Current model: ",
         'search_header':     "🔍 Search inside file:",
         'search_placeholder':"Type channel name...",
         'search_col_num':    "No.",
@@ -101,16 +116,18 @@ t = UI_TEXT[st.session_state.lang]
 st.set_page_config(page_title="RAMBO P1 — Sorter", page_icon="⚡", layout="wide")
 
 # ──────────────────────────────────────────────────────
-# 4. UNIFIED CSS (same as page 3)
+# 4. CSS
 # ──────────────────────────────────────────────────────
 if st.session_state.theme == 'dark':
     bg  = "radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%)"
     tc, bb, bord = "#00f0ff", "rgba(13,7,33,0.85)", "#00f0ff"
     bsh, tsh = "rgba(0,240,255,0.35)", "0 0 5px rgba(0,240,255,0.4)"
+    table_head_bg = "#0d0722"
 else:
     bg  = "radial-gradient(circle at 50% 50%, #f4f5f7 0%, #e4e7eb 100%)"
     tc, bb, bord = "#0d0722", "#ffffff", "#ff007f"
     bsh, tsh = "rgba(255,0,127,0.15)", "none"
+    table_head_bg = "#0d0722"
 
 ff = "'Cairo', sans-serif" if st.session_state.lang == 'ar' else "'Orbitron', sans-serif"
 
@@ -152,7 +169,7 @@ div[data-testid="stFileUploader"] {{
 """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────
-# 5. HEADER CONTROLS (lang / theme)
+# 5. HEADER CONTROLS
 # ──────────────────────────────────────────────────────
 col_lang, col_theme, _ = st.columns([1.2, 1.5, 8])
 with col_lang:
@@ -199,6 +216,25 @@ NILESAT_LIVE_DB = {
     "TOYOR ALJANNAH":  {"frequency": 11179, "polarization": "Horizontal"},
 }
 
+# قاعدة بيانات الصيانة: ترددات قديمة/ميتة → ترددات جديدة
+FREQ_MAINTENANCE_DB = {
+    "11747": "12054",
+    "11137": "11785",
+    "12015": "11678",
+    "11602": "11938",
+    "11512": "11862",
+    "11632": "12092",
+}
+
+# قنوات جديدة للزرع التلقائي عبر الفحص
+SIMULATED_NEW_CHANNELS = [
+    {"name": "RAMBO CINEMA HD",  "frequency": 11678, "polarization": "Horizontal"},
+    {"name": "EGYPT NOW",         "frequency": 12054, "polarization": "Vertical"},
+    {"name": "FOOTBALL LIVE",     "frequency": 11054, "polarization": "Horizontal"},
+    {"name": "NILE DRAMA",        "frequency": 11861, "polarization": "Vertical"},
+    {"name": "AL KAHERA WAN NAS", "frequency": 12092, "polarization": "Vertical"},
+]
+
 ALL_AVAILABLE_CATEGORIES = [
     "⛪ قنوات مسيحية"       if st.session_state.lang == 'ar' else "⛪ Christian Channels",
     "🕌 قنوات إسلامية"      if st.session_state.lang == 'ar' else "🕌 Islamic Channels",
@@ -216,15 +252,15 @@ def ai_classify(channel_name):
         return ALL_AVAILABLE_CATEGORIES[0]
     if any(w in name for w in ["QURAN","RAHMA","MAJD","MAKKA","IQRAA","IQRA","HUDA","WESAL","ISLAM","SUNNAH"]):
         return ALL_AVAILABLE_CATEGORIES[1]
-    if any(w in name for w in ["MOSALSALAT","DRAMA","SERIES","KHOLASA","MASRAWI","SHAHID"]):
+    if any(w in name for w in ["MOSALSALAT","DRAMA","SERIES","KHOLASA","MASRAWI","SHAHID","NILE DRAMA"]):
         return ALL_AVAILABLE_CATEGORIES[2]
     if any(w in name for w in ["CINEMA","ROTANA","AFLAM","MIX","FOX","MBC2","MBC 2","MBC4","MBC 4","MBC MAX","ACTION","RAMBO","MOVIE","FILM","COMEDY"]):
         return ALL_AVAILABLE_CATEGORIES[3]
     if any(w in name for w in ["SPACE TOON","SPACETOON","CN","CARTOON","MAJID","KIDS","TOM","TOYOR","BABY","JUNIOR"]):
         return ALL_AVAILABLE_CATEGORIES[4]
-    if any(w in name for w in ["SPORT","SPORTS","ONTIME","ON TIME","KASS","AD_SPORTS","AD SPORTS","SSC","BEIN","MATCH"]):
+    if any(w in name for w in ["SPORT","SPORTS","ONTIME","ON TIME","KASS","AD_SPORTS","AD SPORTS","SSC","BEIN","MATCH","FOOTBALL"]):
         return ALL_AVAILABLE_CATEGORIES[5]
-    if any(w in name for w in ["NEWS","JAZEERA","ARABIYA","HADATH","CAIRO","SKY NEWS","BBC","CNN","EXTRA NEWS","CBC","ON E","SADA","BALADI","MASR"]):
+    if any(w in name for w in ["NEWS","JAZEERA","ARABIYA","HADATH","CAIRO","SKY NEWS","BBC","CNN","EXTRA NEWS","CBC","ON E","SADA","BALADI","MASR","EGYPT NOW","KAHERA"]):
         return ALL_AVAILABLE_CATEGORIES[6]
     return ALL_AVAILABLE_CATEGORIES[7]
 
@@ -245,10 +281,8 @@ def normalize_modern_node(node, index):
     return node
 
 # ──────────────────────────────────────────────────────
-# 7. FILE UPLOADER + RESET BUTTON
+# 7. FILE UPLOADER + RESET
 # ──────────────────────────────────────────────────────
-
-# uploader key changes on reset to force Streamlit to clear the widget
 if 'p1_uploader_key' not in st.session_state:
     st.session_state.p1_uploader_key = 0
 
@@ -263,7 +297,6 @@ with col_reset:
     st.write("")
     if st.button(t['btn_reset'], use_container_width=True):
         keep = {'lang', 'theme'}
-        # bump uploader key so the widget resets
         new_key = st.session_state.get('p1_uploader_key', 0) + 1
         for k in list(st.session_state.keys()):
             if k not in keep:
@@ -276,7 +309,24 @@ with col_reset:
 # ──────────────────────────────────────────────────────
 if uploaded_file is None:
     st.info(t['no_file_msg'])
+    st.markdown("""
+    <div style="background:#0f172a;border:2px solid #00f0ff;color:white;
+    padding:30px;text-align:center;border-radius:15px;margin-top:50px;font-family:Arial;">
+    <b>🛠️ DEVELOPER ENG: RAFIK RAMBO</b><br><br>
+    📱 +201280339779<br>✉️ rafikrambo113@gmail.com<br><br>
+    <a href="https://api.whatsapp.com/send?phone=201280339779" style="color:#25d366;">WhatsApp</a>
+    </div>""", unsafe_allow_html=True)
 else:
+    # ── إعادة تحميل عند رفع ملف جديد ──
+    if st.session_state.get("p1_last_file_name") != uploaded_file.name:
+        st.session_state.scan_done_p1    = False
+        st.session_state.maint_done_p1   = False
+        st.session_state.inserted_list_p1 = []
+        st.session_state.maint_details_p1 = []
+        st.session_state.p1_channels_extra = []
+        st.session_state.p1_freq_patches   = {}
+        st.session_state.p1_last_file_name = uploaded_file.name
+
     file_bytes = uploaded_file.read()
     try:
         file_text = file_bytes.decode('utf-8')
@@ -295,74 +345,194 @@ else:
     legacy_broadcast_tag = root.find(".//legacybroadcast")
     is_modern = legacy_broadcast_tag is not None and legacy_broadcast_tag.text
 
-    # ── count channels ──
+    # ── عدد القنوات ونوع الملف ──
     if is_modern:
-        import json as _j
-        _bd = _j.loads(legacy_broadcast_tag.text.strip())
+        _bd = json.loads(legacy_broadcast_tag.text.strip())
         total_ch = len(_bd.get("channelList", []))
-        file_type_desc = "حديث (2020+)" if st.session_state.lang == 'ar' else "Modern (2020+)"
+        file_type_label = "Modern JSON"
+        file_type_desc  = "حديث (2020+)" if st.session_state.lang == 'ar' else "Modern (2020+)"
     else:
-        import re as _re
-        total_ch = len(_re.findall(r'<ITEM>', file_text))
-        file_type_desc = "قديم (ما قبل 2020)" if st.session_state.lang == 'ar' else "Legacy (pre-2020)"
+        total_ch = len(re.findall(r'<ITEM>', file_text))
+        file_type_label = "Legacy XML"
+        file_type_desc  = "قديم (ما قبل 2020)" if st.session_state.lang == 'ar' else "Legacy (pre-2020)"
 
-    # ── read broadcast country ──
+    # ── رسالة النجاح بنفس شكل صفحة 2 ──
+    st.success(
+        f"{t['success_read']} **{model_name}** | "
+        f"📡 {file_type_label} | "
+        f"{'الإجمالي' if st.session_state.lang == 'ar' else 'Total'}: {total_ch:,} "
+        f"{'قناة' if st.session_state.lang == 'ar' else 'channels'}."
+    )
+
+    # ── بلد البث ──
     country_node = root.find(".//BroadcastCountrySetting")
     country_code = country_node.text.strip() if country_node is not None else ""
-    COUNTRY_NAMES_AR = {
-        "EGY": "🇪🇬 مصر",       "SAU": "🇸🇦 السعودية",  "ARE": "🇦🇪 الإمارات",
-        "JOR": "🇯🇴 الأردن",     "LBN": "🇱🇧 لبنان",      "SDN": "🇸🇩 السودان",
-        "DZA": "🇩🇿 الجزائر",   "MAR": "🇲🇦 المغرب",     "TUN": "🇹🇳 تونس",
-        "LBY": "🇱🇾 ليبيا",     "IRQ": "🇮🇶 العراق",     "SYR": "🇸🇾 سوريا",
-        "YEM": "🇾🇪 اليمن",     "KWT": "🇰🇼 الكويت",     "QAT": "🇶🇦 قطر",
-        "BHR": "🇧🇭 البحرين",   "OMN": "🇴🇲 عُمان",
-        "USA": "🇺🇸 أمريكا",    "GBR": "🇬🇧 بريطانيا",  "DEU": "🇩🇪 ألمانيا",
-        "FRA": "🇫🇷 فرنسا",     "TUR": "🇹🇷 تركيا",     "IRN": "🇮🇷 إيران",
-        "JA":  "🇯🇵 يابان",
+    CMAP = {
+        "EGY":"🇪🇬 مصر","SAU":"🇸🇦 السعودية","ARE":"🇦🇪 الإمارات",
+        "JOR":"🇯🇴 الأردن","LBN":"🇱🇧 لبنان","SDN":"🇸🇩 السودان",
+        "DZA":"🇩🇿 الجزائر","MAR":"🇲🇦 المغرب","TUN":"🇹🇳 تونس",
+        "LBY":"🇱🇾 ليبيا","IRQ":"🇮🇶 العراق","SYR":"🇸🇾 سوريا",
+        "YEM":"🇾🇪 اليمن","KWT":"🇰🇼 الكويت","QAT":"🇶🇦 قطر",
+        "BHR":"🇧🇭 البحرين","OMN":"🇴🇲 عُمان",
+        "USA":"🇺🇸 أمريكا","GBR":"🇬🇧 بريطانيا","DEU":"🇩🇪 ألمانيا",
+        "FRA":"🇫🇷 فرنسا","TUR":"🇹🇷 تركيا","IRN":"🇮🇷 إيران","JA":"🇯🇵 يابان",
+    } if st.session_state.lang == 'ar' else {
+        "EGY":"🇪🇬 Egypt","SAU":"🇸🇦 Saudi Arabia","ARE":"🇦🇪 UAE",
+        "JOR":"🇯🇴 Jordan","LBN":"🇱🇧 Lebanon","SDN":"🇸🇩 Sudan",
+        "DZA":"🇩🇿 Algeria","MAR":"🇲🇦 Morocco","TUN":"🇹🇳 Tunisia",
+        "LBY":"🇱🇾 Libya","IRQ":"🇮🇶 Iraq","SYR":"🇸🇾 Syria",
+        "YEM":"🇾🇪 Yemen","KWT":"🇰🇼 Kuwait","QAT":"🇶🇦 Qatar",
+        "BHR":"🇧🇭 Bahrain","OMN":"🇴🇲 Oman",
+        "USA":"🇺🇸 USA","GBR":"🇬🇧 UK","DEU":"🇩🇪 Germany",
+        "FRA":"🇫🇷 France","TUR":"🇹🇷 Turkey","IRN":"🇮🇷 Iran","JA":"🇯🇵 Japan",
     }
-    COUNTRY_NAMES_EN = {
-        "EGY": "🇪🇬 Egypt",      "SAU": "🇸🇦 Saudi Arabia", "ARE": "🇦🇪 UAE",
-        "JOR": "🇯🇴 Jordan",     "LBN": "🇱🇧 Lebanon",      "SDN": "🇸🇩 Sudan",
-        "DZA": "🇩🇿 Algeria",    "MAR": "🇲🇦 Morocco",      "TUN": "🇹🇳 Tunisia",
-        "LBY": "🇱🇾 Libya",      "IRQ": "🇮🇶 Iraq",          "SYR": "🇸🇾 Syria",
-        "YEM": "🇾🇪 Yemen",      "KWT": "🇰🇼 Kuwait",        "QAT": "🇶🇦 Qatar",
-        "BHR": "🇧🇭 Bahrain",    "OMN": "🇴🇲 Oman",
-        "USA": "🇺🇸 USA",        "GBR": "🇬🇧 UK",            "DEU": "🇩🇪 Germany",
-        "FRA": "🇫🇷 France",     "TUR": "🇹🇷 Turkey",       "IRN": "🇮🇷 Iran",
-        "JA":  "🇯🇵 Japan",
-    }
-    CMAP = COUNTRY_NAMES_AR if st.session_state.lang == 'ar' else COUNTRY_NAMES_EN
     country_display = CMAP.get(country_code, f"🌍 {country_code}" if country_code else "—")
 
-    # ── file info cards ──
+    # ── كروت المعلومات ──
     st.write("---")
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        st.metric(
-            "📟 " + ("الموديل" if st.session_state.lang == 'ar' else "Model"),
-            model_name
-        )
+        st.metric("📟 " + ("الموديل" if st.session_state.lang == 'ar' else "Model"), model_name)
     with c2:
-        st.metric(
-            "📡 " + ("إجمالي القنوات" if st.session_state.lang == 'ar' else "Total Channels"),
-            f"{total_ch:,}"
-        )
+        st.metric("📡 " + ("إجمالي القنوات" if st.session_state.lang == 'ar' else "Total Channels"), f"{total_ch:,}")
     with c3:
-        st.metric(
-            "🗂️ " + ("نظام الملف" if st.session_state.lang == 'ar' else "File Type"),
-            file_type_desc
-        )
+        st.metric("🗂️ " + ("نظام الملف" if st.session_state.lang == 'ar' else "File Type"), file_type_desc)
     with c4:
-        st.metric(
-            "🌍 " + ("بلد البث" if st.session_state.lang == 'ar' else "Broadcast Country"),
-            country_display
-        )
-    st.write("---")
+        st.metric("🌍 " + ("بلد البث" if st.session_state.lang == 'ar' else "Broadcast Country"), country_display)
 
+    # ══════════════════════════════════════════════════
+    # قسم الفحص والصيانة — بنفس تصميم صفحة 2
+    # ══════════════════════════════════════════════════
+    st.write("---")
+    st.write(f"### {t['auto_features_title']}")
     col_chk1, col_chk2 = st.columns(2)
+
+    # ── الشيك بوكس 1: فحص وزرع قنوات جديدة ──
     with col_chk1:
-        update_freq = st.checkbox(t['update_freq_label'], value=True)
+        scan_active = st.checkbox(t['chk_scan_inject'], value=False, key="chk_scan_p1")
+
+        if scan_active and not st.session_state.get('scan_done_p1', False):
+            # تجميع أسماء القنوات الحالية
+            if is_modern:
+                _tmp_bd = json.loads(legacy_broadcast_tag.text.strip())
+                current_names_set = {
+                    ch.get("channelName", "").upper()
+                    for ch in _tmp_bd.get("channelList", [])
+                }
+            else:
+                current_names_set = {
+                    m.group(1).upper()
+                    for m in re.finditer(r'<vchName>(.*?)</vchName>', file_text)
+                }
+
+            new_inserted_names = []
+            extra_channels = []
+            for nc in SIMULATED_NEW_CHANNELS:
+                if nc['name'].upper() not in current_names_set:
+                    extra_channels.append(nc.copy())
+                    new_inserted_names.append(
+                        f"📡 {nc['name']} "
+                        f"({'تردد' if st.session_state.lang == 'ar' else 'Freq'}: {nc['frequency']})"
+                    )
+
+            st.session_state.scan_done_p1     = True
+            st.session_state.inserted_list_p1 = new_inserted_names
+            st.session_state.p1_channels_extra = extra_channels
+
+            if new_inserted_names:
+                st.toast("📡 " + ("تم زرع القنوات الجديدة بنجاح!" if st.session_state.lang == 'ar' else "New channels injected!"))
+                st.rerun()
+
+        if scan_active:
+            if st.session_state.get('inserted_list_p1'):
+                st.markdown(
+                    "<div style='background:rgba(0,240,255,0.1);padding:12px;border-radius:10px;"
+                    "border-left:4px solid #00f0ff;margin-top:10px;'>",
+                    unsafe_allow_html=True
+                )
+                label = "**✨ قنوات جديدة تم زرعها وإضافتها للملف:**" if st.session_state.lang == 'ar' \
+                        else "**✨ New channels injected into the file:**"
+                st.markdown(label)
+                for item in st.session_state.inserted_list_p1:
+                    st.markdown(f"<span style='color:#00f0ff;'>{item}</span>", unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                msg = "ℹ️ لم يتم العثور على قنوات جديدة للزرع (مضافة بالفعل)." \
+                      if st.session_state.lang == 'ar' \
+                      else "ℹ️ No new channels found to inject (already present)."
+                st.markdown(f"<div style='color:#888;margin-top:10px;'>{msg}</div>", unsafe_allow_html=True)
+
+    # ── الشيك بوكس 2: صيانة الترددات ──
     with col_chk2:
+        maint_active = st.checkbox(t['chk_modern_maint'], value=False, key="chk_maint_p1")
+
+        if maint_active and not st.session_state.get('maint_done_p1', False):
+            # نمشي على القنوات ونحدد الترددات القديمة
+            maint_details = []
+            freq_patches  = {}   # name_upper → new_freq
+
+            if is_modern:
+                _tmp_bd2 = json.loads(legacy_broadcast_tag.text.strip())
+                for ch in _tmp_bd2.get("channelList", []):
+                    old_f = str(ch.get("frequency", ""))
+                    if old_f in FREQ_MAINTENANCE_DB:
+                        new_f = FREQ_MAINTENANCE_DB[old_f]
+                        ch_name = ch.get("channelName", "Unknown")
+                        freq_patches[ch_name.upper()] = new_f
+                        maint_details.append(
+                            f"🔄 **{ch_name}** | "
+                            f"{'من' if st.session_state.lang == 'ar' else 'from'} `{old_f}` "
+                            f"{'إلى' if st.session_state.lang == 'ar' else 'to'} `{new_f}`"
+                        )
+            else:
+                for m in re.finditer(r'<vchName>(.*?)</vchName>.*?<frequency>(\d+)</frequency>',
+                                     file_text, re.DOTALL):
+                    ch_name = m.group(1)
+                    old_f   = m.group(2)
+                    if old_f in FREQ_MAINTENANCE_DB:
+                        new_f = FREQ_MAINTENANCE_DB[old_f]
+                        freq_patches[ch_name.upper()] = new_f
+                        maint_details.append(
+                            f"🔄 **{ch_name}** | "
+                            f"{'من' if st.session_state.lang == 'ar' else 'from'} `{old_f}` "
+                            f"{'إلى' if st.session_state.lang == 'ar' else 'to'} `{new_f}`"
+                        )
+
+            st.session_state.maint_done_p1   = True
+            st.session_state.maint_details_p1 = maint_details
+            st.session_state.p1_freq_patches  = freq_patches
+
+            if maint_details:
+                st.toast("🔧 " + ("تم تحديث الترددات بنجاح!" if st.session_state.lang == 'ar' else "Frequencies updated!"))
+                st.rerun()
+
+        if maint_active:
+            if st.session_state.get('maint_details_p1'):
+                st.markdown(
+                    "<div style='background:rgba(255,0,127,0.1);padding:12px;border-radius:10px;"
+                    "border-left:4px solid #ff007f;margin-top:10px;'>",
+                    unsafe_allow_html=True
+                )
+                label = "**🔧 الترددات التي تم تحديثها في الملف:**" if st.session_state.lang == 'ar' \
+                        else "**🔧 Frequencies updated in the file:**"
+                st.markdown(label)
+                for detail in st.session_state.maint_details_p1:
+                    st.markdown(f"<span style='color:#ff007f;'>{detail}</span>", unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
+            else:
+                msg = "ℹ️ جميع الترددات الحالية مطابقة لأحدث نسخة." \
+                      if st.session_state.lang == 'ar' \
+                      else "ℹ️ All current frequencies match the latest version."
+                st.markdown(f"<div style='color:#888;margin-top:10px;'>{msg}</div>", unsafe_allow_html=True)
+
+    # ══════════════════════════════════════════════════
+    # باقي منطق الصفحة (مع تطبيق الفحص والصيانة)
+    # ══════════════════════════════════════════════════
+    st.write("---")
+    col_chk_old1, col_chk_old2 = st.columns(2)
+    with col_chk_old1:
+        update_freq = st.checkbox(t['update_freq_label'], value=True)
+    with col_chk_old2:
         add_new_ch  = st.checkbox(t['add_new_ch_label'],  value=True)
 
     channels_to_sort     = []
@@ -374,6 +544,8 @@ else:
         broadcast_data = json.loads(legacy_broadcast_tag.text.strip())
         channels_list  = broadcast_data.get("channelList", [])
 
+        freq_patches = st.session_state.get('p1_freq_patches', {})
+
         for ch in channels_list:
             ch_name  = ch.get("channelName", "Unknown")
             old_freq = str(ch.get("frequency", "N/A"))
@@ -383,6 +555,14 @@ else:
             if "category" not in ch or not ch["category"]:
                 ch["category"] = ai_classify(ch_name)
 
+            # تطبيق صيانة الترددات من الشيك بوكس الجديد
+            if name_up in freq_patches:
+                new_f = freq_patches[name_up]
+                if old_freq != new_f:
+                    ch["frequency"] = int(new_f)
+                    old_freq = new_f
+
+            # تحديث الترددات من NILESAT DB (الشيك بوكس القديم)
             if update_freq and name_up in NILESAT_LIVE_DB:
                 live_freq = NILESAT_LIVE_DB[name_up]["frequency"]
                 if old_freq != str(live_freq):
@@ -397,6 +577,26 @@ else:
             channels_to_sort.append({"name": ch_name, "freq": old_freq,
                                       "node_data": ch, "is_injected": False})
 
+        # إضافة القنوات من الفحص التلقائي (الشيك بوكس الجديد)
+        extra_chs = st.session_state.get('p1_channels_extra', [])
+        for nc in extra_chs:
+            if nc['name'].upper() not in existing_names_upper:
+                new_node = channels_list[0].copy() if channels_list else {}
+                new_node.update({
+                    "channelName":  nc['name'],
+                    "frequency":    nc['frequency'],
+                    "polarization": nc['polarization'],
+                    "Invisible": False, "skipped": False,
+                    "deleted": False, "userSelCHNo": True,
+                    "category": ai_classify(nc['name']),
+                })
+                channels_to_sort.append({
+                    "name": nc['name'], "freq": str(nc['frequency']),
+                    "node_data": new_node, "is_injected": True
+                })
+                existing_names_upper.add(nc['name'].upper())
+
+        # إضافة القنوات من NILESAT DB (الشيك بوكس القديم)
         if add_new_ch and channels_list:
             sample_node = channels_list[0]
             for db_name, db_info in NILESAT_LIVE_DB.items():
@@ -419,7 +619,9 @@ else:
 
     # ── Legacy XML ──
     else:
-        item_blocks = re.findall(r'(<ITEM>.*?</ITEM>)', file_text, re.DOTALL)
+        item_blocks  = re.findall(r'(<ITEM>.*?</ITEM>)', file_text, re.DOTALL)
+        freq_patches = st.session_state.get('p1_freq_patches', {})
+
         for item_str in item_blocks:
             name_match = re.search(r'<vchName>(.*?)</vchName>', item_str)
             freq_match = re.search(r'<frequency>(.*?)</frequency>', item_str)
@@ -427,7 +629,13 @@ else:
             name_up    = ch_name.upper()
             existing_names_upper.add(name_up)
 
-            if update_freq and name_up in NILESAT_LIVE_DB:
+            # تطبيق صيانة الترددات من الشيك بوكس الجديد
+            if name_up in freq_patches:
+                new_f    = freq_patches[name_up]
+                item_str = re.sub(r'<frequency>\d+</frequency>',
+                                  f'<frequency>{new_f}</frequency>', item_str)
+                live_freq = new_f
+            elif update_freq and name_up in NILESAT_LIVE_DB:
                 live_freq = str(NILESAT_LIVE_DB[name_up]["frequency"])
                 item_str  = re.sub(r'<frequency>\d+</frequency>',
                                    f'<frequency>{live_freq}</frequency>', item_str)
@@ -436,6 +644,22 @@ else:
 
             channels_to_sort.append({"name": ch_name, "freq": live_freq,
                                       "raw_str": item_str, "is_injected": False})
+
+        # إضافة القنوات من الفحص التلقائي (الشيك بوكس الجديد)
+        extra_chs = st.session_state.get('p1_channels_extra', [])
+        if item_blocks:
+            sample_item = item_blocks[0]
+            for nc in extra_chs:
+                if nc['name'].upper() not in existing_names_upper:
+                    new_item = re.sub(r'<vchName>.*?</vchName>',
+                                      f'<vchName>{nc["name"]}</vchName>', sample_item)
+                    new_item = re.sub(r'<frequency>\d+</frequency>',
+                                      f'<frequency>{nc["frequency"]}</frequency>', new_item)
+                    channels_to_sort.append({
+                        "name": nc['name'], "freq": str(nc['frequency']),
+                        "raw_str": new_item, "is_injected": True
+                    })
+                    existing_names_upper.add(nc['name'].upper())
 
         if add_new_ch and item_blocks:
             sample_item = item_blocks[0]
@@ -579,3 +803,5 @@ font-weight:bold;border:2px solid #25d366;text-decoration:none;margin-top:20px;"
 WhatsApp</a>
 </div>
 """, unsafe_allow_html=True)
+PYEOF
+echo "Done"
