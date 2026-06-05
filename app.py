@@ -247,16 +247,28 @@ def normalize_modern_node(node, index):
 # ──────────────────────────────────────────────────────
 # 7. FILE UPLOADER + RESET BUTTON
 # ──────────────────────────────────────────────────────
+
+# uploader key changes on reset to force Streamlit to clear the widget
+if 'p1_uploader_key' not in st.session_state:
+    st.session_state.p1_uploader_key = 0
+
 col_up, col_reset = st.columns([5, 1])
 with col_up:
-    uploaded_file = st.file_uploader(t['upload_label'], type=["TLL"], key="p1_uploader")
+    uploaded_file = st.file_uploader(
+        t['upload_label'], type=["TLL"],
+        key=f"p1_uploader_{st.session_state.p1_uploader_key}"
+    )
 with col_reset:
     st.write("")
     st.write("")
     if st.button(t['btn_reset'], use_container_width=True):
+        keep = {'lang', 'theme'}
+        # bump uploader key so the widget resets
+        new_key = st.session_state.get('p1_uploader_key', 0) + 1
         for k in list(st.session_state.keys()):
-            if k not in ['lang', 'theme']:
+            if k not in keep:
                 del st.session_state[k]
+        st.session_state.p1_uploader_key = new_key
         st.rerun()
 
 # ──────────────────────────────────────────────────────
@@ -283,7 +295,69 @@ else:
     legacy_broadcast_tag = root.find(".//legacybroadcast")
     is_modern = legacy_broadcast_tag is not None and legacy_broadcast_tag.text
 
-    st.info(f"{t['success_read']} **{model_name}**")
+    # ── count channels ──
+    if is_modern:
+        import json as _j
+        _bd = _j.loads(legacy_broadcast_tag.text.strip())
+        total_ch = len(_bd.get("channelList", []))
+        file_type_desc = "حديث (2020+)" if st.session_state.lang == 'ar' else "Modern (2020+)"
+    else:
+        import re as _re
+        total_ch = len(_re.findall(r'<ITEM>', file_text))
+        file_type_desc = "قديم (ما قبل 2020)" if st.session_state.lang == 'ar' else "Legacy (pre-2020)"
+
+    # ── read broadcast country ──
+    country_node = root.find(".//BroadcastCountrySetting")
+    country_code = country_node.text.strip() if country_node is not None else ""
+    COUNTRY_NAMES_AR = {
+        "EGY": "🇪🇬 مصر",       "SAU": "🇸🇦 السعودية",  "ARE": "🇦🇪 الإمارات",
+        "JOR": "🇯🇴 الأردن",     "LBN": "🇱🇧 لبنان",      "SDN": "🇸🇩 السودان",
+        "DZA": "🇩🇿 الجزائر",   "MAR": "🇲🇦 المغرب",     "TUN": "🇹🇳 تونس",
+        "LBY": "🇱🇾 ليبيا",     "IRQ": "🇮🇶 العراق",     "SYR": "🇸🇾 سوريا",
+        "YEM": "🇾🇪 اليمن",     "KWT": "🇰🇼 الكويت",     "QAT": "🇶🇦 قطر",
+        "BHR": "🇧🇭 البحرين",   "OMN": "🇴🇲 عُمان",
+        "USA": "🇺🇸 أمريكا",    "GBR": "🇬🇧 بريطانيا",  "DEU": "🇩🇪 ألمانيا",
+        "FRA": "🇫🇷 فرنسا",     "TUR": "🇹🇷 تركيا",     "IRN": "🇮🇷 إيران",
+        "JA":  "🇯🇵 يابان",
+    }
+    COUNTRY_NAMES_EN = {
+        "EGY": "🇪🇬 Egypt",      "SAU": "🇸🇦 Saudi Arabia", "ARE": "🇦🇪 UAE",
+        "JOR": "🇯🇴 Jordan",     "LBN": "🇱🇧 Lebanon",      "SDN": "🇸🇩 Sudan",
+        "DZA": "🇩🇿 Algeria",    "MAR": "🇲🇦 Morocco",      "TUN": "🇹🇳 Tunisia",
+        "LBY": "🇱🇾 Libya",      "IRQ": "🇮🇶 Iraq",          "SYR": "🇸🇾 Syria",
+        "YEM": "🇾🇪 Yemen",      "KWT": "🇰🇼 Kuwait",        "QAT": "🇶🇦 Qatar",
+        "BHR": "🇧🇭 Bahrain",    "OMN": "🇴🇲 Oman",
+        "USA": "🇺🇸 USA",        "GBR": "🇬🇧 UK",            "DEU": "🇩🇪 Germany",
+        "FRA": "🇫🇷 France",     "TUR": "🇹🇷 Turkey",       "IRN": "🇮🇷 Iran",
+        "JA":  "🇯🇵 Japan",
+    }
+    CMAP = COUNTRY_NAMES_AR if st.session_state.lang == 'ar' else COUNTRY_NAMES_EN
+    country_display = CMAP.get(country_code, f"🌍 {country_code}" if country_code else "—")
+
+    # ── file info cards ──
+    st.write("---")
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.metric(
+            "📟 " + ("الموديل" if st.session_state.lang == 'ar' else "Model"),
+            model_name
+        )
+    with c2:
+        st.metric(
+            "📡 " + ("إجمالي القنوات" if st.session_state.lang == 'ar' else "Total Channels"),
+            f"{total_ch:,}"
+        )
+    with c3:
+        st.metric(
+            "🗂️ " + ("نظام الملف" if st.session_state.lang == 'ar' else "File Type"),
+            file_type_desc
+        )
+    with c4:
+        st.metric(
+            "🌍 " + ("بلد البث" if st.session_state.lang == 'ar' else "Broadcast Country"),
+            country_display
+        )
+    st.write("---")
 
     col_chk1, col_chk2 = st.columns(2)
     with col_chk1:
