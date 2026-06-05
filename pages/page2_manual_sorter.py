@@ -26,7 +26,9 @@ if 'file_text_original' not in st.session_state:
 if 'model_name' not in st.session_state:
     st.session_state.model_name = ""
 if 'edit_finished' not in st.session_state:
-    st.session_state.edit_finished = False 
+    st.session_state.edit_finished = False
+if 'p2_uploader_key' not in st.session_state:
+    st.session_state.p2_uploader_key = 0
 
 # ─────────────────────────────────────────────
 # 2. قواميس النصوص (عربي / إنجليزي)
@@ -61,6 +63,7 @@ UI = {
         'upload_label':    "🚀 Upload Channel File (GlobalClone00001.TLL):",
         'success_read':    "🛸 File Parsed Successfully! Model: ",
         'search_ph':       "🔍 Search channel name in original pool...",
+        'all_ch_title':    "📋 1. All Available Channels",
         'ordered_title':   "📊 2. Final Custom List (Change numbers then click save below)",
         'col_action':      "Action",
         'btn_add_to_order': "➕ Inject",
@@ -87,13 +90,10 @@ t = UI[st.session_state.lang]
 st.set_page_config(page_title="RAMBO P2 — Advanced Sorter", page_icon="🎛️", layout="wide")
 
 def reset_all_session_state():
-    """مسح جميع بيانات الجلسة لإعادة التهيئة الكاملة"""
-    keys_to_keep = ['lang', 'theme']  # نحافظ على اللغة والسمة فقط
+    keys_to_keep = ['lang', 'theme']
     keys_to_delete = [k for k in st.session_state.keys() if k not in keys_to_keep]
     for key in keys_to_delete:
         del st.session_state[key]
-    
-    # إعادة تهيئة القيم الافتراضية
     st.session_state.channels = []
     st.session_state.ordered_channels = []
     st.session_state.is_modern = False
@@ -138,12 +138,13 @@ st.markdown(f"""
     .stTextInput>div>div>input, .stNumberInput>div>div>input {{ background-color: {box_bg} !important; color: {text_color} !important; border: 2px solid {box_border} !important; border-radius: 10px !important; }}
     div[data-testid="stFileUploader"], .rambo-box {{ background: {box_bg} !important; border: 2px solid {box_border} !important; box-shadow: 0px 5px 15px {box_shadow} !important; border-radius: 14px !important; padding: 18px !important; margin-bottom: 20px !important; }}
     .stButton>button {{ background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important; color: #ffffff !important; border: 2px solid #ff007f !important; border-radius: 12px !important; font-weight: bold; width: 100%; }}
-    #btn_reset_download {{ background: linear-gradient(135deg, #ff6b35 0%, #d43f00 100%) !important; }}
+    .stDownloadButton>button {{ background: linear-gradient(135deg, #00b894 0%, #00695c 100%) !important; color: #fff !important; border: none !important; border-radius: 12px !important; font-weight: bold; width: 100%; }}
     </style>
 """, unsafe_allow_html=True)
 
 st.title(t['title'])
-st.markdown(f"<h3>{t['subtitle']}</h3>", unsafe_allow_html=True)
+st.markdown(f"<h3 style='text-align:center;'>{t['subtitle']}</h3>", unsafe_allow_html=True)
+st.write("---")
 
 # ─────────────────────────────────────────────
 # 4. دالة قراءة وتفكيك ملف الـ TLL
@@ -185,10 +186,26 @@ def parse_tll(file_bytes):
         return channels, False, root, None, file_text, None
 
 # ─────────────────────────────────────────────
-# 5. رفع ومعالجة الملف الأصلي
+# 5. رفع الملف + زر إعادة التهيئة في الأعلى
 # ─────────────────────────────────────────────
-uploaded = st.file_uploader(t['upload_label'], type=["TLL"], key="tll_uploader_p2")
+col_up, col_reset_top = st.columns([5, 1])
+with col_up:
+    uploaded = st.file_uploader(
+        t['upload_label'], type=["TLL"],
+        key=f"tll_uploader_p2_{st.session_state.p2_uploader_key}"
+    )
+with col_reset_top:
+    st.write("")
+    st.write("")
+    if st.button(t['btn_reset'], key="reset_top_p2", use_container_width=True):
+        new_key = st.session_state.get('p2_uploader_key', 0) + 1
+        reset_all_session_state()
+        st.session_state.p2_uploader_key = new_key
+        st.rerun()
 
+# ─────────────────────────────────────────────
+# 6. معالجة الملف المرفوع
+# ─────────────────────────────────────────────
 if uploaded is not None:
     if st.session_state.get("last_file_name") != uploaded.name:
         st.session_state.channels = []
@@ -226,7 +243,6 @@ if uploaded is not None:
 if not st.session_state.channels:
     st.info(t['no_file'])
 
-    # 👇 حط الفوتر هنا
     st.markdown("""
     <div style="
     background:#0f172a;
@@ -251,7 +267,7 @@ if not st.session_state.channels:
 st.success(f"{t['success_read']} **{st.session_state.model_name}** | 📡 {'Modern JSON' if st.session_state.is_modern else 'Legacy XML'} | الإجمالي: {len(st.session_state.channels)} قناة.")
 
 # ─────────────────────────────────────────────
-# 6. خيارات الفحص والصيانة التلقائية
+# 7. خيارات الفحص والصيانة التلقائية
 # ─────────────────────────────────────────────
 st.write(f"### {t['auto_features_title']}")
 col_chk1, col_chk2 = st.columns(2)
@@ -272,13 +288,11 @@ with col_chk1:
         for nc in simulated_new_channels:
             if nc['name'] not in current_names:
                 new_idx = len(st.session_state.channels)
-                
                 if st.session_state.is_modern:
                     node = {"channelName": nc['name'], "frequency": int(nc['freq']), "polarization": nc['pol'], "majorNumber": new_idx+1, "serviceType":"1"}
                     nc['raw_node'] = node
                 else:
                     nc['raw_str'] = f"<ITEM>\r\n<prNum>{new_idx+1}</prNum>\r\n<vchName>{nc['name']}</vchName>\r\n<frequency>{nc['freq']}</frequency>\r\n</ITEM>"
-                
                 nc['id'] = new_idx
                 st.session_state.channels.append(nc)
                 new_inserted_names.append(f"📡 {nc['name']} (تردد: {nc['freq']})")
@@ -317,7 +331,6 @@ with col_chk2:
                     ch['raw_node']['frequency'] = int(new_f)
                 elif 'raw_str' in ch:
                     ch['raw_str'] = re.sub(r'<frequency>\d+</frequency>', f'<frequency>{new_f}</frequency>', ch['raw_str'])
-                
                 detail_str = f"🔄 القناة: **{ch.get('name','Unknown')}** | تم تحديث التردد من `{current_freq}` إلى `{new_f}`"
                 if detail_str not in maint_details:
                     maint_details.append(detail_str)
@@ -340,23 +353,21 @@ with col_chk2:
             st.markdown("<div style='color:#888; margin-top:10px;'>ℹ️ جميع الترددات الحالية بجدول المتوفر مطابقة لأحدث نسخة.</div>", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# 7. دوال الـ Callbacks لضمان ثبات البيانات
+# 8. دوال الـ Callbacks
 # ─────────────────────────────────────────────
 def add_channel_callback(ch_obj):
     st.session_state.ordered_channels.append(ch_obj.copy())
     st.session_state.edit_finished = False
 
 # ─────────────────────────────────────────────
-# 8. واجهة نظام الجدولين المتجاورين
+# 9. واجهة نظام الجدولين المتجاورين
 # ─────────────────────────────────────────────
 st.write("---")
 col_table1, col_table2 = st.columns(2)
 
-# ── الجدول الأول: القنوات الكلية المتاحة ──
 with col_table1:
     st.write(f"### {t['all_ch_title']}")
     search_q1 = st.text_input(t['search_ph'], key="src_p2_1").strip().upper()
-    
     filtered_pool = [c for c in st.session_state.channels if not search_q1 or search_q1 in c.get('name', '').upper()]
     st.write(f"🔎 المتاح حسب البحث: **{len(filtered_pool)}** قناة.")
     
@@ -376,10 +387,8 @@ with col_table1:
             col_n.write(f"**{ch.get('name', 'Unknown')}**")
             col_b.button(t['btn_add_to_order'], key=f"btn_add_{ch['id']}_{len(st.session_state.ordered_channels)}", on_click=add_channel_callback, args=(ch,))
 
-# ── الجدول الثاني التفاعلي: عرض وتحديث الترتيب النهائي بسلة المهملات ──
 with col_table2:
     st.write(f"### {t['ordered_title']}")
-    
     ord_list = st.session_state.ordered_channels
     st.write(f"🔢 القنوات داخل لستتك الآن: **{len(ord_list)}** قناة.")
     
@@ -399,24 +408,14 @@ with col_table2:
         with scroll_ordered:
             for i, ch in enumerate(ord_list):
                 col_rank, col_name, col_freq, col_del = st.columns([1.2, 2.5, 1.3, 1])
-                
-                # 1. خانة تعديل رقم الترتيب اليدوي
                 with col_rank:
                     new_val = st.number_input(
-                        "الترتيب", 
-                        min_value=1, 
-                        max_value=2000, 
-                        value=i + 1, 
-                        key=f"rank_input_{i}_{ch['id']}", 
-                        label_visibility="collapsed"
+                        "الترتيب", min_value=1, max_value=2000, value=i + 1,
+                        key=f"rank_input_{i}_{ch['id']}", label_visibility="collapsed"
                     )
                     new_ranks[i] = new_val
-                
-                # 2. اسم القناة والتردد
                 col_name.write(f"**{ch.get('name', 'Unknown')}**")
                 col_freq.write(f"`{ch.get('freq', 'N/A')}`")
-                
-                # 3. زر سلة المهملات الفورية
                 with col_del:
                     if st.button("🗑️", key=f"del_btn_{i}_{ch['id']}", help="حذف القناة فوراً من قائمة الترتيب"):
                         st.session_state.ordered_channels.pop(i)
@@ -425,23 +424,20 @@ with col_table2:
                         st.rerun()
         
         st.write("")
-        # 4. زر اعتماد الترتيب الجديد
         if st.button("💾 اعتماد الترتيب الجديد وحفظ التعديلات", key="save_ordered_ranks_btn"):
             indexed_channels = [(new_ranks[idx], ch) for idx, ch in enumerate(ord_list)]
             indexed_channels.sort(key=lambda x: x[0])
-            
             st.session_state.ordered_channels = [item[1] for item in indexed_channels]
             st.session_state.edit_finished = False
             st.toast("🎯 تم فرز وتحديث جدول الترتيب بنجاح طبقاً للأرقام المكتوبة!")
             st.rerun()
-            
     else:
         st.info("💡 اضغط على زر [➕ زرع] من الجدول الأيمن لتصنع قائمة الترتيب المخصصة هنا.")
 
 st.write("---")
 
 # ─────────────────────────────────────────────
-# 9. التجهيز النهائي والتحميل والملحوظة الفنية
+# 10. التجهيز النهائي والتحميل
 # ─────────────────────────────────────────────
 st.write(f"### {t['preview_title']}")
 
@@ -457,7 +453,6 @@ else:
     if st.session_state.edit_finished:
         st.success(t['ready_msg'])
         
-        # إنشاء ملف التقارير المكتوبة
         report_header = t.get('txt_header', "📄 تقرير الترتيب اليدوي المطور")
         txt_report = f"{report_header} ({st.session_state.model_name})\n"
         txt_report += "=" * 60 + "\n"
@@ -467,7 +462,6 @@ else:
         root = st.session_state.root
         legacy_tag = st.session_state.get('legacy_tag')
 
-        # بناء ملف الـ TLL النهائي بناءً على نوع البنية
         if st.session_state.is_modern:
             bdata = st.session_state.broadcast_data
             final_list_nodes = []
@@ -488,7 +482,6 @@ else:
                 else:
                     raw = raw.replace("<ITEM>", f"<ITEM>\r\n<prNum>{rank}</prNum>")
                 item_strings.append(raw)
-
             combined = "\r\n".join(item_strings)
             start_i = file_text.find("<ITEM>")
             end_i = file_text.rfind("</ITEM>") + len("</ITEM>")
@@ -499,19 +492,28 @@ else:
             try: final_tll_bytes = final_text.encode('utf-8')
             except UnicodeEncodeError: final_tll_bytes = final_text.encode('latin-1')
 
-        # أزرار التحميل - 3 أزرار جنب بعض
-        col_d1, col_d2, col_d3 = st.columns(3)
+        # أزرار التحميل + زر إعادة التهيئة في الأسفل
+        col_d1, col_d2, col_d3 = st.columns([2, 2, 1])
         with col_d1:
-            st.download_button(label=t['btn_tll'], data=final_tll_bytes, file_name="GlobalClone00001.TLL", mime="application/octet-stream")
+            st.download_button(
+                label=t['btn_tll'], data=final_tll_bytes,
+                file_name="GlobalClone00001.TLL", mime="application/octet-stream",
+                use_container_width=True
+            )
         with col_d2:
-            st.download_button(label=t['btn_txt'], data=txt_report, file_name="Channels_List_Manual.txt", mime="text/plain; charset=utf-8")
+            st.download_button(
+                label=t['btn_txt'], data=txt_report,
+                file_name="Channels_List_Manual.txt", mime="text/plain; charset=utf-8",
+                use_container_width=True
+            )
         with col_d3:
-            if st.button(t['btn_reset'], key="btn_reset_download", help="إعادة تهيئة الصفحة بالكامل والبدء من جديد"):
+            if st.button(t['btn_reset'], key="reset_bottom_p2", use_container_width=True):
+                new_key = st.session_state.get('p2_uploader_key', 0) + 1
                 reset_all_session_state()
-                st.success(t['reset_msg'])
+                st.session_state.p2_uploader_key = new_key
                 st.rerun()
 
-        # ── إضافة الملحوظة الفنية الهامة المخصصة لشاشات LG ──
+        # الملحوظة الفنية
         st.markdown("""
         <div style="background-color: rgba(255, 165, 0, 0.12); border-left: 5px solid #ffa500; padding: 20px; border-radius: 12px; margin-top: 25px;">
             <h4 style="color: #ffa500; margin-top: 0; font-weight: bold;">💡 ملحوظة فنية هامة جداً بعد تنزيل الملف على شاشة LG:</h4>
@@ -550,7 +552,7 @@ font-family:Arial;
 📱 <b>MOBILE / الموبايل:</b> +201280339779
 </div>
 <div style="margin-top:10px;">
-✉️ <b>E-MAIL:</b> [rafikrambo113@gmail.com](mailto:rafikrambo113@gmail.com)
+✉️ <b>E-MAIL:</b> rafikrambo113@gmail.com
 </div>
 <a href="{whatsapp_url}" target="_blank"
 style="
