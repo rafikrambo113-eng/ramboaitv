@@ -300,13 +300,6 @@ with col_reset:
 # ──────────────────────────────────────────────────────
 if uploaded_file is None:
     st.info(t['no_file_msg'])
-    st.markdown("""
-    <div style="background:#0f172a;border:2px solid #00f0ff;color:white;
-    padding:30px;text-align:center;border-radius:15px;margin-top:50px;font-family:Arial;">
-    <b>🛠️ DEVELOPER ENG: RAFIK RAMBO</b><br><br>
-    📱 +201280339779<br>✉️ rafikrambo113@gmail.com<br><br>
-    <a href="https://api.whatsapp.com/send?phone=201280339779" style="color:#25d366;">WhatsApp</a>
-    </div>""", unsafe_allow_html=True)
 else:
     if st.session_state.get("p1_last_file_name") != uploaded_file.name:
         st.session_state.scan_done_p1    = False
