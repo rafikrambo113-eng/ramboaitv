@@ -1,4 +1,3 @@
-
 import streamlit as st
 import xml.etree.ElementTree as ET
 import json
@@ -34,8 +33,6 @@ UI_TEXT = {
         'auto_features_title': "⚙️ خيارات الفحص الذكي والصيانة الفورية للملف",
         'chk_scan_inject':   "📡 تفعيل الفحص التلقائي وزرع القنوات الجديدة المتاحة على القمر فوراً",
         'chk_modern_maint':  "🔧 تفعيل الصيانة الحديثة وتحديث الترددات الميتة والقديمة تلقائياً",
-        'update_freq_label': "⚛️ تحديث الترددات تلقائياً",
-        'add_new_ch_label':  "✨ إضافة القنوات الجديدة المتاحة تلقائياً",
         'search_header':     "🔍 البحث عن قناة داخل الملف:",
         'search_placeholder':"اكتب اسم القناة هنا...",
         'search_col_num':    "الرقم",
@@ -73,8 +70,6 @@ UI_TEXT = {
         'auto_features_title': "⚙️ Smart Auto-Maintenance & Scanning Options",
         'chk_scan_inject':   "📡 Enable Auto-Scan & Inject newly available Satellite Channels",
         'chk_modern_maint':  "🔧 Enable Modern Maintenance & Auto-Update dead frequencies",
-        'update_freq_label': "⚛️ Auto update frequencies",
-        'add_new_ch_label':  "✨ Auto inject missing channels",
         'search_header':     "🔍 Search inside file:",
         'search_placeholder':"Type channel name...",
         'search_col_num':    "No.",
@@ -214,7 +209,6 @@ NILESAT_LIVE_DB = {
     "TOYOR ALJANNAH":  {"frequency": 11179, "polarization": "Horizontal"},
 }
 
-# قاعدة بيانات الصيانة: ترددات قديمة/ميتة → ترددات جديدة
 FREQ_MAINTENANCE_DB = {
     "11747": "12054",
     "11137": "11785",
@@ -224,7 +218,6 @@ FREQ_MAINTENANCE_DB = {
     "11632": "12092",
 }
 
-# قنوات جديدة للزرع التلقائي عبر الفحص
 SIMULATED_NEW_CHANNELS = [
     {"name": "RAMBO CINEMA HD",  "frequency": 11678, "polarization": "Horizontal"},
     {"name": "EGYPT NOW",         "frequency": 12054, "polarization": "Vertical"},
@@ -315,7 +308,6 @@ if uploaded_file is None:
     <a href="https://api.whatsapp.com/send?phone=201280339779" style="color:#25d366;">WhatsApp</a>
     </div>""", unsafe_allow_html=True)
 else:
-    # ── إعادة تحميل عند رفع ملف جديد ──
     if st.session_state.get("p1_last_file_name") != uploaded_file.name:
         st.session_state.scan_done_p1    = False
         st.session_state.maint_done_p1   = False
@@ -343,7 +335,6 @@ else:
     legacy_broadcast_tag = root.find(".//legacybroadcast")
     is_modern = legacy_broadcast_tag is not None and legacy_broadcast_tag.text
 
-    # ── عدد القنوات ونوع الملف ──
     if is_modern:
         _bd = json.loads(legacy_broadcast_tag.text.strip())
         total_ch = len(_bd.get("channelList", []))
@@ -354,7 +345,6 @@ else:
         file_type_label = "Legacy XML"
         file_type_desc  = "قديم (ما قبل 2020)" if st.session_state.lang == 'ar' else "Legacy (pre-2020)"
 
-    # ── رسالة النجاح بنفس شكل صفحة 2 ──
     st.success(
         f"{t['success_read']} **{model_name}** | "
         f"📡 {file_type_label} | "
@@ -362,55 +352,17 @@ else:
         f"{'قناة' if st.session_state.lang == 'ar' else 'channels'}."
     )
 
-    # ── بلد البث ──
-    country_node = root.find(".//BroadcastCountrySetting")
-    country_code = country_node.text.strip() if country_node is not None else ""
-    CMAP = {
-        "EGY":"🇪🇬 مصر","SAU":"🇸🇦 السعودية","ARE":"🇦🇪 الإمارات",
-        "JOR":"🇯🇴 الأردن","LBN":"🇱🇧 لبنان","SDN":"🇸🇩 السودان",
-        "DZA":"🇩🇿 الجزائر","MAR":"🇲🇦 المغرب","TUN":"🇹🇳 تونس",
-        "LBY":"🇱🇾 ليبيا","IRQ":"🇮🇶 العراق","SYR":"🇸🇾 سوريا",
-        "YEM":"🇾🇪 اليمن","KWT":"🇰🇼 الكويت","QAT":"🇶🇦 قطر",
-        "BHR":"🇧🇭 البحرين","OMN":"🇴🇲 عُمان",
-        "USA":"🇺🇸 أمريكا","GBR":"🇬🇧 بريطانيا","DEU":"🇩🇪 ألمانيا",
-        "FRA":"🇫🇷 فرنسا","TUR":"🇹🇷 تركيا","IRN":"🇮🇷 إيران","JA":"🇯🇵 يابان",
-    } if st.session_state.lang == 'ar' else {
-        "EGY":"🇪🇬 Egypt","SAU":"🇸🇦 Saudi Arabia","ARE":"🇦🇪 UAE",
-        "JOR":"🇯🇴 Jordan","LBN":"🇱🇧 Lebanon","SDN":"🇸🇩 Sudan",
-        "DZA":"🇩🇿 Algeria","MAR":"🇲🇦 Morocco","TUN":"🇹🇳 Tunisia",
-        "LBY":"🇱🇾 Libya","IRQ":"🇮🇶 Iraq","SYR":"🇸🇾 Syria",
-        "YEM":"🇾🇪 Yemen","KWT":"🇰🇼 Kuwait","QAT":"🇶🇦 Qatar",
-        "BHR":"🇧🇭 Bahrain","OMN":"🇴🇲 Oman",
-        "USA":"🇺🇸 USA","GBR":"🇬🇧 UK","DEU":"🇩🇪 Germany",
-        "FRA":"🇫🇷 France","TUR":"🇹🇷 Turkey","IRN":"🇮🇷 Iran","JA":"🇯🇵 Japan",
-    }
-    country_display = CMAP.get(country_code, f"🌍 {country_code}" if country_code else "—")
-
-    # ── كروت المعلومات ──
-    st.write("---")
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        st.metric("📟 " + ("الموديل" if st.session_state.lang == 'ar' else "Model"), model_name)
-    with c2:
-        st.metric("📡 " + ("إجمالي القنوات" if st.session_state.lang == 'ar' else "Total Channels"), f"{total_ch:,}")
-    with c3:
-        st.metric("🗂️ " + ("نظام الملف" if st.session_state.lang == 'ar' else "File Type"), file_type_desc)
-    with c4:
-        st.metric("🌍 " + ("بلد البث" if st.session_state.lang == 'ar' else "Broadcast Country"), country_display)
-
     # ══════════════════════════════════════════════════
-    # قسم الفحص والصيانة — بنفس تصميم صفحة 2
+    # قسم الفحص والصيانة
     # ══════════════════════════════════════════════════
     st.write("---")
     st.write(f"### {t['auto_features_title']}")
     col_chk1, col_chk2 = st.columns(2)
 
-    # ── الشيك بوكس 1: فحص وزرع قنوات جديدة ──
     with col_chk1:
         scan_active = st.checkbox(t['chk_scan_inject'], value=False, key="chk_scan_p1")
 
         if scan_active and not st.session_state.get('scan_done_p1', False):
-            # تجميع أسماء القنوات الحالية
             if is_modern:
                 _tmp_bd = json.loads(legacy_broadcast_tag.text.strip())
                 current_names_set = {
@@ -460,14 +412,12 @@ else:
                       else "ℹ️ No new channels found to inject (already present)."
                 st.markdown(f"<div style='color:#888;margin-top:10px;'>{msg}</div>", unsafe_allow_html=True)
 
-    # ── الشيك بوكس 2: صيانة الترددات ──
     with col_chk2:
         maint_active = st.checkbox(t['chk_modern_maint'], value=False, key="chk_maint_p1")
 
         if maint_active and not st.session_state.get('maint_done_p1', False):
-            # نمشي على القنوات ونحدد الترددات القديمة
             maint_details = []
-            freq_patches  = {}   # name_upper → new_freq
+            freq_patches  = {}
 
             if is_modern:
                 _tmp_bd2 = json.loads(legacy_broadcast_tag.text.strip())
@@ -524,14 +474,9 @@ else:
                 st.markdown(f"<div style='color:#888;margin-top:10px;'>{msg}</div>", unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════
-    # باقي منطق الصفحة (مع تطبيق الفحص والصيانة)
+    # باقي منطق الصفحة
     # ══════════════════════════════════════════════════
     st.write("---")
-    col_chk_old1, col_chk_old2 = st.columns(2)
-    with col_chk_old1:
-        update_freq = st.checkbox(t['update_freq_label'], value=True)
-    with col_chk_old2:
-        add_new_ch  = st.checkbox(t['add_new_ch_label'],  value=True)
 
     channels_to_sort     = []
     report_changes       = []
@@ -553,29 +498,15 @@ else:
             if "category" not in ch or not ch["category"]:
                 ch["category"] = ai_classify(ch_name)
 
-            # تطبيق صيانة الترددات من الشيك بوكس الجديد
             if name_up in freq_patches:
                 new_f = freq_patches[name_up]
                 if old_freq != new_f:
                     ch["frequency"] = int(new_f)
                     old_freq = new_f
 
-            # تحديث الترددات من NILESAT DB (الشيك بوكس القديم)
-            if update_freq and name_up in NILESAT_LIVE_DB:
-                live_freq = NILESAT_LIVE_DB[name_up]["frequency"]
-                if old_freq != str(live_freq):
-                    report_changes.append({
-                        "channel": ch_name, "category": ai_classify(ch_name),
-                        "old_freq": old_freq, "new_freq": str(live_freq)
-                    })
-                    ch["frequency"]    = int(live_freq)
-                    ch["polarization"] = NILESAT_LIVE_DB[name_up]["polarization"]
-                    old_freq = str(live_freq)
-
             channels_to_sort.append({"name": ch_name, "freq": old_freq,
                                       "node_data": ch, "is_injected": False})
 
-        # إضافة القنوات من الفحص التلقائي (الشيك بوكس الجديد)
         extra_chs = st.session_state.get('p1_channels_extra', [])
         for nc in extra_chs:
             if nc['name'].upper() not in existing_names_upper:
@@ -594,27 +525,6 @@ else:
                 })
                 existing_names_upper.add(nc['name'].upper())
 
-        # إضافة القنوات من NILESAT DB (الشيك بوكس القديم)
-        if add_new_ch and channels_list:
-            sample_node = channels_list[0]
-            for db_name, db_info in NILESAT_LIVE_DB.items():
-                if db_name not in existing_names_upper:
-                    new_node = json.loads(json.dumps(sample_node))
-                    new_node.update({
-                        "channelName": db_name,
-                        "frequency":   db_info["frequency"],
-                        "polarization":db_info["polarization"],
-                        "Invisible": False, "skipped": False,
-                        "deleted": False, "userSelCHNo": True,
-                        "category": ai_classify(db_name),
-                    })
-                    channels_to_sort.append({"name": db_name,
-                        "freq": str(db_info["frequency"]),
-                        "node_data": new_node, "is_injected": True})
-                    report_changes.append({"channel": db_name,
-                        "category": ai_classify(db_name),
-                        "old_freq": "missing", "new_freq": str(db_info["frequency"])})
-
     # ── Legacy XML ──
     else:
         item_blocks  = re.findall(r'(<ITEM>.*?</ITEM>)', file_text, re.DOTALL)
@@ -627,23 +537,17 @@ else:
             name_up    = ch_name.upper()
             existing_names_upper.add(name_up)
 
-            # تطبيق صيانة الترددات من الشيك بوكس الجديد
             if name_up in freq_patches:
                 new_f    = freq_patches[name_up]
                 item_str = re.sub(r'<frequency>\d+</frequency>',
                                   f'<frequency>{new_f}</frequency>', item_str)
                 live_freq = new_f
-            elif update_freq and name_up in NILESAT_LIVE_DB:
-                live_freq = str(NILESAT_LIVE_DB[name_up]["frequency"])
-                item_str  = re.sub(r'<frequency>\d+</frequency>',
-                                   f'<frequency>{live_freq}</frequency>', item_str)
             else:
                 live_freq = freq_match.group(1) if freq_match else "N/A"
 
             channels_to_sort.append({"name": ch_name, "freq": live_freq,
                                       "raw_str": item_str, "is_injected": False})
 
-        # إضافة القنوات من الفحص التلقائي (الشيك بوكس الجديد)
         extra_chs = st.session_state.get('p1_channels_extra', [])
         if item_blocks:
             sample_item = item_blocks[0]
@@ -659,20 +563,7 @@ else:
                     })
                     existing_names_upper.add(nc['name'].upper())
 
-        if add_new_ch and item_blocks:
-            sample_item = item_blocks[0]
-            for db_name, db_info in NILESAT_LIVE_DB.items():
-                if db_name not in existing_names_upper:
-                    new_item = re.sub(r'<vchName>.*?</vchName>',
-                                      f'<vchName>{db_name}</vchName>', sample_item)
-                    new_item = re.sub(r'<frequency>\d+</frequency>',
-                                      f'<frequency>{db_info["frequency"]}</frequency>', new_item)
-                    channels_to_sort.append({"name": db_name,
-                        "freq": str(db_info["frequency"]),
-                        "raw_str": new_item, "is_injected": True})
-
     # ── Search ──
-    st.write("---")
     st.markdown(f"### {t['search_header']}")
     search_query = st.text_input("", placeholder=t['search_placeholder'], key="p1_search").strip().upper()
     if search_query:
