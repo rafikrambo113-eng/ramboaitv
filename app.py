@@ -11,16 +11,98 @@ if 'page' not in st.session_state:
     st.session_state.page = 'home'
 
 # ─────────────────────────────────────────────
-# إعداد الصفحة
+# إعداد الصفحة + CSS مستقبلي
 # ─────────────────────────────────────────────
 st.set_page_config(page_title="RamboAITV — مرتب القنوات الذكي", page_icon="📺", layout="wide")
+
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Cairo:wght@400;600;700;900&display=swap');
+
+/* الخلفية المستقبيلية */
+.main {
+    background: radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%) !important;
+    font-family: 'Cairo', sans-serif !important;
+}
+
+/* العناوين بألوان نيون */
+h1title {
+    color: #ff007f !important;
+    text-shadow: 0 0 10px #ff007f, 0 0 25px rgba(255,0,127,0.5) !important;
+    font-family: 'Orbitron', 'Cairo' !important;
+    font-weight: 900 !important;
+    text-align: center !important;
+    font-size: 52px !important;
+}
+
+h2, h3, h4 {
+    color: #00f0ff !important;
+    text-shadow: 0 0 5px #00f0ff !important;
+    font-family: 'Orbitron', 'Cairo' !important;
+}
+
+/* النصوص */
+p, label, .stMarkdown {
+    color: #e0e0e0 !important;
+    font-size: 18px !important;
+    line-height: 1.8 !important;
+}
+
+/* الأزرار بمستقبلية */
+.stButton>button {
+    background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important;
+    color: #ffffff !important;
+    border: 2px solid #ff007f !important;
+    border-radius: 14px !important;
+    font-weight: bold !important;
+    font-size: 18px !important;
+    padding: 12px 24px !important;
+    box-shadow: 0 0 15px rgba(255,0,127,0.4) !important;
+    transition: all 0.3s ease !important;
+}
+
+.stButton>button:hover {
+    background: linear-gradient(135deg, #ff6b9f 0%, #cc5577 100%) !important;
+    box-shadow: 0 0 25px rgba(255,0,127,0.7) !important;
+    transform: translateY(-3px) !important;
+}
+
+/* الصناديق */
+.stBlock {
+    background: rgba(13, 7, 33, 0.85) !important;
+    border: 2px solid #00f0ff !important;
+    border-radius: 16px !important;
+    padding: 20px !important;
+    box-shadow: 0 0 20px rgba(0,240,255,0.3) !important;
+}
+
+/* info و success */
+.stInfo {
+    background: rgba(0,240,255,0.15) !important;
+    border-left: 5px solid #00f0ff !important;
+    color: #00f0ff !important;
+}
+
+.stSuccess {
+    background: rgba(255,0,127,0.15) !important;
+    border-left: 5px solid #ff007f !important;
+    color: #ff6b9f !important;
+}
+
+/* الفواصل */
+hr {
+    border-color: #00f0ff !important;
+    opacity: 0.5 !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # الهيدر الرئيسي
 # ─────────────────────────────────────────────
-st.title("📺 RamboAITV")
-st.markdown("⚡ أول موقع مصري ذكي لترتيب قنوات LG بالذكاء الاصطناعي")
-st.markdown("🇪🇬 بأيدٍ مصرية ودماغ منياوية")
+st.markdown("<h1 style='text-align:center;'>📺 RamboAITV</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; font-size:24px; color:#00f0ff; font-weight:700;'>⚡ أول موقع مصري ذكي لترتيب قنوات LG بالذكاء الاصطناعي</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:#ff007f; font-weight:700; font-size:20px;'>🇪🇬 بأيدٍ مصرية ودماغ منياوية</p>", unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -52,7 +134,8 @@ st.markdown("")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.subheader("1️⃣ الترتيب الذكي (بالفئات/Categories)")
+    st.subheader("1️⃣ الترتيب الذكي")
+    st.markdown("**(بالفئات/Categories)**")
     st.write("ارفع ملف قنواتك اللي سحبته على الفلاشة، والموقع هيقوم أوتوماتيكياً بترتيبه لك حسب الفئات (رياضة، أفلام، أخبار.. إلخ).")
     st.write("✅ تحميل ملف Text للترتيب")
     st.write("✅ ملف القنوات المحدث جاهز للتشغيل")
@@ -121,4 +204,4 @@ st.write("📱 MOBILE / الموبايل: +201280339779")
 st.write("✉️ E-MAIL: rafikrambo113@gmail.com")
 
 whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
-st.link_button("WhatsApp", whatsapp_url)
+st.link_button("WhatsApp 💬", whatsapp_url)
