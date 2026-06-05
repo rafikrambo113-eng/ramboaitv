@@ -546,9 +546,11 @@ else:
                            mime="text/plain; charset=utf-8", use_container_width=True)
     with col_d3:
         if st.button(t['btn_reset'], key="reset_bottom", use_container_width=True):
+            new_key = st.session_state.get('p1_uploader_key', 0) + 1
             for k in list(st.session_state.keys()):
                 if k not in ['lang', 'theme']:
                     del st.session_state[k]
+            st.session_state.p1_uploader_key = new_key
             st.rerun()
 
     # ── LG trick note ──
