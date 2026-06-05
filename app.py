@@ -1,6 +1,4 @@
-bash
 
-cat > /mnt/user-data/outputs/page1_updated.py << 'PYEOF'
 import streamlit as st
 import xml.etree.ElementTree as ET
 import json
@@ -803,5 +801,3 @@ font-weight:bold;border:2px solid #25d366;text-decoration:none;margin-top:20px;"
 WhatsApp</a>
 </div>
 """, unsafe_allow_html=True)
-PYEOF
-echo "Done"
