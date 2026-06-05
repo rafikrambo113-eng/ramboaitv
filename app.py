@@ -154,15 +154,6 @@ st.markdown(f"""
         box-shadow: 0 0 20px rgba(255,0,127,0.5) !important;
     }}
     
-    ul {{
-        margin-left: 20px !important;
-    }}
-    
-    li {{
-        margin-bottom: 12px !important;
-        font-size: 17px !important;
-    }}
-    
     .check-list {{
         list-style: none !important;
         margin-left: 0 !important;
@@ -171,6 +162,8 @@ st.markdown(f"""
     .check-list li {{
         padding-left: 30px !important;
         position: relative !important;
+        margin-bottom: 12px !important;
+        font-size: 17px !important;
     }}
     
     .check-list li::before {{
@@ -197,7 +190,7 @@ st.markdown('<p class="hero-subtitle">⚡ أول موقع مصري ذكي لتر
 st.markdown('<div style="text-align:center;"><span class="egyptian-badge">🇪🇬 بأيدٍ مصرية ودماغ منياوية</span></div>', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# المقدمة
+# المقدمة - باستخدام HTML مباشر
 # ─────────────────────────────────────────────
 st.markdown("""
 <div class="section-box">
