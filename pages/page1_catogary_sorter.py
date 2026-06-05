@@ -2,7 +2,9 @@ import streamlit as st
 import xml.etree.ElementTree as ET
 import json
 import re
-from collections import OrderedDict
+import requests
+from bs4 import BeautifulSoup
+from datetime import datetime
 
 # ──────────────────────────────────────────────────────
 # 1. SESSION STATE
@@ -15,8 +17,10 @@ for key, val in {
     'maint_done_p1': False,
     'inserted_list_p1': [],
     'maint_details_p1': [],
-    'p1_channels_extra': [],   # قنوات مزروعة من الفحص
-    'p1_freq_patched': False,  # تم تطبيق صيانة الترددات
+    'p1_channels_extra': [],
+    'p1_freq_patched': False,
+    'live_db_cache': None,        # ← قاعدة البيانات الحية من dthsat.com
+    'live_db_last_fetch': None,   # ← وقت آخر جلب
 }.items():
     if key not in st.session_state:
         st.session_state[key] = val
@@ -33,6 +37,11 @@ UI_TEXT = {
         'auto_features_title': "⚙️ خيارات الفحص الذكي والصيانة الفورية للملف",
         'chk_scan_inject':   "📡 تفعيل الفحص التلقائي وزرع القنوات الجديدة المتاحة على القمر فوراً",
         'chk_modern_maint':  "🔧 تفعيل الصيانة الحديثة وتحديث الترددات الميتة والقديمة تلقائياً",
+        'btn_fetch_live':    "🌐 جلب أحدث بيانات NileSat من الإنترنت الآن",
+        'fetching':          "⏳ جاري الجلب من dthsat.com ...",
+        'fetch_success':     "✅ تم جلب بيانات NileSat الحية! إجمالي القنوات: ",
+        'fetch_fail':        "⚠️ تعذّر الاتصال بـ dthsat.com، سيتم استخدام القاعدة المحلية.",
+        'live_db_info':      "📡 قاعدة البيانات الحية — آخر تحديث: ",
         'search_header':     "🔍 البحث عن قناة داخل الملف:",
         'search_placeholder':"اكتب اسم القناة هنا...",
         'search_col_num':    "الرقم",
@@ -70,6 +79,11 @@ UI_TEXT = {
         'auto_features_title': "⚙️ Smart Auto-Maintenance & Scanning Options",
         'chk_scan_inject':   "📡 Enable Auto-Scan & Inject newly available Satellite Channels",
         'chk_modern_maint':  "🔧 Enable Modern Maintenance & Auto-Update dead frequencies",
+        'btn_fetch_live':    "🌐 Fetch Latest NileSat Data from Internet Now",
+        'fetching':          "⏳ Fetching from dthsat.com ...",
+        'fetch_success':     "✅ Live NileSat data fetched! Total channels: ",
+        'fetch_fail':        "⚠️ Could not reach dthsat.com, using local database.",
+        'live_db_info':      "📡 Live Database — Last updated: ",
         'search_header':     "🔍 Search inside file:",
         'search_placeholder':"Type channel name...",
         'search_col_num':    "No.",
@@ -158,6 +172,11 @@ div[data-testid="stFileUploader"] {{
 }}
 .stCheckbox label {{ color: {tc} !important; }}
 .stExpander {{ border: 1px solid {bord} !important; border-radius: 10px !important; }}
+.live-badge {{
+    display: inline-block; background: linear-gradient(90deg,#00f0ff22,#ff007f22);
+    border: 1px solid #00f0ff; border-radius: 8px; padding: 6px 14px;
+    color: #00f0ff; font-size: 0.85rem; margin-bottom: 10px;
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -179,53 +198,167 @@ st.markdown(f"<h3 style='text-align:center;'>{t['subtitle']}</h3>", unsafe_allow
 st.write("---")
 
 # ──────────────────────────────────────────────────────
-# 6. DB & HELPERS
+# 6. LIVE DATABASE FETCHER من dthsat.com
 # ──────────────────────────────────────────────────────
-NILESAT_LIVE_DB = {
-    "AL HAYAT":        {"frequency": 12207, "polarization": "Vertical"},
-    "AL HAYAT 2":      {"frequency": 12207, "polarization": "Vertical"},
-    "SAT-7 KIDS":      {"frequency": 11353, "polarization": "Vertical"},
-    "SAT-7 ARABIC":    {"frequency": 11353, "polarization": "Vertical"},
-    "CTV":             {"frequency": 12022, "polarization": "Vertical"},
-    "AGHAPY TV":       {"frequency": 11179, "polarization": "Horizontal"},
-    "MESAT":           {"frequency": 11096, "polarization": "Horizontal"},
-    "IQRAA":           {"frequency": 11938, "polarization": "Vertical"},
-    "MAJD":            {"frequency": 11862, "polarization": "Vertical"},
-    "RAHMA":           {"frequency": 11938, "polarization": "Vertical"},
-    "QURAN KAREEM":    {"frequency": 11727, "polarization": "Vertical"},
-    "AL JAZEERA HD":   {"frequency": 10853, "polarization": "Vertical"},
-    "AL ARABIYA":      {"frequency": 11938, "polarization": "Vertical"},
-    "AL HADATH":       {"frequency": 11938, "polarization": "Vertical"},
-    "CBC":             {"frequency": 12092, "polarization": "Vertical"},
-    "EXTRA NEWS":      {"frequency": 12092, "polarization": "Vertical"},
-    "ON E":            {"frequency": 12092, "polarization": "Vertical"},
-    "MBC 2":           {"frequency": 11938, "polarization": "Vertical"},
-    "MBC 4":           {"frequency": 11938, "polarization": "Vertical"},
-    "ROTANA CINEMA":   {"frequency": 11938, "polarization": "Vertical"},
-    "ON TIME SPORTS 1":{"frequency": 11861, "polarization": "Vertical"},
-    "ON TIME SPORTS 2":{"frequency": 11861, "polarization": "Vertical"},
-    "SPACE TOON":      {"frequency": 11727, "polarization": "Vertical"},
-    "MAJID":           {"frequency": 11862, "polarization": "Vertical"},
-    "TOYOR ALJANNAH":  {"frequency": 11179, "polarization": "Horizontal"},
+
+# قاعدة احتياطية محلية (تُستخدم إذا فشل الإنترنت)
+FALLBACK_NILESAT_DB = {
+    "AL HAYAT":            {"frequency": 12207, "polarization": "V"},
+    "AL HAYAT 2":          {"frequency": 12207, "polarization": "V"},
+    "SAT-7 KIDS":          {"frequency": 11353, "polarization": "V"},
+    "SAT-7 ARABIC":        {"frequency": 11353, "polarization": "V"},
+    "CTV":                 {"frequency": 10815, "polarization": "H"},
+    "CTV (EGYPT)":         {"frequency": 10815, "polarization": "H"},
+    "AGHAPY TV":           {"frequency": 10815, "polarization": "H"},
+    "IQRAA":               {"frequency": 11938, "polarization": "V"},
+    "ALMAGD TV":           {"frequency": 10815, "polarization": "H"},
+    "AL RAHMA":            {"frequency": 10873, "polarization": "V"},
+    "QURAN KAREEM":        {"frequency": 11727, "polarization": "V"},
+    "AL SALAM QURAN":      {"frequency": 10853, "polarization": "H"},
+    "DOHAT ALQURAN TV":    {"frequency": 10727, "polarization": "H"},
+    "AL JAZEERA HD":       {"frequency": 10853, "polarization": "H"},
+    "AL ARABIYA":          {"frequency": 11938, "polarization": "V"},
+    "AL HADATH":           {"frequency": 11938, "polarization": "V"},
+    "ECHOROUK TV":         {"frequency": 10922, "polarization": "V"},
+    "ECHOROUK TV NEWS":    {"frequency": 10922, "polarization": "V"},
+    "CBC":                 {"frequency": 12092, "polarization": "V"},
+    "EXTRA NEWS":          {"frequency": 12092, "polarization": "V"},
+    "ON E":                {"frequency": 12092, "polarization": "V"},
+    "MBC 2":               {"frequency": 11938, "polarization": "V"},
+    "MBC 4":               {"frequency": 11938, "polarization": "V"},
+    "ROTANA CINEMA":       {"frequency": 11938, "polarization": "V"},
+    "ON TIME SPORTS 1":    {"frequency": 11861, "polarization": "V"},
+    "ON TIME SPORTS 2":    {"frequency": 11861, "polarization": "V"},
+    "SPACE TOON":          {"frequency": 11727, "polarization": "V"},
+    "BATOOT KIDS":         {"frequency": 10853, "polarization": "H"},
+    "KARAMEESH":           {"frequency": 10815, "polarization": "H"},
+    "TOYOR ALJANNAH":      {"frequency": 11179, "polarization": "H"},
+    "NOURSAT":             {"frequency": 10815, "polarization": "H"},
+    "ALKARMA TV FAMILY":   {"frequency": 10815, "polarization": "H"},
+    "MIRACLE CHANNEL":     {"frequency": 10815, "polarization": "H"},
+    "ALHURRA TV":          {"frequency": 11258, "polarization": "H"},
+    "SYRIA TV":            {"frequency": 11258, "polarization": "H"},
+    "PALESTINE TV":        {"frequency": 10727, "polarization": "H"},
+    "QATAR TV":            {"frequency": 10834, "polarization": "V"},
+    "QATAR TV 2":          {"frequency": 10834, "polarization": "V"},
+    "AL ASSEMA":           {"frequency": 10853, "polarization": "H"},
+    "DRAMA 1":             {"frequency": 10853, "polarization": "H"},
+    "FAMILY DRAMA":        {"frequency": 10873, "polarization": "V"},
+    "4G AFLAM":            {"frequency": 10853, "polarization": "H"},
+    "4G CINEMA":           {"frequency": 10853, "polarization": "H"},
+    "4G DRAMA":            {"frequency": 10853, "polarization": "H"},
+    "TOP MOVIES (EGYPT)":  {"frequency": 10873, "polarization": "V"},
+    "SAMIRA TV":           {"frequency": 10922, "polarization": "V"},
+    "ENNAHAR TV":          {"frequency": 10922, "polarization": "V"},
+    "WATANIA 1":           {"frequency": 10873, "polarization": "V"},
+    "LIBYA AL-AHRAR TV":   {"frequency": 10815, "polarization": "H"},
+    "EL HAYAT TV":         {"frequency": 10922, "polarization": "V"},
+    "MISR TV":             {"frequency": 10727, "polarization": "H"},
+    "AJMAN TV":            {"frequency": 11258, "polarization": "H"},
+    "ALSHARQIYA NEWS":     {"frequency": 10873, "polarization": "V"},
+    "DIJLAH TV":           {"frequency": 10873, "polarization": "V"},
 }
 
-FREQ_MAINTENANCE_DB = {
-    "11747": "12054",
-    "11137": "11785",
-    "12015": "11678",
-    "11602": "11938",
-    "11512": "11862",
-    "11632": "12092",
-}
 
-SIMULATED_NEW_CHANNELS = [
-    {"name": "RAMBO CINEMA HD",  "frequency": 11678, "polarization": "Horizontal"},
-    {"name": "EGYPT NOW",         "frequency": 12054, "polarization": "Vertical"},
-    {"name": "FOOTBALL LIVE",     "frequency": 11054, "polarization": "Horizontal"},
-    {"name": "NILE DRAMA",        "frequency": 11861, "polarization": "Vertical"},
-    {"name": "AL KAHERA WAN NAS", "frequency": 12092, "polarization": "Vertical"},
-]
+@st.cache_data(ttl=3600)  # كاش لمدة ساعة
+def fetch_nilesat_live_db():
+    """
+    يجلب قائمة قنوات NileSat الحية من dthsat.com
+    ويُعيد dict: {CHANNEL_NAME_UPPER: {frequency, polarization}}
+    """
+    try:
+        headers = {
+            "User-Agent": (
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            )
+        }
+        resp = requests.get(
+            "https://www.dthsat.com/Nile-Sat",
+            headers=headers,
+            timeout=12
+        )
+        resp.raise_for_status()
 
+        soup = BeautifulSoup(resp.text, "html.parser")
+        tables = soup.find_all("table")
+
+        live_db = {}
+        for table in tables:
+            rows = table.find_all("tr")
+            for row in rows[1:]:  # تخطي الـ header
+                cols = [td.get_text(strip=True) for td in row.find_all("td")]
+                if len(cols) >= 3:
+                    ch_name = cols[0].strip().upper()
+                    try:
+                        freq = int(cols[1].strip())
+                    except ValueError:
+                        continue
+                    polarity = cols[2].strip().upper()  # H أو V
+                    if ch_name and freq > 1000:
+                        live_db[ch_name] = {
+                            "frequency": freq,
+                            "polarization": "Horizontal" if polarity == "H" else "Vertical"
+                        }
+
+        return live_db if live_db else None
+
+    except Exception:
+        return None
+
+
+def get_active_db():
+    """يُعيد قاعدة البيانات النشطة (حية أو احتياطية)"""
+    if st.session_state.live_db_cache:
+        return st.session_state.live_db_cache
+    return {k: v for k, v in FALLBACK_NILESAT_DB.items()}
+
+
+# ──────────────────────────────────────────────────────
+# 7. زر جلب البيانات الحية — يظهر دائماً في الأعلى
+# ──────────────────────────────────────────────────────
+col_fetch, col_fetch_status = st.columns([2, 4])
+with col_fetch:
+    if st.button(t['btn_fetch_live'], use_container_width=True):
+        with st.spinner(t['fetching']):
+            result = fetch_nilesat_live_db()
+            if result:
+                st.session_state.live_db_cache = result
+                st.session_state.live_db_last_fetch = datetime.now().strftime("%Y-%m-%d %H:%M")
+                # إعادة تعيين الفحص والصيانة عشان يأخذ البيانات الجديدة
+                st.session_state.scan_done_p1  = False
+                st.session_state.maint_done_p1 = False
+                st.session_state.p1_channels_extra = []
+                st.session_state.maint_details_p1  = []
+                st.session_state.inserted_list_p1  = []
+                st.toast("🛸 " + (f"تم جلب {len(result):,} قناة من NileSat!" if st.session_state.lang == 'ar'
+                                  else f"Fetched {len(result):,} channels from NileSat!"))
+                st.rerun()
+            else:
+                st.toast("⚠️ " + (t['fetch_fail']), icon="⚠️")
+
+with col_fetch_status:
+    if st.session_state.live_db_cache:
+        n   = len(st.session_state.live_db_cache)
+        lft = st.session_state.live_db_last_fetch or "?"
+        st.markdown(
+            f"<div class='live-badge'>🟢 {t['fetch_success']}{n:,} | ⏱ {lft}</div>",
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            f"<div class='live-badge' style='border-color:#ff007f;color:#ff007f;'>"
+            f"🔴 {'قاعدة بيانات محلية (اضغط الزر للتحديث)' if st.session_state.lang == 'ar' else 'Local DB (press button to update)'}"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+
+st.write("---")
+
+# ──────────────────────────────────────────────────────
+# 8. CATEGORY LISTS & AI CLASSIFIER
+# ──────────────────────────────────────────────────────
 ALL_AVAILABLE_CATEGORIES = [
     "⛪ قنوات مسيحية"       if st.session_state.lang == 'ar' else "⛪ Christian Channels",
     "🕌 قنوات إسلامية"      if st.session_state.lang == 'ar' else "🕌 Islamic Channels",
@@ -239,22 +372,42 @@ ALL_AVAILABLE_CATEGORIES = [
 
 def ai_classify(channel_name):
     name = channel_name.upper().strip()
-    if any(w in name for w in ["CTV","AGHAPY","MESAT","KARMA","ALKARMA","NOURSAT","SAT-7","SAT7","AL HAYAT","HAYAT TV","MIRACLE","COPTIC","CHURCH"]):
+    if any(w in name for w in ["CTV","AGHAPY","MESAT","KARMA","ALKARMA","NOURSAT","SAT-7","SAT7",
+                                "AL HAYAT","HAYAT TV","MIRACLE","COPTIC","CHURCH","LOVEWORLD",
+                                "CHRIST ARMY","ALMAHABA","AL BASIRA","AL NADA","ANOINTING","ROSE TV"]):
         return ALL_AVAILABLE_CATEGORIES[0]
-    if any(w in name for w in ["QURAN","RAHMA","MAJD","MAKKA","IQRAA","IQRA","HUDA","WESAL","ISLAM","SUNNAH"]):
+    if any(w in name for w in ["QURAN","RAHMA","MAJD","MAKKA","IQRAA","IQRA","HUDA","WESAL","ISLAM",
+                                "SUNNAH","DOHAT","AL SALAM QURAN","AL SALAM SUNNAH","MENHAG","RAWHANYAT",
+                                "ALKAFEEL","KUNUZ","KUNOUZ","AL NUJABA","ZITOUNA","ALGHADEER"]):
         return ALL_AVAILABLE_CATEGORIES[1]
-    if any(w in name for w in ["MOSALSALAT","DRAMA","SERIES","KHOLASA","MASRAWI","SHAHID","NILE DRAMA"]):
+    if any(w in name for w in ["MOSALSALAT","DRAMA","SERIES","KHOLASA","MASRAWI","SHAHID","NILE DRAMA",
+                                "AL SA3AA MOSALSALATE","DOLLY MOSALSALAT","RAMADAN DRAMA","SHOOF DRAMA",
+                                "FAMILY DRAMA","FAMILY HIKAYAT","4G DRAMA","BEIRUT DRAMA","QUEEN DRAMA",
+                                "DRAMA ALWAN","DRAMA 1"]):
         return ALL_AVAILABLE_CATEGORIES[2]
-    if any(w in name for w in ["CINEMA","ROTANA","AFLAM","MIX","FOX","MBC2","MBC 2","MBC4","MBC 4","MBC MAX","ACTION","RAMBO","MOVIE","FILM","COMEDY"]):
+    if any(w in name for w in ["CINEMA","ROTANA","AFLAM","MIX","FOX","MBC2","MBC 2","MBC4","MBC 4",
+                                "MBC MAX","ACTION","RAMBO","MOVIE","FILM","COMEDY","4G AFLAM","4G CINEMA",
+                                "4G CIMA","4G FILM","4G CLASSIC","AL SHASHA CINEMA","ALYAOUM CINEMA",
+                                "BEIRUT AFLAM","BEIRUT CINEMA","BEIRUT CLASSIC","CIMA TUBE","CINEMA TUBE",
+                                "TOP MOVIES","CINEMA PRO","TOK TOK CINEMA","TOK TOK CIMA","ORPIT PLUS"]):
         return ALL_AVAILABLE_CATEGORIES[3]
-    if any(w in name for w in ["SPACE TOON","SPACETOON","CN","CARTOON","MAJID","KIDS","TOM","TOYOR","BABY","JUNIOR"]):
+    if any(w in name for w in ["SPACE TOON","SPACETOON","CN","CARTOON","MAJID","KIDS","TOM","TOYOR",
+                                "BABY","JUNIOR","BATOOT","KARAMEESH","BANNOUTA","COOKIES KIDS"]):
         return ALL_AVAILABLE_CATEGORIES[4]
-    if any(w in name for w in ["SPORT","SPORTS","ONTIME","ON TIME","KASS","AD_SPORTS","AD SPORTS","SSC","BEIN","MATCH","FOOTBALL"]):
+    if any(w in name for w in ["SPORT","SPORTS","ONTIME","ON TIME","KASS","AD_SPORTS","AD SPORTS",
+                                "SSC","BEIN","MATCH","FOOTBALL","EL-HEDDAF","HEDDAF","7BESHA ACTION"]):
         return ALL_AVAILABLE_CATEGORIES[5]
-    if any(w in name for w in ["NEWS","JAZEERA","ARABIYA","HADATH","CAIRO","SKY NEWS","BBC","CNN","EXTRA NEWS","CBC","ON E","SADA","BALADI","MASR","EGYPT NOW","KAHERA"]):
+    if any(w in name for w in ["NEWS","JAZEERA","ARABIYA","HADATH","CAIRO","SKY NEWS","BBC","CNN",
+                                "EXTRA NEWS","CBC","ON E","SADA","BALADI","MASR","EGYPT NOW","KAHERA",
+                                "ECHOROUK","ENNAHAR","AL 24","ALSHARQIYA","AL ASSEMA","ALHURRA",
+                                "ALARABY","MISR TV","PALESTINE","CHANNEL 24"]):
         return ALL_AVAILABLE_CATEGORIES[6]
     return ALL_AVAILABLE_CATEGORIES[7]
 
+
+# ──────────────────────────────────────────────────────
+# 9. HELPERS
+# ──────────────────────────────────────────────────────
 def set_item_prnum(raw, index):
     if "<prNum>" in raw:
         raw = re.sub(r"<prNum>\d+</prNum>", f"<prNum>{index}</prNum>", raw)
@@ -271,8 +424,9 @@ def normalize_modern_node(node, index):
     node["userSelCHNo"] = True
     return node
 
+
 # ──────────────────────────────────────────────────────
-# 7. FILE UPLOADER + RESET
+# 10. FILE UPLOADER + RESET
 # ──────────────────────────────────────────────────────
 if 'p1_uploader_key' not in st.session_state:
     st.session_state.p1_uploader_key = 0
@@ -287,7 +441,7 @@ with col_reset:
     st.write("")
     st.write("")
     if st.button(t['btn_reset'], use_container_width=True):
-        keep = {'lang', 'theme'}
+        keep = {'lang', 'theme', 'live_db_cache', 'live_db_last_fetch'}
         new_key = st.session_state.get('p1_uploader_key', 0) + 1
         for k in list(st.session_state.keys()):
             if k not in keep:
@@ -296,14 +450,14 @@ with col_reset:
         st.rerun()
 
 # ──────────────────────────────────────────────────────
-# 8. MAIN LOGIC
+# 11. MAIN LOGIC
 # ──────────────────────────────────────────────────────
 if uploaded_file is None:
     st.info(t['no_file_msg'])
 else:
     if st.session_state.get("p1_last_file_name") != uploaded_file.name:
-        st.session_state.scan_done_p1    = False
-        st.session_state.maint_done_p1   = False
+        st.session_state.scan_done_p1     = False
+        st.session_state.maint_done_p1    = False
         st.session_state.inserted_list_p1 = []
         st.session_state.maint_details_p1 = []
         st.session_state.p1_channels_extra = []
@@ -346,10 +500,16 @@ else:
     )
 
     # ══════════════════════════════════════════════════
-    # قسم الفحص والصيانة
+    # قسم الفحص والصيانة — الآن يستخدم قاعدة البيانات الحية
     # ══════════════════════════════════════════════════
     st.write("---")
     st.write(f"### {t['auto_features_title']}")
+
+    # نجلب القاعدة النشطة (حية أو احتياطية)
+    ACTIVE_DB = get_active_db()
+
+    # بناء قاعدة الصيانة ديناميكياً من القاعدة الحية:
+    # نقارن أي قناة في الملف لها تردد مختلف عن القاعدة الحية → نحدّثه
     col_chk1, col_chk2 = st.columns(2)
 
     with col_chk1:
@@ -369,41 +529,63 @@ else:
                 }
 
             new_inserted_names = []
-            extra_channels = []
-            for nc in SIMULATED_NEW_CHANNELS:
-                if nc['name'].upper() not in current_names_set:
-                    extra_channels.append(nc.copy())
+            extra_channels     = []
+
+            # المقارنة: كل قناة في القاعدة الحية غير موجودة في الملف → إضافة
+            for db_name_upper, db_info in ACTIVE_DB.items():
+                # نتحقق بمطابقة جزئية مرنة
+                is_present = any(
+                    db_name_upper in existing or existing in db_name_upper
+                    for existing in current_names_set
+                )
+                if not is_present:
+                    pol_full = db_info["polarization"]
+                    nc = {
+                        "name": db_name_upper.title(),
+                        "frequency": db_info["frequency"],
+                        "polarization": pol_full,
+                    }
+                    extra_channels.append(nc)
                     new_inserted_names.append(
                         f"📡 {nc['name']} "
-                        f"({'تردد' if st.session_state.lang == 'ar' else 'Freq'}: {nc['frequency']})"
+                        f"({'تردد' if st.session_state.lang == 'ar' else 'Freq'}: {nc['frequency']} {pol_full[0]})"
                     )
 
-            st.session_state.scan_done_p1     = True
-            st.session_state.inserted_list_p1 = new_inserted_names
+            st.session_state.scan_done_p1      = True
+            st.session_state.inserted_list_p1  = new_inserted_names
             st.session_state.p1_channels_extra = extra_channels
 
             if new_inserted_names:
-                st.toast("📡 " + ("تم زرع القنوات الجديدة بنجاح!" if st.session_state.lang == 'ar' else "New channels injected!"))
+                st.toast("📡 " + ("تم زرع القنوات الجديدة بنجاح!" if st.session_state.lang == 'ar'
+                                  else "New channels injected!"))
                 st.rerun()
 
         if scan_active:
             if st.session_state.get('inserted_list_p1'):
+                injected = st.session_state.inserted_list_p1
                 st.markdown(
                     "<div style='background:rgba(0,240,255,0.1);padding:12px;border-radius:10px;"
                     "border-left:4px solid #00f0ff;margin-top:10px;'>",
                     unsafe_allow_html=True
                 )
-                label = "**✨ قنوات جديدة تم زرعها وإضافتها للملف:**" if st.session_state.lang == 'ar' \
-                        else "**✨ New channels injected into the file:**"
+                label = (f"**✨ {len(injected)} قناة جديدة تم زرعها وإضافتها للملف:**"
+                         if st.session_state.lang == 'ar'
+                         else f"**✨ {len(injected)} new channels injected into the file:**")
                 st.markdown(label)
-                for item in st.session_state.inserted_list_p1:
-                    st.markdown(f"<span style='color:#00f0ff;'>{item}</span>", unsafe_allow_html=True)
+                # نعرض أول 30 فقط لتجنب الإطالة
+                for item in injected[:30]:
+                    st.markdown(f"<span style='color:#00f0ff;font-size:0.85rem;'>{item}</span>",
+                                unsafe_allow_html=True)
+                if len(injected) > 30:
+                    st.markdown(f"<span style='color:#888;'>... و {len(injected)-30} قناة أخرى</span>",
+                                unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
             else:
-                msg = "ℹ️ لم يتم العثور على قنوات جديدة للزرع (مضافة بالفعل)." \
-                      if st.session_state.lang == 'ar' \
-                      else "ℹ️ No new channels found to inject (already present)."
-                st.markdown(f"<div style='color:#888;margin-top:10px;'>{msg}</div>", unsafe_allow_html=True)
+                msg = ("ℹ️ لم يتم العثور على قنوات جديدة للزرع (مضافة بالفعل)."
+                       if st.session_state.lang == 'ar'
+                       else "ℹ️ No new channels found to inject (already present).")
+                st.markdown(f"<div style='color:#888;margin-top:10px;'>{msg}</div>",
+                            unsafe_allow_html=True)
 
     with col_chk2:
         maint_active = st.checkbox(t['chk_modern_maint'], value=False, key="chk_maint_p1")
@@ -412,62 +594,82 @@ else:
             maint_details = []
             freq_patches  = {}
 
+            # مقارنة ترددات الملف بالقاعدة الحية وتحديث المختلف منها
             if is_modern:
                 _tmp_bd2 = json.loads(legacy_broadcast_tag.text.strip())
                 for ch in _tmp_bd2.get("channelList", []):
-                    old_f = str(ch.get("frequency", ""))
-                    if old_f in FREQ_MAINTENANCE_DB:
-                        new_f = FREQ_MAINTENANCE_DB[old_f]
-                        ch_name = ch.get("channelName", "Unknown")
-                        freq_patches[ch_name.upper()] = new_f
-                        maint_details.append(
-                            f"🔄 **{ch_name}** | "
-                            f"{'من' if st.session_state.lang == 'ar' else 'from'} `{old_f}` "
-                            f"{'إلى' if st.session_state.lang == 'ar' else 'to'} `{new_f}`"
-                        )
+                    ch_name  = ch.get("channelName", "Unknown")
+                    old_f    = ch.get("frequency", 0)
+                    name_up  = ch_name.upper()
+                    # بحث في القاعدة الحية
+                    db_match = ACTIVE_DB.get(name_up) or ACTIVE_DB.get(
+                        next((k for k in ACTIVE_DB if k in name_up or name_up in k), ""), None
+                    )
+                    if db_match:
+                        new_f = db_match["frequency"]
+                        if str(old_f) != str(new_f):
+                            freq_patches[name_up] = str(new_f)
+                            maint_details.append(
+                                f"🔄 **{ch_name}** | "
+                                f"{'من' if st.session_state.lang == 'ar' else 'from'} `{old_f}` "
+                                f"{'إلى' if st.session_state.lang == 'ar' else 'to'} `{new_f}`"
+                            )
             else:
                 for m in re.finditer(r'<vchName>(.*?)</vchName>.*?<frequency>(\d+)</frequency>',
                                      file_text, re.DOTALL):
                     ch_name = m.group(1)
                     old_f   = m.group(2)
-                    if old_f in FREQ_MAINTENANCE_DB:
-                        new_f = FREQ_MAINTENANCE_DB[old_f]
-                        freq_patches[ch_name.upper()] = new_f
-                        maint_details.append(
-                            f"🔄 **{ch_name}** | "
-                            f"{'من' if st.session_state.lang == 'ar' else 'from'} `{old_f}` "
-                            f"{'إلى' if st.session_state.lang == 'ar' else 'to'} `{new_f}`"
-                        )
+                    name_up = ch_name.upper()
+                    db_match = ACTIVE_DB.get(name_up) or ACTIVE_DB.get(
+                        next((k for k in ACTIVE_DB if k in name_up or name_up in k), ""), None
+                    )
+                    if db_match:
+                        new_f = str(db_match["frequency"])
+                        if old_f != new_f:
+                            freq_patches[name_up] = new_f
+                            maint_details.append(
+                                f"🔄 **{ch_name}** | "
+                                f"{'من' if st.session_state.lang == 'ar' else 'from'} `{old_f}` "
+                                f"{'إلى' if st.session_state.lang == 'ar' else 'to'} `{new_f}`"
+                            )
 
-            st.session_state.maint_done_p1   = True
+            st.session_state.maint_done_p1    = True
             st.session_state.maint_details_p1 = maint_details
             st.session_state.p1_freq_patches  = freq_patches
 
             if maint_details:
-                st.toast("🔧 " + ("تم تحديث الترددات بنجاح!" if st.session_state.lang == 'ar' else "Frequencies updated!"))
+                st.toast("🔧 " + (f"تم تحديث {len(maint_details)} تردد!" if st.session_state.lang == 'ar'
+                                  else f"Updated {len(maint_details)} frequencies!"))
                 st.rerun()
 
         if maint_active:
             if st.session_state.get('maint_details_p1'):
+                details = st.session_state.maint_details_p1
                 st.markdown(
                     "<div style='background:rgba(255,0,127,0.1);padding:12px;border-radius:10px;"
                     "border-left:4px solid #ff007f;margin-top:10px;'>",
                     unsafe_allow_html=True
                 )
-                label = "**🔧 الترددات التي تم تحديثها في الملف:**" if st.session_state.lang == 'ar' \
-                        else "**🔧 Frequencies updated in the file:**"
+                label = (f"**🔧 {len(details)} تردد تم تحديثه من القاعدة الحية:**"
+                         if st.session_state.lang == 'ar'
+                         else f"**🔧 {len(details)} frequencies updated from live database:**")
                 st.markdown(label)
-                for detail in st.session_state.maint_details_p1:
-                    st.markdown(f"<span style='color:#ff007f;'>{detail}</span>", unsafe_allow_html=True)
+                for detail in details[:20]:
+                    st.markdown(f"<span style='color:#ff007f;font-size:0.85rem;'>{detail}</span>",
+                                unsafe_allow_html=True)
+                if len(details) > 20:
+                    st.markdown(f"<span style='color:#888;'>... و {len(details)-20} تردد آخر</span>",
+                                unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
             else:
-                msg = "ℹ️ جميع الترددات الحالية مطابقة لأحدث نسخة." \
-                      if st.session_state.lang == 'ar' \
-                      else "ℹ️ All current frequencies match the latest version."
-                st.markdown(f"<div style='color:#888;margin-top:10px;'>{msg}</div>", unsafe_allow_html=True)
+                msg = ("ℹ️ جميع الترددات الحالية مطابقة لأحدث نسخة."
+                       if st.session_state.lang == 'ar'
+                       else "ℹ️ All current frequencies match the latest version.")
+                st.markdown(f"<div style='color:#888;margin-top:10px;'>{msg}</div>",
+                            unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════
-    # باقي منطق الصفحة
+    # باقي منطق الصفحة — نفس الكود الأصلي بدون تغيير
     # ══════════════════════════════════════════════════
     st.write("---")
 
@@ -479,8 +681,7 @@ else:
     if is_modern:
         broadcast_data = json.loads(legacy_broadcast_tag.text.strip())
         channels_list  = broadcast_data.get("channelList", [])
-
-        freq_patches = st.session_state.get('p1_freq_patches', {})
+        freq_patches   = st.session_state.get('p1_freq_patches', {})
 
         for ch in channels_list:
             ch_name  = ch.get("channelName", "Unknown")
@@ -652,9 +853,10 @@ else:
                            mime="text/plain; charset=utf-8", use_container_width=True)
     with col_d3:
         if st.button(t['btn_reset'], key="reset_bottom", use_container_width=True):
+            keep = {'lang', 'theme', 'live_db_cache', 'live_db_last_fetch'}
             new_key = st.session_state.get('p1_uploader_key', 0) + 1
             for k in list(st.session_state.keys()):
-                if k not in ['lang', 'theme']:
+                if k not in keep:
                     del st.session_state[k]
             st.session_state.p1_uploader_key = new_key
             st.rerun()
@@ -670,7 +872,7 @@ else:
 """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────
-# 9. FOOTER
+# 12. FOOTER
 # ──────────────────────────────────────────────────────
 whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
 st.markdown(f"""
