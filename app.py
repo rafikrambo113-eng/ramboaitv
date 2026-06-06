@@ -105,7 +105,7 @@ hr {
 # ─────────────────────────────────────────────
 # الهيدر الرئيسي
 # ─────────────────────────────────────────────
-st.markdown("<h1>📺 RamboAITV</h1>", unsafe_allow_html=True)
+st.markdown("<h1>📺 Rambo AI TV</h1>", unsafe_allow_html=True)
 st.markdown("<p class='center-text' style='font-size:24px; color:#00f0ff; font-weight:700;'>⚡ أول موقع مصري ذكي لترتيب قنوات إل جي بالذكاء الاصطناعي</p>", unsafe_allow_html=True)
 st.markdown("<p class='center-text' style='color:#ff007f; font-weight:700; font-size:20px;'>🇪🇬 بأيدٍ مصرية ودماغ منياوية</p>", unsafe_allow_html=True)
 
@@ -120,7 +120,7 @@ st.markdown("<p class='center-text'>هل بتعاني من فوضى ترتيب �
 st.markdown("<p class='center-text'>زهقت من البحث اليدوي عن الترددات الجديدة؟</p>", unsafe_allow_html=True)
 
 st.markdown("")
-st.success("🚀 بكل فخر، بنقدم لكم RamboAITV!")
+st.success("🚀 بكل فخر، بنقدم لكم Rambo AI TV!")
 st.info("**الموقع الأول من نوعه** \"بأيدٍ مصرية ودماغ منياوية\"، اللي بيحل لك أزمة ترتيب القنوات **بضغطة زر** وبقوة **الذكاء الاصطناعي!**")
 
 st.markdown("---")
