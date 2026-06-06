@@ -797,19 +797,3 @@ elif st.session_state.edit_finished:
     <p style="font-size:13px;color:#ffaa55;font-style:italic;margin-bottom:0;">
     *تفعل هذه الخطوة فقط إذا شعرت أن الملف غير مرتب كما حددته.</p>
     </div>""", unsafe_allow_html=True)
-
-# ─────────────────────────────────────────────
-# 14. FOOTER
-# ─────────────────────────────────────────────
-whatsapp_url = "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo"
-st.markdown(f"""
-<div style="background:#0f172a;border:2px solid #00f0ff;color:#ffffff;
-padding:35px;text-align:center;border-radius:20px;margin-top:65px;font-family:Arial;">
-<div style="color:#ff007f;font-size:26px;font-weight:bold;">🛠️ DEVELOPER ENG: RAFIK NATHAN</div>
-<div style="margin-top:10px;">📱 <b>MOBILE / الموبايل:</b> +201280339779</div>
-<div style="margin-top:10px;">✉️ <b>E-MAIL:</b> rafikrambo113@gmail.com</div>
-<a href="{whatsapp_url}" target="_blank"
-style="color:#25d366;padding:14px 35px;border-radius:35px;display:inline-block;
-font-weight:bold;border:2px solid #25d366;text-decoration:none;margin-top:20px;">
-WhatsApp</a>
-</div>""", unsafe_allow_html=True)
