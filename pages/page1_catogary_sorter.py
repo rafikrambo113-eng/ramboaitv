@@ -871,4 +871,3 @@ else:
 {''.join(f'<div style="margin:6px 0;line-height:1.7;">{line}</div>' for line in trick_lines if line.strip())}
 </div>
 """, unsafe_allow_html=True)
-
