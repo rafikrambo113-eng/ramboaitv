@@ -414,9 +414,9 @@ if not st.session_state.channels:
     st.markdown("""
     <div style="background:#0f172a;border:2px solid #00f0ff;color:white;padding:30px;
     text-align:center;border-radius:15px;margin-top:50px;font-family:Arial;">
-    <b></b><br><br>
-    📱 <br>✉️ <br><br>
-    <a href="" style="color:#25d366;">WhatsApp</a>
+    <b>🛠️ DEVELOPER ENG: RAFIK RAMBO</b><br><br>
+    📱 +201280339779<br>✉️ rafikrambo113@gmail.com<br><br>
+    <a href="https://api.whatsapp.com/send?phone=201280339779" style="color:#25d366;">WhatsApp</a>
     </div>""", unsafe_allow_html=True)
     st.stop()
 
