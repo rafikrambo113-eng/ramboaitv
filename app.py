@@ -13,7 +13,7 @@ if 'page' not in st.session_state:
 # ─────────────────────────────────────────────
 # إعداد الصفحة + CSS مستقبلي
 # ─────────────────────────────────────────────
-st.set_page_config(page_title="Rambo AI TV — مرتب القنوات الذكي", page_icon="📺", layout="wide")
+st.set_page_config(page_title="Rambo_ AI_ TV — مرتب القنوات الذكي", page_icon="📺", layout="wide")
 
 st.markdown("""
 <style>
