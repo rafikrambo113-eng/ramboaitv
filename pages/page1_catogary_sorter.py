@@ -3,15 +3,12 @@ import xml.etree.ElementTree as ET
 import json
 import re
 import requests
-
 from datetime import datetime
 
 # ──────────────────────────────────────────────────────
 # 1. SESSION STATE
 # ──────────────────────────────────────────────────────
 for key, val in {
-    'lang': 'ar',
-    'theme': 'dark',
     'p1_file_loaded': False,
     'scan_done_p1': False,
     'maint_done_p1': False,
@@ -19,189 +16,170 @@ for key, val in {
     'maint_details_p1': [],
     'p1_channels_extra': [],
     'p1_freq_patched': False,
-    'live_db_cache': None,        # ← قاعدة البيانات الحية من dthsat.com
-    'live_db_last_fetch': None,   # ← وقت آخر جلب
+    'live_db_cache': None,
+    'live_db_last_fetch': None,
 }.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
 # ──────────────────────────────────────────────────────
-# 2. UI TEXT
+# 2. PAGE CONFIG
 # ──────────────────────────────────────────────────────
-UI_TEXT = {
-    'ar': {
-        'title':             "📺 RAMBO — المُرتِّب الذكي بالفئات",
-        'subtitle':          "⚡ ارفع ملف القنوات، رتّب الفئات، وحمّل الملف المعدَّل",
-        'upload_label':      "🚀 اختر ملف القنوات (GlobalClone00001.TLL) من الفلاشة:",
-        'success_read':      "🛸 تم قراءة الملف بنجاح! الموديل: ",
-        'auto_features_title': "⚙️ خيارات الفحص الذكي والصيانة الفورية للملف",
-        'chk_scan_inject':   "📡 تفعيل الفحص التلقائي وزرع القنوات الجديدة المتاحة على القمر فوراً",
-        'chk_modern_maint':  "🔧 تفعيل الصيانة الحديثة وتحديث الترددات الميتة والقديمة تلقائياً",
-        'btn_fetch_live':    "🌐 جلب أحدث بيانات NileSat من الإنترنت الآن",
-        'fetching':          "⏳ جاري الجلب من dthsat.com ...",
-        'fetch_success':     "✅ تم جلب بيانات NileSat الحية! إجمالي القنوات: ",
-        'fetch_fail':        "⚠️ تعذّر الاتصال بـ dthsat.com، سيتم استخدام القاعدة المحلية.",
-        'live_db_info':      "📡 قاعدة البيانات الحية — آخر تحديث: ",
-        'search_header':     "🔍 البحث عن قناة داخل الملف:",
-        'search_placeholder':"اكتب اسم القناة هنا...",
-        'search_col_num':    "الرقم",
-        'search_col_name':   "اسم القناة",
-        'search_col_cat':    "الفئة",
-        'search_col_freq':   "التردد",
-        'search_no_results': "⚠️ لا توجد نتائج مطابقة.",
-        'config_title':      "🎛️ ترتيب الفئات:",
-        'multiselect_label': "اختر الفئات بالترتيب المطلوب:",
-        'preview_title':     "📊 معاينة التوزيع الحالي:",
-        'channels_count':    "قناة",
-        'ready_msg':         "✅ تم تجهيز الملف النهائي للتحميل:",
-        'btn_download_tll':  "📥 تحميل ملف الشاشة النهائي (GlobalClone00001.TLL)",
-        'btn_download_txt':  "📄 تحميل تقرير الترتيب (Channels_List.txt)",
-        'btn_reset':         "🔄 إعادة تهيئة / رفع ملف جديد",
-        'txt_header':        "📄 تقرير ترتيب القنوات النهائي",
-        'txt_order':         "🛠️ ترتيب الفئات المختار: ",
-        'lg_trick_title':    "💡 ملحوظة فنية هامة جداً بعد تنزيل الملف على شاشة LG:",
-        'lg_trick_text': (
-            "في بعض الحالات، بعد تنزيل ملف القنوات على الشاشة، قد تشعر أن القنوات ليست منظمة كما رتبتها. "
-            "لحل هذا الأمر فوراً واجبار الشاشة على تفعيل الترتيب الصحيح، قم بالآتي:\n\n"
-            "1. من إعدادات التلفزيون اختار القنوات (Channels).\n"
-            "2. بعد ذلك اختار مدير القنوات (Channel Manager).\n"
-            "3. اختار التعديل على كل القنوات (Edit All Channels).\n"
-            "4. ستظهر لك القنوات المرتبة ويكون بعضها في وضع مخفي، قم بتحديد كل القنوات واختار استعادة (Restore).\n\n"
-            "ملحوظة: تفعل هذه الخطوة فقط إذا شعرت أن الملف بعد التنزيل غير مرتب كما حددته على الموقع."
-        ),
-        'no_file_msg':       "⬆️ ارفع ملف TLL أولاً لتبدأ العمل.",
-    },
-    'en': {
-        'title':             "📺 RAMBO — Smart Category Sorter",
-        'subtitle':          "⚡ Upload your channel file, sort categories, download the result",
-        'upload_label':      "🚀 Upload Channel File (GlobalClone00001.TLL) from USB:",
-        'success_read':      "🛸 File Parsed Successfully! Model: ",
-        'auto_features_title': "⚙️ Smart Auto-Maintenance & Scanning Options",
-        'chk_scan_inject':   "📡 Enable Auto-Scan & Inject newly available Satellite Channels",
-        'chk_modern_maint':  "🔧 Enable Modern Maintenance & Auto-Update dead frequencies",
-        'btn_fetch_live':    "🌐 Fetch Latest NileSat Data from Internet Now",
-        'fetching':          "⏳ Fetching from dthsat.com ...",
-        'fetch_success':     "✅ Live NileSat data fetched! Total channels: ",
-        'fetch_fail':        "⚠️ Could not reach dthsat.com, using local database.",
-        'live_db_info':      "📡 Live Database — Last updated: ",
-        'search_header':     "🔍 Search inside file:",
-        'search_placeholder':"Type channel name...",
-        'search_col_num':    "No.",
-        'search_col_name':   "Channel Name",
-        'search_col_cat':    "Category",
-        'search_col_freq':   "Frequency",
-        'search_no_results': "⚠️ No matching results.",
-        'config_title':      "🎛️ Category order:",
-        'multiselect_label': "Select categories in desired order:",
-        'preview_title':     "📊 Current distribution preview:",
-        'channels_count':    "Channels",
-        'ready_msg':         "✅ Final file ready for download:",
-        'btn_download_tll':  "📥 Download Final TV File (GlobalClone00001.TLL)",
-        'btn_download_txt':  "📄 Download Sorting Report (Channels_List.txt)",
-        'btn_reset':         "🔄 Reset / Upload New File",
-        'txt_header':        "📄 Final Channel Sorting Report",
-        'txt_order':         "🛠️ Selected category priority: ",
-        'lg_trick_title':    "💡 Important Technical Note After Loading File on LG TV:",
-        'lg_trick_text': (
-            "In some cases, after loading the channel file onto the TV, you may feel the channels are not "
-            "organized as you sorted them. To fix this immediately and force the TV to apply the correct order:\n\n"
-            "1. From TV Settings, select Channels.\n"
-            "2. Then select Channel Manager.\n"
-            "3. Select Edit All Channels.\n"
-            "4. The sorted channels will appear with some hidden — select all channels and choose Restore.\n\n"
-            "Note: Only perform this step if you feel the file after loading is not sorted as you set on the site."
-        ),
-        'no_file_msg':       "⬆️ Upload a TLL file to start.",
-    }
+st.set_page_config(page_title="RAMBO — الترتيب الذكي بالفئات", page_icon="🧠", layout="wide")
+
+# ──────────────────────────────────────────────────────
+# 3. CSS
+# ──────────────────────────────────────────────────────
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Cairo:wght@400;600;700;900&display=swap');
+
+.main {
+    background: radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%) !important;
+    font-family: 'Cairo', sans-serif !important;
+    direction: rtl !important;
+    text-align: right !important;
 }
 
-t = UI_TEXT[st.session_state.lang]
+h1 {
+    color: #ff007f !important;
+    text-shadow: 0 0 10px #ff007f, 0 0 25px rgba(255,0,127,0.5) !important;
+    font-family: 'Orbitron', 'Cairo' !important;
+    font-weight: 900 !important;
+    text-align: center !important;
+    font-size: 52px !important;
+    direction: ltr !important;
+}
 
-# ──────────────────────────────────────────────────────
-# 3. PAGE CONFIG
-# ──────────────────────────────────────────────────────
-st.set_page_config(page_title="RAMBO P1 — Sorter", page_icon="⚡", layout="wide")
+h2 {
+    color: #00f0ff !important;
+    text-shadow: 0 0 5px #00f0ff !important;
+    font-family: 'Orbitron', 'Cairo' !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+}
 
-# ──────────────────────────────────────────────────────
-# 4. CSS
-# ──────────────────────────────────────────────────────
-if st.session_state.theme == 'dark':
-    bg  = "radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%)"
-    tc, bb, bord = "#00f0ff", "rgba(13,7,33,0.85)", "#00f0ff"
-    bsh, tsh = "rgba(0,240,255,0.35)", "0 0 5px rgba(0,240,255,0.4)"
-    table_head_bg = "#0d0722"
-else:
-    bg  = "radial-gradient(circle at 50% 50%, #f4f5f7 0%, #e4e7eb 100%)"
-    tc, bb, bord = "#0d0722", "#ffffff", "#ff007f"
-    bsh, tsh = "rgba(255,0,127,0.15)", "none"
-    table_head_bg = "#0d0722"
+h3, h4 {
+    color: #00f0ff !important;
+    font-family: 'Cairo' !important;
+    font-weight: 700 !important;
+}
 
-ff = "'Cairo', sans-serif" if st.session_state.lang == 'ar' else "'Orbitron', sans-serif"
+p, label, .stMarkdown, .stBody {
+    color: #e0e0e0 !important;
+    font-size: 18px !important;
+    line-height: 1.9 !important;
+    direction: rtl !important;
+    text-align: right !important;
+}
 
-st.markdown(f"""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;900&family=Cairo:wght@400;700&display=swap');
-.main {{ background: {bg} !important; color: {tc} !important; font-family: {ff}; }}
-h1 {{ color: #ff007f !important; text-shadow: 0 0 10px #ff007f, 0 0 25px rgba(255,0,127,0.4) !important;
-      text-align: center; font-weight: 900; margin-top: 5px; }}
-h3, p, label, .stMarkdown {{ color: {tc} !important; text-shadow: {tsh}; }}
-.stTextInput > div > div > input, .stSelectbox > div > div {{
-    background-color: {bb} !important; color: {tc} !important;
-    border: 2px solid {bord} !important; border-radius: 10px !important;
-}}
-div[data-testid="stFileUploader"] {{
-    background: {bb} !important; border: 2px solid {bord} !important;
-    box-shadow: 0 5px 15px {bsh} !important; border-radius: 14px !important;
-    padding: 18px !important; margin-bottom: 20px !important;
-}}
-.rambo-card {{
-    background: {bb}; border: 2px solid {bord};
-    box-shadow: 0 5px 15px {bsh}; border-radius: 14px;
-    padding: 22px; margin-bottom: 18px;
-}}
-.stButton > button {{
+.center-text {
+    text-align: center !important;
+    direction: rtl !important;
+}
+
+.stButton > button {
     background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important;
-    color: #ffffff !important; border: 2px solid #ff007f !important;
-    border-radius: 12px !important; font-weight: bold; width: 100%;
-    font-size: 1.05rem; padding: 0.6rem;
-}}
-.stDownloadButton > button {{
+    color: #ffffff !important;
+    border: 2px solid #ff007f !important;
+    border-radius: 12px !important;
+    font-weight: bold !important;
+    font-size: 1.05rem !important;
+    padding: 0.6rem !important;
+    box-shadow: 0 0 15px rgba(255,0,127,0.4) !important;
+    font-family: 'Cairo' !important;
+    width: 100% !important;
+}
+
+.stDownloadButton > button {
     background: linear-gradient(135deg, #00b894 0%, #00695c 100%) !important;
-    color: #fff !important; border: none !important;
-    border-radius: 12px !important; font-weight: bold; width: 100%;
-}}
-.stCheckbox label {{ color: {tc} !important; }}
-.stExpander {{ border: 1px solid {bord} !important; border-radius: 10px !important; }}
-.live-badge {{
-    display: inline-block; background: linear-gradient(90deg,#00f0ff22,#ff007f22);
-    border: 1px solid #00f0ff; border-radius: 8px; padding: 6px 14px;
-    color: #00f0ff; font-size: 0.85rem; margin-bottom: 10px;
-}}
+    color: #fff !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-weight: bold !important;
+    width: 100% !important;
+    font-family: 'Cairo' !important;
+}
+
+.stButton {
+    text-align: center !important;
+}
+
+.stInfo {
+    background: rgba(0,240,255,0.15) !important;
+    border-left: 5px solid #00f0ff !important;
+    color: #00f0ff !important;
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+.stSuccess {
+    background: rgba(255,0,127,0.15) !important;
+    border-left: 5px solid #ff007f !important;
+    color: #ff6b9f !important;
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+.stWarning {
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+.stCheckbox label {
+    color: #e0e0e0 !important;
+}
+
+.stExpander {
+    border: 1px solid #00f0ff !important;
+    border-radius: 10px !important;
+}
+
+div[data-testid="stFileUploader"] {
+    background: rgba(13,7,33,0.85) !important;
+    border: 2px solid #00f0ff !important;
+    box-shadow: 0 5px 15px rgba(0,240,255,0.35) !important;
+    border-radius: 14px !important;
+    padding: 18px !important;
+    margin-bottom: 20px !important;
+}
+
+.stTextInput > div > div > input {
+    background-color: rgba(13,7,33,0.85) !important;
+    color: #00f0ff !important;
+    border: 2px solid #00f0ff !important;
+    border-radius: 10px !important;
+}
+
+.live-badge {
+    display: inline-block;
+    background: linear-gradient(90deg, #00f0ff22, #ff007f22);
+    border: 1px solid #00f0ff;
+    border-radius: 8px;
+    padding: 6px 14px;
+    color: #00f0ff;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+}
+
+hr {
+    border-color: #00f0ff !important;
+    opacity: 0.5 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────────────
-# 5. HEADER CONTROLS
+# 4. HEADER
 # ──────────────────────────────────────────────────────
-col_lang, col_theme, _ = st.columns([1.2, 1.5, 8])
-with col_lang:
-    if st.button("🌐 English" if st.session_state.lang == 'ar' else "🌐 العربية"):
-        st.session_state.lang = 'en' if st.session_state.lang == 'ar' else 'ar'
-        st.rerun()
-with col_theme:
-    if st.button("☀️ Light Mode" if st.session_state.theme == 'dark' else "🌙 Dark Mode"):
-        st.session_state.theme = 'light' if st.session_state.theme == 'dark' else 'dark'
-        st.rerun()
-
-st.title(t['title'])
-st.markdown(f"<h3 style='text-align:center;'>{t['subtitle']}</h3>", unsafe_allow_html=True)
-st.write("---")
+st.markdown("<h1>📺 RamboAITV</h1>", unsafe_allow_html=True)
+st.markdown("<h2>🧠 الترتيب الذكي بالفئات</h2>", unsafe_allow_html=True)
+st.markdown("<p class='center-text' style='color:#ff007f; font-weight:700;'>🇪🇬 بأيدٍ مصرية ودماغ منياوية</p>", unsafe_allow_html=True)
+st.markdown("---")
 
 # ──────────────────────────────────────────────────────
-# 6. LIVE DATABASE FETCHER من dthsat.com
+# 5. FALLBACK DB
 # ──────────────────────────────────────────────────────
-
-# قاعدة احتياطية محلية (تُستخدم إذا فشل الإنترنت)
 FALLBACK_NILESAT_DB = {
     "AL HAYAT":            {"frequency": 12207, "polarization": "V"},
     "AL HAYAT 2":          {"frequency": 12207, "polarization": "V"},
@@ -259,13 +237,8 @@ FALLBACK_NILESAT_DB = {
     "DIJLAH TV":           {"frequency": 10873, "polarization": "V"},
 }
 
-
-@st.cache_data(ttl=3600)  # كاش لمدة ساعة
+@st.cache_data(ttl=3600)
 def fetch_nilesat_live_db():
-    """
-    يجلب قائمة قنوات NileSat الحية من dthsat.com
-    ويُعيد dict: {CHANNEL_NAME_UPPER: {frequency, polarization}}
-    """
     try:
         headers = {
             "User-Agent": (
@@ -274,21 +247,12 @@ def fetch_nilesat_live_db():
                 "Chrome/120.0.0.0 Safari/537.36"
             )
         }
-        resp = requests.get(
-            "https://www.dthsat.com/Nile-Sat",
-            headers=headers,
-            timeout=12
-        )
+        resp = requests.get("https://www.dthsat.com/Nile-Sat", headers=headers, timeout=12)
         resp.raise_for_status()
-
-        # استخراج صفوف <tr> من كل جداول HTML باستخدام regex فقط
         live_db = {}
-        # نجيب كل الصفوف من الصفحة
         rows = re.findall(r'<tr[^>]*>(.*?)</tr>', resp.text, re.DOTALL | re.IGNORECASE)
         for row in rows:
-            # نجيب كل الخلايا <td>
             cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
-            # تنظيف من HTML tags
             cols = [re.sub(r'<[^>]+>', '', c).strip() for c in cells]
             if len(cols) >= 3:
                 ch_name = cols[0].upper().strip()
@@ -302,73 +266,68 @@ def fetch_nilesat_live_db():
                         "frequency": freq,
                         "polarization": "Horizontal" if polarity == "H" else "Vertical"
                     }
-
         return live_db if live_db else None
-
     except Exception:
         return None
 
 
 def get_active_db():
-    """يُعيد قاعدة البيانات النشطة (حية أو احتياطية)"""
     if st.session_state.live_db_cache:
         return st.session_state.live_db_cache
     return {k: v for k, v in FALLBACK_NILESAT_DB.items()}
 
 
 # ──────────────────────────────────────────────────────
-# 7. زر جلب البيانات الحية — يظهر دائماً في الأعلى
+# 6. زر جلب البيانات الحية
 # ──────────────────────────────────────────────────────
 col_fetch, col_fetch_status = st.columns([2, 4])
 with col_fetch:
-    if st.button(t['btn_fetch_live'], use_container_width=True):
-        with st.spinner(t['fetching']):
+    if st.button("🌐 جلب أحدث بيانات NileSat من الإنترنت الآن", use_container_width=True):
+        with st.spinner("⏳ جاري الجلب من dthsat.com ..."):
             result = fetch_nilesat_live_db()
             if result:
                 st.session_state.live_db_cache = result
                 st.session_state.live_db_last_fetch = datetime.now().strftime("%Y-%m-%d %H:%M")
-                # إعادة تعيين الفحص والصيانة عشان يأخذ البيانات الجديدة
                 st.session_state.scan_done_p1  = False
                 st.session_state.maint_done_p1 = False
                 st.session_state.p1_channels_extra = []
                 st.session_state.maint_details_p1  = []
                 st.session_state.inserted_list_p1  = []
-                st.toast("🛸 " + (f"تم جلب {len(result):,} قناة من NileSat!" if st.session_state.lang == 'ar'
-                                  else f"Fetched {len(result):,} channels from NileSat!"))
+                st.toast(f"🛸 تم جلب {len(result):,} قناة من NileSat!")
                 st.rerun()
             else:
-                st.toast("⚠️ " + (t['fetch_fail']), icon="⚠️")
+                st.toast("⚠️ تعذّر الاتصال بـ dthsat.com، سيتم استخدام القاعدة المحلية.", icon="⚠️")
 
 with col_fetch_status:
     if st.session_state.live_db_cache:
         n   = len(st.session_state.live_db_cache)
-        lft = st.session_state.live_db_last_fetch or "?"
+        lft = st.session_state.live_db_last_fetch or "؟"
         st.markdown(
-            f"<div class='live-badge'>🟢 {t['fetch_success']}{n:,} | ⏱ {lft}</div>",
+            f"<div class='live-badge'>🟢 ✅ تم جلب بيانات NileSat الحية! إجمالي القنوات: {n:,} | ⏱ {lft}</div>",
             unsafe_allow_html=True
         )
     else:
         st.markdown(
-            f"<div class='live-badge' style='border-color:#ff007f;color:#ff007f;'>"
-            f"🔴 {'قاعدة بيانات محلية (اضغط الزر للتحديث)' if st.session_state.lang == 'ar' else 'Local DB (press button to update)'}"
-            f"</div>",
+            "<div class='live-badge' style='border-color:#ff007f;color:#ff007f;'>"
+            "🔴 قاعدة بيانات محلية (اضغط الزر للتحديث)"
+            "</div>",
             unsafe_allow_html=True
         )
 
 st.write("---")
 
 # ──────────────────────────────────────────────────────
-# 8. CATEGORY LISTS & AI CLASSIFIER
+# 7. CATEGORY LISTS & AI CLASSIFIER
 # ──────────────────────────────────────────────────────
 ALL_AVAILABLE_CATEGORIES = [
-    "⛪ قنوات مسيحية"       if st.session_state.lang == 'ar' else "⛪ Christian Channels",
-    "🕌 قنوات إسلامية"      if st.session_state.lang == 'ar' else "🕌 Islamic Channels",
-    "🎬 مسلسلات ودراما"     if st.session_state.lang == 'ar' else "🎬 Drama & Series",
-    "🍿 أفلام عربية وأجنبية" if st.session_state.lang == 'ar' else "🍿 Movies (Ar/En)",
-    "👶 أطفال وكرتون"       if st.session_state.lang == 'ar' else "👶 Kids & Cartoon",
-    "⚽ رياضة"              if st.session_state.lang == 'ar' else "⚽ Sports",
-    "📰 أخبار وسياسة"       if st.session_state.lang == 'ar' else "📰 News & Politics",
-    "📺 قنوات عامة ومنوعات" if st.session_state.lang == 'ar' else "📺 General Channels",
+    "⛪ قنوات مسيحية",
+    "🕌 قنوات إسلامية",
+    "🎬 مسلسلات ودراما",
+    "🍿 أفلام عربية وأجنبية",
+    "👶 أطفال وكرتون",
+    "⚽ رياضة",
+    "📰 أخبار وسياسة",
+    "📺 قنوات عامة ومنوعات",
 ]
 
 def ai_classify(channel_name):
@@ -382,21 +341,18 @@ def ai_classify(channel_name):
                                 "ALKAFEEL","KUNUZ","KUNOUZ","AL NUJABA","ZITOUNA","ALGHADEER"]):
         return ALL_AVAILABLE_CATEGORIES[1]
     if any(w in name for w in ["MOSALSALAT","DRAMA","SERIES","KHOLASA","MASRAWI","SHAHID","NILE DRAMA",
-                                "AL SA3AA MOSALSALATE","DOLLY MOSALSALAT","RAMADAN DRAMA","SHOOF DRAMA",
                                 "FAMILY DRAMA","FAMILY HIKAYAT","4G DRAMA","BEIRUT DRAMA","QUEEN DRAMA",
                                 "DRAMA ALWAN","DRAMA 1"]):
         return ALL_AVAILABLE_CATEGORIES[2]
     if any(w in name for w in ["CINEMA","ROTANA","AFLAM","MIX","FOX","MBC2","MBC 2","MBC4","MBC 4",
                                 "MBC MAX","ACTION","RAMBO","MOVIE","FILM","COMEDY","4G AFLAM","4G CINEMA",
-                                "4G CIMA","4G FILM","4G CLASSIC","AL SHASHA CINEMA","ALYAOUM CINEMA",
-                                "BEIRUT AFLAM","BEIRUT CINEMA","BEIRUT CLASSIC","CIMA TUBE","CINEMA TUBE",
-                                "TOP MOVIES","CINEMA PRO","TOK TOK CINEMA","TOK TOK CIMA","ORPIT PLUS"]):
+                                "4G CIMA","4G FILM","4G CLASSIC","TOP MOVIES","CINEMA PRO"]):
         return ALL_AVAILABLE_CATEGORIES[3]
     if any(w in name for w in ["SPACE TOON","SPACETOON","CN","CARTOON","MAJID","KIDS","TOM","TOYOR",
                                 "BABY","JUNIOR","BATOOT","KARAMEESH","BANNOUTA","COOKIES KIDS"]):
         return ALL_AVAILABLE_CATEGORIES[4]
     if any(w in name for w in ["SPORT","SPORTS","ONTIME","ON TIME","KASS","AD_SPORTS","AD SPORTS",
-                                "SSC","BEIN","MATCH","FOOTBALL","EL-HEDDAF","HEDDAF","7BESHA ACTION"]):
+                                "SSC","BEIN","MATCH","FOOTBALL","EL-HEDDAF","HEDDAF"]):
         return ALL_AVAILABLE_CATEGORIES[5]
     if any(w in name for w in ["NEWS","JAZEERA","ARABIYA","HADATH","CAIRO","SKY NEWS","BBC","CNN",
                                 "EXTRA NEWS","CBC","ON E","SADA","BALADI","MASR","EGYPT NOW","KAHERA",
@@ -407,7 +363,7 @@ def ai_classify(channel_name):
 
 
 # ──────────────────────────────────────────────────────
-# 9. HELPERS
+# 8. HELPERS
 # ──────────────────────────────────────────────────────
 def set_item_prnum(raw, index):
     if "<prNum>" in raw:
@@ -427,7 +383,7 @@ def normalize_modern_node(node, index):
 
 
 # ──────────────────────────────────────────────────────
-# 10. FILE UPLOADER + RESET
+# 9. FILE UPLOADER + RESET
 # ──────────────────────────────────────────────────────
 if 'p1_uploader_key' not in st.session_state:
     st.session_state.p1_uploader_key = 0
@@ -435,14 +391,15 @@ if 'p1_uploader_key' not in st.session_state:
 col_up, col_reset = st.columns([5, 1])
 with col_up:
     uploaded_file = st.file_uploader(
-        t['upload_label'], type=["TLL"],
+        "🚀 اختر ملف القنوات (GlobalClone00001.TLL) من الفلاشة:",
+        type=["TLL"],
         key=f"p1_uploader_{st.session_state.p1_uploader_key}"
     )
 with col_reset:
     st.write("")
     st.write("")
-    if st.button(t['btn_reset'], use_container_width=True):
-        keep = {'lang', 'theme', 'live_db_cache', 'live_db_last_fetch'}
+    if st.button("🔄 إعادة تهيئة", use_container_width=True):
+        keep = {'live_db_cache', 'live_db_last_fetch'}
         new_key = st.session_state.get('p1_uploader_key', 0) + 1
         for k in list(st.session_state.keys()):
             if k not in keep:
@@ -451,10 +408,10 @@ with col_reset:
         st.rerun()
 
 # ──────────────────────────────────────────────────────
-# 11. MAIN LOGIC
+# 10. MAIN LOGIC
 # ──────────────────────────────────────────────────────
 if uploaded_file is None:
-    st.info(t['no_file_msg'])
+    st.info("⬆️ ارفع ملف TLL أولاً لتبدأ العمل.")
 else:
     if st.session_state.get("p1_last_file_name") != uploaded_file.name:
         st.session_state.scan_done_p1     = False
@@ -487,34 +444,30 @@ else:
         _bd = json.loads(legacy_broadcast_tag.text.strip())
         total_ch = len(_bd.get("channelList", []))
         file_type_label = "Modern JSON"
-        file_type_desc  = "حديث (2020+)" if st.session_state.lang == 'ar' else "Modern (2020+)"
+        file_type_desc  = "حديث (2020+)"
     else:
         total_ch = len(re.findall(r'<ITEM>', file_text))
         file_type_label = "Legacy XML"
-        file_type_desc  = "قديم (ما قبل 2020)" if st.session_state.lang == 'ar' else "Legacy (pre-2020)"
+        file_type_desc  = "قديم (ما قبل 2020)"
 
     st.success(
-        f"{t['success_read']} **{model_name}** | "
+        f"🛸 تم قراءة الملف بنجاح! الموديل: **{model_name}** | "
         f"📡 {file_type_label} | "
-        f"{'الإجمالي' if st.session_state.lang == 'ar' else 'Total'}: {total_ch:,} "
-        f"{'قناة' if st.session_state.lang == 'ar' else 'channels'}."
+        f"الإجمالي: {total_ch:,} قناة."
     )
 
     # ══════════════════════════════════════════════════
-    # قسم الفحص والصيانة — الآن يستخدم قاعدة البيانات الحية
+    # قسم الفحص والصيانة
     # ══════════════════════════════════════════════════
     st.write("---")
-    st.write(f"### {t['auto_features_title']}")
+    st.write("### ⚙️ خيارات الفحص الذكي والصيانة الفورية للملف")
 
-    # نجلب القاعدة النشطة (حية أو احتياطية)
     ACTIVE_DB = get_active_db()
 
-    # بناء قاعدة الصيانة ديناميكياً من القاعدة الحية:
-    # نقارن أي قناة في الملف لها تردد مختلف عن القاعدة الحية → نحدّثه
     col_chk1, col_chk2 = st.columns(2)
 
     with col_chk1:
-        scan_active = st.checkbox(t['chk_scan_inject'], value=False, key="chk_scan_p1")
+        scan_active = st.checkbox("📡 تفعيل الفحص التلقائي وزرع القنوات الجديدة المتاحة على القمر فوراً", value=False, key="chk_scan_p1")
 
         if scan_active and not st.session_state.get('scan_done_p1', False):
             if is_modern:
@@ -532,9 +485,7 @@ else:
             new_inserted_names = []
             extra_channels     = []
 
-            # المقارنة: كل قناة في القاعدة الحية غير موجودة في الملف → إضافة
             for db_name_upper, db_info in ACTIVE_DB.items():
-                # نتحقق بمطابقة جزئية مرنة
                 is_present = any(
                     db_name_upper in existing or existing in db_name_upper
                     for existing in current_names_set
@@ -548,8 +499,7 @@ else:
                     }
                     extra_channels.append(nc)
                     new_inserted_names.append(
-                        f"📡 {nc['name']} "
-                        f"({'تردد' if st.session_state.lang == 'ar' else 'Freq'}: {nc['frequency']} {pol_full[0]})"
+                        f"📡 {nc['name']} (تردد: {nc['frequency']} {pol_full[0]})"
                     )
 
             st.session_state.scan_done_p1      = True
@@ -557,8 +507,7 @@ else:
             st.session_state.p1_channels_extra = extra_channels
 
             if new_inserted_names:
-                st.toast("📡 " + ("تم زرع القنوات الجديدة بنجاح!" if st.session_state.lang == 'ar'
-                                  else "New channels injected!"))
+                st.toast("📡 تم زرع القنوات الجديدة بنجاح!")
                 st.rerun()
 
         if scan_active:
@@ -569,11 +518,7 @@ else:
                     "border-left:4px solid #00f0ff;margin-top:10px;'>",
                     unsafe_allow_html=True
                 )
-                label = (f"**✨ {len(injected)} قناة جديدة تم زرعها وإضافتها للملف:**"
-                         if st.session_state.lang == 'ar'
-                         else f"**✨ {len(injected)} new channels injected into the file:**")
-                st.markdown(label)
-                # نعرض أول 30 فقط لتجنب الإطالة
+                st.markdown(f"**✨ {len(injected)} قناة جديدة تم زرعها وإضافتها للملف:**")
                 for item in injected[:30]:
                     st.markdown(f"<span style='color:#00f0ff;font-size:0.85rem;'>{item}</span>",
                                 unsafe_allow_html=True)
@@ -582,27 +527,22 @@ else:
                                 unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
             else:
-                msg = ("ℹ️ لم يتم العثور على قنوات جديدة للزرع (مضافة بالفعل)."
-                       if st.session_state.lang == 'ar'
-                       else "ℹ️ No new channels found to inject (already present).")
-                st.markdown(f"<div style='color:#888;margin-top:10px;'>{msg}</div>",
+                st.markdown("<div style='color:#888;margin-top:10px;'>ℹ️ لم يتم العثور على قنوات جديدة للزرع (مضافة بالفعل).</div>",
                             unsafe_allow_html=True)
 
     with col_chk2:
-        maint_active = st.checkbox(t['chk_modern_maint'], value=False, key="chk_maint_p1")
+        maint_active = st.checkbox("🔧 تفعيل الصيانة الحديثة وتحديث الترددات الميتة والقديمة تلقائياً", value=False, key="chk_maint_p1")
 
         if maint_active and not st.session_state.get('maint_done_p1', False):
             maint_details = []
             freq_patches  = {}
 
-            # مقارنة ترددات الملف بالقاعدة الحية وتحديث المختلف منها
             if is_modern:
                 _tmp_bd2 = json.loads(legacy_broadcast_tag.text.strip())
                 for ch in _tmp_bd2.get("channelList", []):
                     ch_name  = ch.get("channelName", "Unknown")
                     old_f    = ch.get("frequency", 0)
                     name_up  = ch_name.upper()
-                    # بحث في القاعدة الحية
                     db_match = ACTIVE_DB.get(name_up) or ACTIVE_DB.get(
                         next((k for k in ACTIVE_DB if k in name_up or name_up in k), ""), None
                     )
@@ -611,9 +551,7 @@ else:
                         if str(old_f) != str(new_f):
                             freq_patches[name_up] = str(new_f)
                             maint_details.append(
-                                f"🔄 **{ch_name}** | "
-                                f"{'من' if st.session_state.lang == 'ar' else 'from'} `{old_f}` "
-                                f"{'إلى' if st.session_state.lang == 'ar' else 'to'} `{new_f}`"
+                                f"🔄 **{ch_name}** | من `{old_f}` إلى `{new_f}`"
                             )
             else:
                 for m in re.finditer(r'<vchName>(.*?)</vchName>.*?<frequency>(\d+)</frequency>',
@@ -629,9 +567,7 @@ else:
                         if old_f != new_f:
                             freq_patches[name_up] = new_f
                             maint_details.append(
-                                f"🔄 **{ch_name}** | "
-                                f"{'من' if st.session_state.lang == 'ar' else 'from'} `{old_f}` "
-                                f"{'إلى' if st.session_state.lang == 'ar' else 'to'} `{new_f}`"
+                                f"🔄 **{ch_name}** | من `{old_f}` إلى `{new_f}`"
                             )
 
             st.session_state.maint_done_p1    = True
@@ -639,8 +575,7 @@ else:
             st.session_state.p1_freq_patches  = freq_patches
 
             if maint_details:
-                st.toast("🔧 " + (f"تم تحديث {len(maint_details)} تردد!" if st.session_state.lang == 'ar'
-                                  else f"Updated {len(maint_details)} frequencies!"))
+                st.toast(f"🔧 تم تحديث {len(maint_details)} تردد!")
                 st.rerun()
 
         if maint_active:
@@ -651,10 +586,7 @@ else:
                     "border-left:4px solid #ff007f;margin-top:10px;'>",
                     unsafe_allow_html=True
                 )
-                label = (f"**🔧 {len(details)} تردد تم تحديثه من القاعدة الحية:**"
-                         if st.session_state.lang == 'ar'
-                         else f"**🔧 {len(details)} frequencies updated from live database:**")
-                st.markdown(label)
+                st.markdown(f"**🔧 {len(details)} تردد تم تحديثه من القاعدة الحية:**")
                 for detail in details[:20]:
                     st.markdown(f"<span style='color:#ff007f;font-size:0.85rem;'>{detail}</span>",
                                 unsafe_allow_html=True)
@@ -663,14 +595,11 @@ else:
                                 unsafe_allow_html=True)
                 st.markdown("</div>", unsafe_allow_html=True)
             else:
-                msg = ("ℹ️ جميع الترددات الحالية مطابقة لأحدث نسخة."
-                       if st.session_state.lang == 'ar'
-                       else "ℹ️ All current frequencies match the latest version.")
-                st.markdown(f"<div style='color:#888;margin-top:10px;'>{msg}</div>",
+                st.markdown("<div style='color:#888;margin-top:10px;'>ℹ️ جميع الترددات الحالية مطابقة لأحدث نسخة.</div>",
                             unsafe_allow_html=True)
 
     # ══════════════════════════════════════════════════
-    # باقي منطق الصفحة — نفس الكود الأصلي بدون تغيير
+    # منطق الترتيب
     # ══════════════════════════════════════════════════
     st.write("---")
 
@@ -759,21 +688,21 @@ else:
                     existing_names_upper.add(nc['name'].upper())
 
     # ── Search ──
-    st.markdown(f"### {t['search_header']}")
-    search_query = st.text_input("", placeholder=t['search_placeholder'], key="p1_search").strip().upper()
+    st.markdown("### 🔍 البحث عن قناة داخل الملف:")
+    search_query = st.text_input("", placeholder="اكتب اسم القناة هنا...", key="p1_search").strip().upper()
     if search_query:
         results = [
-            {t['search_col_num']: idx, t['search_col_name']: ch["name"],
-             t['search_col_cat']: ai_classify(ch["name"]), t['search_col_freq']: ch["freq"]}
+            {"الرقم": idx, "اسم القناة": ch["name"],
+             "الفئة": ai_classify(ch["name"]), "التردد": ch["freq"]}
             for idx, ch in enumerate(channels_to_sort, 1)
             if search_query in ch["name"].upper()
         ]
-        st.table(results) if results else st.warning(t['search_no_results'])
+        st.table(results) if results else st.warning("⚠️ لا توجد نتائج مطابقة.")
 
     # ── Category sort ──
     st.write("---")
-    st.markdown(f"### {t['config_title']}")
-    user_priority = st.multiselect(t['multiselect_label'],
+    st.markdown("### 🎛️ ترتيب الفئات:")
+    user_priority = st.multiselect("اختر الفئات بالترتيب المطلوب:",
                                    options=ALL_AVAILABLE_CATEGORIES, default=[])
     final_priority = list(user_priority)
     for cat in ALL_AVAILABLE_CATEGORIES:
@@ -789,25 +718,25 @@ else:
         categorized.setdefault(ai_classify(ch["name"]), []).append(ch["name"])
 
     st.write("---")
-    st.markdown(f"### {t['preview_title']}")
+    st.markdown("### 📊 معاينة التوزيع الحالي:")
     col1, col2 = st.columns(2)
     for i, cat_name in enumerate(final_priority):
         if cat_name in categorized:
             ch_list = categorized[cat_name]
             star    = "⭐ " if cat_name in user_priority else ""
-            title   = f"{star}{cat_name} — ({len(ch_list)} {t['channels_count']})"
+            title   = f"{star}{cat_name} — ({len(ch_list)} قناة)"
             with (col1 if i % 2 == 0 else col2):
                 with st.expander(title):
                     st.write(", ".join(ch_list))
 
     if report_changes:
         st.write("---")
-        st.markdown("### 🔁 التعديلات" if st.session_state.lang == 'ar' else "### 🔁 Changes")
+        st.markdown("### 🔁 التعديلات")
         st.table(report_changes)
 
     # ── Build output ──
-    text_report  = f"{t['txt_header']} ({model_name})\n" + "=" * 50 + "\n"
-    text_report += t['txt_order'] + " -> ".join(final_priority) + "\n" + "=" * 50 + "\n\n"
+    text_report  = f"📄 تقرير ترتيب القنوات النهائي ({model_name})\n" + "=" * 50 + "\n"
+    text_report += "🛠️ ترتيب الفئات المختار: " + " -> ".join(final_priority) + "\n" + "=" * 50 + "\n\n"
 
     if is_modern:
         final_list_modern = []
@@ -841,20 +770,22 @@ else:
 
     # ── Download ──
     st.write("---")
-    st.success(t['ready_msg'])
+    st.success("✅ تم تجهيز الملف النهائي للتحميل:")
 
     col_d1, col_d2, col_d3 = st.columns([2, 2, 1])
     with col_d1:
-        st.download_button(label=t['btn_download_tll'], data=final_xml_bytes,
+        st.download_button(label="📥 تحميل ملف الشاشة النهائي (GlobalClone00001.TLL)",
+                           data=final_xml_bytes,
                            file_name="GlobalClone00001.TLL",
                            mime="application/octet-stream", use_container_width=True)
     with col_d2:
-        st.download_button(label=t['btn_download_txt'], data=text_report,
+        st.download_button(label="📄 تحميل تقرير الترتيب (Channels_List.txt)",
+                           data=text_report,
                            file_name="Channels_List.txt",
                            mime="text/plain; charset=utf-8", use_container_width=True)
     with col_d3:
-        if st.button(t['btn_reset'], key="reset_bottom", use_container_width=True):
-            keep = {'lang', 'theme', 'live_db_cache', 'live_db_last_fetch'}
+        if st.button("🔄 إعادة تهيئة / رفع ملف جديد", key="reset_bottom", use_container_width=True):
+            keep = {'live_db_cache', 'live_db_last_fetch'}
             new_key = st.session_state.get('p1_uploader_key', 0) + 1
             for k in list(st.session_state.keys()):
                 if k not in keep:
@@ -864,10 +795,19 @@ else:
 
     # ── LG trick note ──
     st.write("---")
-    trick_lines = t['lg_trick_text'].split('\n')
+    lg_trick_text = (
+        "في بعض الحالات، بعد تنزيل ملف القنوات على الشاشة، قد تشعر أن القنوات ليست منظمة كما رتبتها. "
+        "لحل هذا الأمر فوراً واجبار الشاشة على تفعيل الترتيب الصحيح، قم بالآتي:\n\n"
+        "1. من إعدادات التلفزيون اختار القنوات (Channels).\n"
+        "2. بعد ذلك اختار مدير القنوات (Channel Manager).\n"
+        "3. اختار التعديل على كل القنوات (Edit All Channels).\n"
+        "4. ستظهر لك القنوات المرتبة ويكون بعضها في وضع مخفي، قم بتحديد كل القنوات واختار استعادة (Restore).\n\n"
+        "ملحوظة: تفعل هذه الخطوة فقط إذا شعرت أن الملف بعد التنزيل غير مرتب كما حددته على الموقع."
+    )
+    trick_lines = lg_trick_text.split('\n')
     st.markdown(f"""
 <div style="background:rgba(255,193,7,0.1);border:2px solid #ffc107;border-radius:14px;padding:22px;margin-top:10px;">
-<div style="color:#ffc107;font-size:1.1rem;font-weight:bold;margin-bottom:12px;">{t['lg_trick_title']}</div>
-{''.join(f'<div style="margin:6px 0;line-height:1.7;">{line}</div>' for line in trick_lines if line.strip())}
+<div style="color:#ffc107;font-size:1.1rem;font-weight:bold;margin-bottom:12px;">💡 ملحوظة فنية هامة جداً بعد تنزيل الملف على شاشة LG:</div>
+{''.join(f'<div style="margin:6px 0;line-height:1.7;color:#e0e0e0;">{line}</div>' for line in trick_lines if line.strip())}
 </div>
 """, unsafe_allow_html=True)
