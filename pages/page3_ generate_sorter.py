@@ -1,3 +1,4 @@
+
 import streamlit as st
 import xml.etree.ElementTree as ET
 import json
@@ -10,8 +11,6 @@ from datetime import datetime
 # 1. SESSION STATE
 # ──────────────────────────────────────────────────────
 for key, val in {
-    'lang': 'ar',
-    'theme': 'dark',
     'p3_step': 1,
     'p3_answers': {},
     'p3_output_bytes': None,
@@ -23,153 +22,160 @@ for key, val in {
         st.session_state[key] = val
 
 # ──────────────────────────────────────────────────────
-# 2. UI TEXT
+# 2. PAGE CONFIG & CSS (نفس استايل صفحة 1 بالكامل)
 # ──────────────────────────────────────────────────────
-UI = {
-    'ar': {
-        'title':        "📺 RAMBO — مولّد ملفات القنوات",
-        'subtitle':     "⚡ أجب على الأسئلة وسيتم توليد ملف TLL مخصص لشاشتك",
-        'step1_header': "🛰️ الخطوة 1: معلومات الإعداد",
-        'q_sat':        "القمر الصناعي *",
-        'q_country':    "بلد البث *",
-        'q_inch':       "حجم الشاشة (بوصة)",
-        'q_model':      "موديل الشاشة (اختياري)",
-        'q_year':       "سنة الصنع *",
-        'sat_opts':     ["🛰️ نايل سات 7°W", "🛰️ عرب سات / بدر 26°E", "🛰️ هوت بيرد 13°E", "🛰️ يوتلسات 8°W"],
-        'country_opts': ["🇪🇬 مصر", "🇸🇦 السعودية", "🇦🇪 الإمارات", "🇯🇴 الأردن", "🇱🇧 لبنان", "🇸🇩 السودان", "🇩🇿 الجزائر", "🇲🇦 المغرب", "🇹🇳 تونس", "🇱🇾 ليبيا", "🇮🇶 العراق", "🇸🇾 سوريا", "🇾🇪 اليمن", "🇰🇼 الكويت", "🇶🇦 قطر", "🇧🇭 البحرين", "🇴🇲 عُمان"],
-        'inch_opts':    ["32", "43", "49", "50", "55", "65", "75", "86"],
-        'year_opts':    ["2024 / 2025 (جديد)", "2022 / 2023", "2020 / 2021", "2018 / 2019", "2016 / 2017 (قديم)"],
-        'btn_next':     "▶️ توليد الملف",
-        'step2_header': "📊 الخطوة 2: معاينة الملف المولَّد",
-        'info_modern':  "✅ نوع الملف: **حديث (Modern JSON)** — مناسب لشاشات 2020+",
-        'info_legacy':  "✅ نوع الملف: **قديم (Legacy XML)** — مناسب لشاشات ما قبل 2020",
-        'preview_ch':   "📋 عينة من القنوات المضمنة:",
-        'btn_download': "📥 تحميل ملف الشاشة (GlobalClone00001.TLL)",
-        'btn_report':   "📄 تحميل تقرير القنوات (Channels_List.txt)",
-        'btn_back':     "🔄 إنشاء ملف جديد",
-        'success_msg':  "🎉 تم توليد الملف بنجاح! جاهز للتحميل.",
-        'warn_sat':     "⚠️ اختر القمر الصناعي.",
-        'warn_country': "⚠️ اختر بلد البث.",
-        'warn_year':    "⚠️ اختر سنة الصنع.",
-        'col_num':      "الرقم",
-        'col_name':     "اسم القناة",
-        'col_freq':     "التردد",
-        'col_cat':      "الفئة",
-        'file_type_lbl':"نوع الملف المولَّد:",
-        'ch_count_lbl': "إجمالي القنوات:",
-        'sat_lbl':      "القمر الصناعي:",
-        'country_lbl':  "بلد البث:",
-        'ai_section':   "⚡ ميزات التحديث الذكي",
-        'ai_update_freq': "⚛️ تحديث الترددات تلقائياً",
-        'ai_new_ch':    "✨ إضافة القنوات الجديدة المتاحة",
-        'ai_freq_info': "سيتم مقارنة الترددات الحالية بقاعدة البيانات المحدثة وتصحيح أي تردد قديم.",
-        'ai_newch_info':"سيتم فحص القنوات الجديدة المتاحة على القمر وإضافتها تلقائياً للملف.",
-        'ai_freq_done': "✅ تم تحديث الترددات",
-        'ai_newch_done': "✅ تم إضافة قنوات جديدة",
-        'ai_freq_updated': "قناة تم تحديث ترددها",
-        'ai_new_found': "قناة جديدة تم إضافتها",
-        'ai_freq_col_ch': "القناة",
-        'ai_freq_col_old': "التردد القديم",
-        'ai_freq_col_new': "التردد الجديد",
-        'ai_freq_col_src': "المصدر",
-        'ai_newch_col_name': "اسم القناة",
-        'ai_newch_col_freq': "التردد",
-        'ai_newch_col_cat': "الفئة",
-        'cat_section': "🎛️ ترتيب الفئات",
-        'cat_multiselect': "اختر الفئات بالترتيب المطلوب (الأول = الأعلى):",
-        'cat_preview': "📊 معاينة توزيع القنوات:",
-        'cat_channels': "قناة",
-        'lg_trick_title': "💡 ملحوظة فنية هامة جداً بعد تنزيل الملف على شاشة LG:",
-        'lg_trick_text': (
-            "في بعض الحالات، بعد تنزيل ملف القنوات على الشاشة، قد تشعر أن القنوات ليست منظمة كما رتبتها. "
-            "لحل هذا الأمر فوراً واجبار الشاشة على تفعيل الترتيب الصحيح، قم بالآتي:\n\n"
-            "1. من إعدادات التلفزيون اختار القنوات (Channels).\n"
-            "2. بعد ذلك اختار مدير القنوات (Channel Manager).\n"
-            "3. اختار التعديل على كل القنوات (Edit All Channels).\n"
-            "4. ستظهر لك القنوات المرتبة ويكون بعضها في وضع مخفي، قم بتحديد كل القنوات واختار استعادة (Restore).\n\n"
-            "ملحوظة: تفعل هذه الخطوة فقط إذا شعرت أن الملف بعد التنزيل غير مرتب كما حددته على الموقع."
-        ),
-        'btn_fetch_live': "🌐 جلب أحدث بيانات NileSat من الإنترنت",
-        'fetching': "⏳ جاري الجلب من dthsat.com ...",
-        'fetch_success': "✅ تم جلب بيانات NileSat الحية! إجمالي القنوات: ",
-        'fetch_fail': "⚠️ تعذّر الاتصال بـ dthsat.com، سيتم استخدام القاعدة المحلية.",
-        'live_badge_on': "قناة حية",
-        'live_badge_off': "قاعدة محلية (اضغط للتحديث)",
-    },
-    'en': {
-        'title':        "📺 RAMBO — Channel File Generator",
-        'subtitle':     "⚡ Answer the questions and get a custom TLL file for your TV",
-        'step1_header': "🛰️ Step 1: Setup Information",
-        'q_sat':        "Satellite *",
-        'q_country':    "Broadcast Country *",
-        'q_inch':       "Screen Size (inch)",
-        'q_model':      "TV Model (optional)",
-        'q_year':       "Year of Manufacture *",
-        'sat_opts':     ["🛰️ NileSat 7°W", "🛰️ ArabSat / Badr 26°E", "🛰️ HotBird 13°E", "🛰️ Eutelsat 8°W"],
-        'country_opts': ["🇪🇬 Egypt", "🇸🇦 Saudi Arabia", "🇦🇪 UAE", "🇯🇴 Jordan", "🇱🇧 Lebanon", "🇸🇩 Sudan", "🇩🇿 Algeria", "🇲🇦 Morocco", "🇹🇳 Tunisia", "🇱🇾 Libya", "🇮🇶 Iraq", "🇸🇾 Syria", "🇾🇪 Yemen", "🇰🇼 Kuwait", "🇶🇦 Qatar", "🇧🇭 Bahrain", "🇴🇲 Oman"],
-        'inch_opts':    ["32", "43", "49", "50", "55", "65", "75", "86"],
-        'year_opts':    ["2024 / 2025 (New)", "2022 / 2023", "2020 / 2021", "2018 / 2019", "2016 / 2017 (Old)"],
-        'btn_next':     "▶️ Generate File",
-        'step2_header': "📊 Step 2: Preview Generated File",
-        'info_modern':  "✅ File Type: **Modern (JSON)** — for 2020+ TVs",
-        'info_legacy':  "✅ File Type: **Legacy (XML)** — for pre-2020 TVs",
-        'preview_ch':   "📋 Sample of included channels:",
-        'btn_download': "📥 Download TV File (GlobalClone00001.TLL)",
-        'btn_report':   "📄 Download Channel Report (Channels_List.txt)",
-        'btn_back':     "🔄 Generate New File",
-        'success_msg':  "🎉 File generated successfully! Ready to download.",
-        'warn_sat':     "⚠️ Please select a satellite.",
-        'warn_country': "⚠️ Please select a broadcast country.",
-        'warn_year':    "⚠️ Please select manufacture year.",
-        'col_num':      "No.",
-        'col_name':     "Channel Name",
-        'col_freq':     "Frequency",
-        'col_cat':      "Category",
-        'file_type_lbl':"Generated file type:",
-        'ch_count_lbl': "Total channels:",
-        'sat_lbl':      "Satellite:",
-        'country_lbl':  "Country:",
-        'ai_section':   "⚡ Smart Update Features",
-        'ai_update_freq': "⚛️ Auto-Update Frequencies",
-        'ai_new_ch':    "✨ Add New Available Channels",
-        'ai_freq_info': "Compares current frequencies against updated database and corrects outdated ones.",
-        'ai_newch_info':"Scans for new channels available on the satellite and adds them automatically.",
-        'ai_freq_done': "✅ Frequencies Updated",
-        'ai_newch_done': "✅ New Channels Added",
-        'ai_freq_updated': "channel(s) frequency updated",
-        'ai_new_found': "new channel(s) added",
-        'ai_freq_col_ch': "Channel",
-        'ai_freq_col_old': "Old Freq",
-        'ai_freq_col_new': "New Freq",
-        'ai_freq_col_src': "Source",
-        'ai_newch_col_name': "Channel Name",
-        'ai_newch_col_freq': "Frequency",
-        'ai_newch_col_cat': "Category",
-        'cat_section': "🎛️ Category Order",
-        'cat_multiselect': "Select categories in priority order (first = top):",
-        'cat_preview': "📊 Channel distribution preview:",
-        'cat_channels': "channels",
-        'lg_trick_title': "💡 Important Technical Note After Loading File on LG TV:",
-        'lg_trick_text': (
-            "In some cases, after loading the channel file onto the TV, you may feel the channels are not "
-            "organized as you sorted them. To fix this immediately and force the TV to apply the correct order:\n\n"
-            "1. From TV Settings, select Channels.\n"
-            "2. Then select Channel Manager.\n"
-            "3. Select Edit All Channels.\n"
-            "4. The sorted channels will appear with some hidden — select all channels and choose Restore.\n\n"
-            "Note: Only perform this step if you feel the file after loading is not sorted as you set on the site."
-        ),
-        'btn_fetch_live': "🌐 Fetch Latest NileSat Data from Internet",
-        'fetching': "⏳ Fetching from dthsat.com ...",
-        'fetch_success': "✅ Live NileSat data fetched! Total channels: ",
-        'fetch_fail': "⚠️ Could not reach dthsat.com, using local database.",
-        'live_badge_on': "live channels",
-        'live_badge_off': "Local DB (press to update)",
-    }
+st.set_page_config(page_title="RAMBO P3 — مولّد الملفات", page_icon="📡", layout="wide")
+
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Cairo:wght@400;600;700;900&display=swap');
+
+.main {
+    background: radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%) !important;
+    font-family: 'Cairo', sans-serif !important;
+    direction: rtl !important;
+    text-align: right !important;
 }
 
+h1 {
+    color: #ff007f !important;
+    text-shadow: 0 0 10px #ff007f, 0 0 25px rgba(255,0,127,0.5) !important;
+    font-family: 'Orbitron', 'Cairo' !important;
+    font-weight: 900 !important;
+    text-align: center !important;
+    font-size: 52px !important;
+    direction: ltr !important;
+}
+
+h2 {
+    color: #00f0ff !important;
+    text-shadow: 0 0 5px #00f0ff !important;
+    font-family: 'Orbitron', 'Cairo' !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+}
+
+h3, h4 {
+    color: #00f0ff !important;
+    font-family: 'Cairo' !important;
+    font-weight: 700 !important;
+}
+
+p, label, .stMarkdown, .stBody {
+    color: #e0e0e0 !important;
+    font-size: 18px !important;
+    line-height: 1.9 !important;
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+.center-text {
+    text-align: center !important;
+    direction: rtl !important;
+}
+
+.stButton > button {
+    background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important;
+    color: #ffffff !important;
+    border: 2px solid #ff007f !important;
+    border-radius: 12px !important;
+    font-weight: bold !important;
+    font-size: 1.05rem !important;
+    padding: 0.6rem !important;
+    box-shadow: 0 0 15px rgba(255,0,127,0.4) !important;
+    font-family: 'Cairo' !important;
+    width: 100% !important;
+}
+
+.stDownloadButton > button {
+    background: linear-gradient(135deg, #00b894 0%, #00695c 100%) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 12px !important;
+    font-weight: bold !important;
+    width: 100% !important;
+    font-family: 'Cairo' !important;
+}
+
+.stButton {
+    text-align: center !important;
+}
+
+.stInfo {
+    background: rgba(0,240,255,0.15) !important;
+    border-left: 5px solid #00f0ff !important;
+    color: #00f0ff !important;
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+.stSuccess {
+    background: rgba(255,0,127,0.15) !important;
+    border-left: 5px solid #ff007f !important;
+    color: #ff6b9f !important;
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+.stWarning {
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+.stCheckbox label {
+    color: #e0e0e0 !important;
+}
+
+.stExpander {
+    border: 1px solid #00f0ff !important;
+    border-radius: 10px !important;
+}
+
+.stSelectbox > div > div,
+.stTextInput > div > div > input {
+    background-color: rgba(13,7,33,0.85) !important;
+    color: #00f0ff !important;
+    border: 2px solid #00f0ff !important;
+    border-radius: 10px !important;
+}
+
+.live-badge {
+    display: inline-block;
+    background: linear-gradient(90deg, #00f0ff22, #ff007f22);
+    border: 1px solid #00f0ff;
+    border-radius: 8px;
+    padding: 6px 14px;
+    color: #00f0ff;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+}
+
+hr {
+    border-color: #00f0ff !important;
+    opacity: 0.5 !important;
+}
+
+.rambo-card {
+    background: rgba(13,7,33,0.85);
+    border: 2px solid #00f0ff;
+    box-shadow: 0 5px 15px rgba(0,240,255,0.35);
+    border-radius: 14px;
+    padding: 22px;
+    margin-bottom: 18px;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ──────────────────────────────────────────────────────
-# 3. LIVE DB (نفس منطق صفحة 2)
+# 3. HEADER
+# ──────────────────────────────────────────────────────
+st.markdown("<h1>📺 RamboAITV</h1>", unsafe_allow_html=True)
+st.markdown("<h2>📡 مولّد ملفات القنوات</h2>", unsafe_allow_html=True)
+st.markdown("<p class='center-text' style='color:#ff007f; font-weight:700;'>🇪🇬 بأيدٍ مصرية ودماغ منياوية</p>", unsafe_allow_html=True)
+st.markdown("---")
+
+# ──────────────────────────────────────────────────────
+# 4. LIVE DB
 # ──────────────────────────────────────────────────────
 FALLBACK_NILESAT_DB = {
     "AL HAYAT":            {"frequency": 12207, "polarization": "Vertical"},
@@ -229,13 +235,7 @@ FALLBACK_NILESAT_DB = {
 @st.cache_data(ttl=3600)
 def fetch_nilesat_live_db_p3():
     try:
-        headers = {
-            "User-Agent": (
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                "AppleWebKit/537.36 (KHTML, like Gecko) "
-                "Chrome/120.0.0.0 Safari/537.36"
-            )
-        }
+        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
         resp = requests.get("https://www.dthsat.com/Nile-Sat", headers=headers, timeout=12)
         resp.raise_for_status()
         live_db = {}
@@ -267,19 +267,53 @@ def get_active_db_p3():
 
 
 # ──────────────────────────────────────────────────────
-# 4. CHANNEL CLASSIFIER
+# 5. زر جلب البيانات الحية
+# ──────────────────────────────────────────────────────
+col_fetch, col_fetch_status = st.columns([2, 4])
+with col_fetch:
+    if st.button("🌐 جلب أحدث بيانات NileSat من الإنترنت الآن", use_container_width=True, key="p3_fetch_live_btn"):
+        with st.spinner("⏳ جاري الجلب من dthsat.com ..."):
+            result = fetch_nilesat_live_db_p3()
+            if result:
+                st.session_state.p3_live_db_cache = result
+                st.session_state.p3_live_db_last_fetch = datetime.now().strftime("%Y-%m-%d %H:%M")
+                st.toast(f"🛸 تم جلب {len(result):,} قناة من NileSat!")
+                st.rerun()
+            else:
+                st.toast("⚠️ تعذّر الاتصال بـ dthsat.com، سيتم استخدام القاعدة المحلية.", icon="⚠️")
+
+with col_fetch_status:
+    if st.session_state.get('p3_live_db_cache'):
+        n   = len(st.session_state.p3_live_db_cache)
+        lft = st.session_state.get('p3_live_db_last_fetch', '؟')
+        st.markdown(
+            f"<div class='live-badge'>🟢 ✅ تم جلب بيانات NileSat الحية! إجمالي القنوات: {n:,} | ⏱ {lft}</div>",
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            "<div class='live-badge' style='border-color:#ff007f;color:#ff007f;'>"
+            "🔴 قاعدة بيانات محلية (اضغط الزر للتحديث)"
+            "</div>",
+            unsafe_allow_html=True
+        )
+
+st.write("---")
+
+# ──────────────────────────────────────────────────────
+# 6. CLASSIFIER
 # ──────────────────────────────────────────────────────
 def ai_classify(name):
     n = name.upper().strip()
     if any(w in n for w in ["CTV","AGHAPY","MESAT","KARMA","ALKARMA","NOURSAT","SAT-7","SAT7","AL HAYAT","HAYAT TV","MIRACLE","COPTIC","CHURCH","LOGOS","ALFADY","SALVATION","LOVEWORLD","KOOGI","NOUR MARIAM","EL HAYAT TV"]):
         return "⛪ مسيحية"
-    if any(w in n for w in ["QURAN","RAHMA","MAJD","MAKKA","IQRAA","IQRA","HUDA","WESAL","ISLAM","SUNNAH","AL-MAJD","ALMAJD","PRAYER","AZAN","TARAWEEH","MEKKA","ALMAJD","AL QURAN","AL-QURAN","KAREM","KORAN"]):
+    if any(w in n for w in ["QURAN","RAHMA","MAJD","MAKKA","IQRAA","IQRA","HUDA","WESAL","ISLAM","SUNNAH","AL-MAJD","ALMAJD","PRAYER","AZAN","MEKKA","AL QURAN","AL-QURAN","KAREM","KORAN"]):
         return "🕌 إسلامية"
     if any(w in n for w in ["MOSALSALAT","DRAMA","SERIES","KHOLASA","MASRAWI","SHAHID","MUSALSAL","SERIE","MUSALSALAT"]):
         return "🎬 دراما"
     if any(w in n for w in ["CINEMA","ROTANA","AFLAM","MIX","FOX","MBC2","MBC 2","MBC4","MBC 4","MBC MAX","ACTION","RAMBO","MOVIE","FILM","COMEDY","OSN MOVIES","STAR MOVIES"]):
         return "🍿 أفلام"
-    if any(w in n for w in ["SPACE TOON","SPACETOON","CARTOON","MAJID","KIDS","TOYOR","BABY","JUNIOR","BOOMERANG","DISNEY","BARAEM","TOM AND JERRY","NICKELODEON"]):
+    if any(w in n for w in ["SPACE TOON","SPACETOON","CARTOON","MAJID","KIDS","TOYOR","BABY","JUNIOR","BOOMERANG","DISNEY","BARAEM","NICKELODEON"]):
         return "👶 أطفال"
     if any(w in n for w in ["SPORT","SPORTS","ONTIME","ON TIME","KASS","AD_SPORTS","AD SPORTS","SSC","BEIN","MATCH","FOOTBALL","SOCCER","GOLF","TENNIS","OLYMPIC","STADIUM"]):
         return "⚽ رياضة"
@@ -289,7 +323,7 @@ def ai_classify(name):
 
 
 # ──────────────────────────────────────────────────────
-# 5. LIVE FREQ DB (محدّث 2024-2025)
+# 7. LIVE FREQ DB
 # ──────────────────────────────────────────────────────
 LIVE_FREQ_DB = {
     "AL JAZEERA HD":         {"freq": 10853, "src": "lyngsat"},
@@ -308,8 +342,6 @@ LIVE_FREQ_DB = {
     "MBC ACTION":            {"freq": 11938, "src": "lyngsat"},
     "MBC MASR":              {"freq": 11938, "src": "lyngsat"},
     "MBC MASR 2":            {"freq": 11938, "src": "lyngsat"},
-    "MBC MASR DRAMA HD":     {"freq": 11221, "src": "flysat"},
-    "MBC MASR HD":           {"freq": 11221, "src": "flysat"},
     "CBC":                   {"freq": 12092, "src": "lyngsat"},
     "CBC DRAMA":             {"freq": 12092, "src": "lyngsat"},
     "EXTRA NEWS":            {"freq": 12092, "src": "lyngsat"},
@@ -319,7 +351,6 @@ LIVE_FREQ_DB = {
     "ON TIME SPORTS 2":      {"freq": 11861, "src": "lyngsat"},
     "ON TIME SPORTS 3":      {"freq": 11861, "src": "lyngsat"},
     "ROTANA CINEMA":         {"freq": 11938, "src": "lyngsat"},
-    "ROTANA AFLAM":          {"freq": 11938, "src": "lyngsat"},
     "ROTANA CLASSIC":        {"freq": 11938, "src": "lyngsat"},
     "ROTANA DRAMA":          {"freq": 11938, "src": "lyngsat"},
     "SPACE TOON":            {"freq": 11727, "src": "lyngsat"},
@@ -329,18 +360,14 @@ LIVE_FREQ_DB = {
     "SAT-7 KIDS":            {"freq": 11354, "src": "lyngsat"},
     "AL HAYAT":              {"freq": 11392, "src": "lyngsat"},
     "IQRAA":                 {"freq": 11938, "src": "lyngsat"},
-    "ALMAJD TV":             {"freq": 11862, "src": "lyngsat"},
-    "RAHMA":                 {"freq": 11938, "src": "lyngsat"},
     "QURAN KAREEM":          {"freq": 11727, "src": "lyngsat"},
     "HUDA TV":               {"freq": 11727, "src": "lyngsat"},
     "NILE NEWS":             {"freq": 11785, "src": "lyngsat"},
     "NILE DRAMA":            {"freq": 11785, "src": "lyngsat"},
     "NILE CINEMA":           {"freq": 11785, "src": "lyngsat"},
-    "NILE SPORT":            {"freq": 11785, "src": "lyngsat"},
     "DMC":                   {"freq": 12091, "src": "lyngsat"},
     "DMC DRAMA":             {"freq": 12091, "src": "lyngsat"},
     "AL NAHAR":              {"freq": 11785, "src": "lyngsat"},
-    "AL NAHAR DRAMA":        {"freq": 11785, "src": "lyngsat"},
     "SADA AL BALAD":         {"freq": 11785, "src": "lyngsat"},
     "CBC SOFRA":             {"freq": 12092, "src": "lyngsat"},
     "CBC EXTRA":             {"freq": 12092, "src": "lyngsat"},
@@ -354,7 +381,7 @@ LIVE_FREQ_DB = {
 }
 
 # ──────────────────────────────────────────────────────
-# 6. EXTENDED NEW CHANNELS
+# 8. EXTENDED NEW CHANNELS
 # ──────────────────────────────────────────────────────
 EXTENDED_NEW_CHANNELS = [
     {"name": "Al Qahera News",       "freq": 12092, "pol": "Vertical",   "sat_id": "3530"},
@@ -395,256 +422,208 @@ EXTENDED_NEW_CHANNELS = [
 ]
 
 # ──────────────────────────────────────────────────────
-# 7. CHANNEL DATABASE (NileSat كامل)
+# 9. CHANNEL DATABASES
 # ──────────────────────────────────────────────────────
 NILESAT_DB = [
-    # ─── ⛪ Christian ───
-    {"name": "AGHAPY TV", "freq": 10815, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Al Hayat", "freq": 11392, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Al Karma Family", "freq": 10815, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Alfady", "freq": 11096, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Alkarma Discipleship", "freq": 11392, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Alkarma ME 1", "freq": 11096, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "AlKarma Praise", "freq": 11354, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "CTV EGYPT", "freq": 12687, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Koogi", "freq": 11096, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Logos TV", "freq": 11096, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Loveworld Arabic", "freq": 11096, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "MESat", "freq": 11602, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Nour Mariam", "freq": 11096, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Noursat", "freq": 10815, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "SALVATION TV MENA", "freq": 11096, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "SAT-7 ARABIC", "freq": 11354, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "SAT-7 KIDS", "freq": 11354, "pol": "Vertical", "sat_id": "3530"},
-    # ─── 🕌 Islamic ───
-    {"name": "Al Quran", "freq": 11258, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "AL RAHMA", "freq": 10873, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Almajd General", "freq": 11373, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Huda TV", "freq": 11564, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Makkah TV", "freq": 12399, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Misr Quran Kareem", "freq": 11861, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Quran Kareem", "freq": 11411, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Saudi CH For Quran", "freq": 12149, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Saudi CH For Sunnah", "freq": 12149, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "IQRAA", "freq": 11938, "pol": "Vertical", "sat_id": "3530"},
-    # ─── 🎬 Drama ───
-    {"name": "Al-Nahar Drama", "freq": 11785, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "CBC Drama", "freq": 11785, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "dmc drama", "freq": 12091, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "MBC Drama", "freq": 11471, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "MBC MASR DRAMA HD", "freq": 11219, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Melody Drama", "freq": 11678, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Nile Drama", "freq": 11842, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "ON Drama", "freq": 11861, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Panorama Drama", "freq": 12053, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Panorama Drama 2", "freq": 12053, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Rotana Drama", "freq": 12226, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Zee Alwan", "freq": 11277, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Dolly Drama", "freq": 11678, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Fox Drama", "freq": 11678, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Drama Live", "freq": 11678, "pol": "Vertical", "sat_id": "3530"},
-    # ─── 🍿 Movies ───
-    {"name": "Aflam 1", "freq": 11177, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Aflam 2", "freq": 11177, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "MBC 2", "freq": 11219, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "MBC 4", "freq": 11471, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "MBC Action", "freq": 11471, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Melody Aflam", "freq": 11678, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Mix", "freq": 11785, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Nile Cinema", "freq": 11842, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Nile Comedy", "freq": 11842, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Panorama Film", "freq": 12053, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Rotana Cinema EGY", "freq": 12226, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Rotana Cinema KSA", "freq": 12226, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Rotana Classic", "freq": 12226, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Rotana Khalijia", "freq": 12226, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Zee Aflam", "freq": 12322, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Dolly cinema", "freq": 11678, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Cinema 1", "freq": 11177, "pol": "Vertical", "sat_id": "3530"},
-    # ─── 👶 Kids ───
-    {"name": "BATOOT KIDS TV", "freq": 11678, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Cartoon Network", "freq": 11137, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "SPACETOON ARABIC", "freq": 11785, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Toyor Aljanah", "freq": 11258, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Karameesh TV", "freq": 11430, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Kidsy", "freq": 10727, "pol": "Vertical", "sat_id": "3530"},
-    # ─── ⚽ Sports ───
-    {"name": "AD Sport 1 HD", "freq": 11411, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "AD Sport 2 HD", "freq": 11411, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "AlHayat Sport", "freq": 12206, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Alkass one HD", "freq": 11919, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Alkass two HD", "freq": 12187, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "beIN SPORTS", "freq": 11054, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "beIN SPORTS 5", "freq": 11013, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "beIN SPORTS MAX 1", "freq": 12604, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "DUBAI SPORTS 1 HD", "freq": 12418, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "DUBAI SPORTS 2 HD", "freq": 12418, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Jordan Sport", "freq": 11957, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "KSA SPORTS 1", "freq": 12149, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "KSA SPORTS 2", "freq": 12149, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Kuwait Sports", "freq": 11054, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Nile Sport", "freq": 11842, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "ON TIME SPORTS 1", "freq": 11861, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "ON TIME SPORTS 2", "freq": 11861, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Sharjah Sport HD", "freq": 11013, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "SSC 1", "freq": 11727, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "SSC 2", "freq": 11727, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "SSC 3", "freq": 11727, "pol": "Vertical", "sat_id": "3530"},
-    # ─── 📰 News ───
-    {"name": "Al Arabiya", "freq": 11747, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Al Hadath", "freq": 11471, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Al Jazeera", "freq": 10971, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Al Jazeera HD", "freq": 12521, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Al Mayadeen HD", "freq": 11641, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Al Qahera News", "freq": 11747, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "BBC Arabic", "freq": 12206, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "CBC", "freq": 11785, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "CBC HD", "freq": 12091, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "CBC Sofra", "freq": 11785, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "CNN", "freq": 11137, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "dmc", "freq": 12091, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Echorouk News", "freq": 10921, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Extra News", "freq": 11785, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "MBC MASR", "freq": 12015, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "MBC MASR 2", "freq": 11219, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Nile News", "freq": 11842, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "ON E", "freq": 11861, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Sada El Balad", "freq": 11823, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Sky News Arabia", "freq": 11976, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Al-Nahar One", "freq": 11785, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "France 24", "freq": 12206, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Al Hurra HD", "freq": 11258, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "RT ARABIC HD", "freq": 11957, "pol": "Vertical", "sat_id": "3530"},
-    # ─── 📺 General ───
-    {"name": "Abu Dhabi TV HD", "freq": 11411, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Al Jazeera English", "freq": 10971, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Dubai TV HD", "freq": 12418, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Jordan HD", "freq": 11957, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Kuwait TV 1", "freq": 11054, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Kuwait TV 2", "freq": 11054, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "LBC SAT", "freq": 12226, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "MBC 1", "freq": 11471, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "MBC 3", "freq": 11471, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "MBC Bollywood", "freq": 11471, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Oman TV General HD", "freq": 12130, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Qatar TV HD", "freq": 10834, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Rotana Music", "freq": 12226, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Saudi TV", "freq": 12149, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Syria TV", "freq": 10971, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "TeN TV", "freq": 11842, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "TRT Arabi HD", "freq": 11258, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Al Sharqiya HD", "freq": 11785, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Al Rasheed TV HD", "freq": 11315, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Iraqia Ent HD", "freq": 12562, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Dijlah TV HD", "freq": 11258, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Al Forat HD", "freq": 11137, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Mazzika", "freq": 11900, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Nogoum FM TV", "freq": 11900, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "ROYA HD", "freq": 11957, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Almamlaka TV", "freq": 11957, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Samira TV", "freq": 10921, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Ennahar TV Algerie", "freq": 10921, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Echorouk TV", "freq": 10921, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Tunisia Nat1 HD", "freq": 10873, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "2M Maroc", "freq": 12015, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Libya Al Ahrar HD", "freq": 10815, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Sudan TV", "freq": 11747, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Yemen TV HD", "freq": 11096, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Bahrain TV HD", "freq": 12728, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Al Ekhbaria HD", "freq": 12284, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Asharq News Channel HD", "freq": 12360, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "Alaraby HD TV", "freq": 12034, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "NHK World Japan", "freq": 11976, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "DW Arabia HD", "freq": 11137, "pol": "Vertical", "sat_id": "3530"},
-    {"name": "France 24 Eng", "freq": 11976, "pol": "Vertical", "sat_id": "3530"},
+    {"name": "AGHAPY TV",             "freq": 10815, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Hayat",              "freq": 11392, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Karma Family",       "freq": 10815, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Alfady",                "freq": 11096, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Alkarma Discipleship",  "freq": 11392, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Alkarma ME 1",          "freq": 11096, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "AlKarma Praise",        "freq": 11354, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "CTV EGYPT",             "freq": 12687, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Koogi",                 "freq": 11096, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Logos TV",              "freq": 11096, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Loveworld Arabic",      "freq": 11096, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "MESat",                 "freq": 11602, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Nour Mariam",           "freq": 11096, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Noursat",               "freq": 10815, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "SALVATION TV MENA",     "freq": 11096, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "SAT-7 ARABIC",          "freq": 11354, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "SAT-7 KIDS",            "freq": 11354, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Quran",              "freq": 11258, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "AL RAHMA",              "freq": 10873, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Almajd General",        "freq": 11373, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Huda TV",               "freq": 11564, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Makkah TV",             "freq": 12399, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Misr Quran Kareem",     "freq": 11861, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Quran Kareem",          "freq": 11411, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Saudi CH For Quran",    "freq": 12149, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Saudi CH For Sunnah",   "freq": 12149, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "IQRAA",                 "freq": 11938, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al-Nahar Drama",        "freq": 11785, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "CBC Drama",             "freq": 11785, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "dmc drama",             "freq": 12091, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "MBC Drama",             "freq": 11471, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "MBC MASR DRAMA HD",     "freq": 11219, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Melody Drama",          "freq": 11678, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Nile Drama",            "freq": 11842, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "ON Drama",              "freq": 11861, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Panorama Drama",        "freq": 12053, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Rotana Drama",          "freq": 12226, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Zee Alwan",             "freq": 11277, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Dolly Drama",           "freq": 11678, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Drama Live",            "freq": 11678, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Aflam 1",               "freq": 11177, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Aflam 2",               "freq": 11177, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "MBC 2",                 "freq": 11219, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "MBC 4",                 "freq": 11471, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "MBC Action",            "freq": 11471, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Melody Aflam",          "freq": 11678, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Mix",                   "freq": 11785, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Nile Cinema",           "freq": 11842, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Nile Comedy",           "freq": 11842, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Panorama Film",         "freq": 12053, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Rotana Cinema EGY",     "freq": 12226, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Rotana Cinema KSA",     "freq": 12226, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Rotana Classic",        "freq": 12226, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Rotana Khalijia",       "freq": 12226, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Zee Aflam",             "freq": 12322, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Cinema 1",              "freq": 11177, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "BATOOT KIDS TV",        "freq": 11678, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Cartoon Network",       "freq": 11137, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "SPACETOON ARABIC",      "freq": 11785, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Toyor Aljanah",         "freq": 11258, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Karameesh TV",          "freq": 11430, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Kidsy",                 "freq": 10727, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "AD Sport 1 HD",         "freq": 11411, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "AD Sport 2 HD",         "freq": 11411, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "AlHayat Sport",         "freq": 12206, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Alkass one HD",         "freq": 11919, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "beIN SPORTS",           "freq": 11054, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "beIN SPORTS 5",         "freq": 11013, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "DUBAI SPORTS 1 HD",     "freq": 12418, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Jordan Sport",          "freq": 11957, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "KSA SPORTS 1",          "freq": 12149, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "KSA SPORTS 2",          "freq": 12149, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Nile Sport",            "freq": 11842, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "ON TIME SPORTS 1",      "freq": 11861, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "ON TIME SPORTS 2",      "freq": 11861, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "SSC 1",                 "freq": 11727, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "SSC 2",                 "freq": 11727, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "SSC 3",                 "freq": 11727, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Arabiya",            "freq": 11747, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Hadath",             "freq": 11471, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Jazeera",            "freq": 10971, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Jazeera HD",         "freq": 12521, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Mayadeen HD",        "freq": 11641, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Qahera News",        "freq": 11747, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "BBC Arabic",            "freq": 12206, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "CBC",                   "freq": 11785, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "CBC HD",                "freq": 12091, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "CBC Sofra",             "freq": 11785, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "CNN",                   "freq": 11137, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "dmc",                   "freq": 12091, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Echorouk News",         "freq": 10921, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Extra News",            "freq": 11785, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "MBC MASR",              "freq": 12015, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "MBC MASR 2",            "freq": 11219, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Nile News",             "freq": 11842, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "ON E",                  "freq": 11861, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Sada El Balad",         "freq": 11823, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Sky News Arabia",       "freq": 11976, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al-Nahar One",          "freq": 11785, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "France 24",             "freq": 12206, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Hurra HD",           "freq": 11258, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "RT ARABIC HD",          "freq": 11957, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Abu Dhabi TV HD",       "freq": 11411, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Dubai TV HD",           "freq": 12418, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Jordan HD",             "freq": 11957, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Kuwait TV 1",           "freq": 11054, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "LBC SAT",               "freq": 12226, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "MBC 1",                 "freq": 11471, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "MBC 3",                 "freq": 11471, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "MBC Bollywood",         "freq": 11471, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Qatar TV HD",           "freq": 10834, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Rotana Music",          "freq": 12226, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Saudi TV",              "freq": 12149, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Syria TV",              "freq": 10971, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "TeN TV",                "freq": 11842, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Al Sharqiya HD",        "freq": 11785, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Dijlah TV HD",          "freq": 11258, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Mazzika",               "freq": 11900, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "ROYA HD",               "freq": 11957, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Samira TV",             "freq": 10921, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Ennahar TV Algerie",    "freq": 10921, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Echorouk TV",           "freq": 10921, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Sudan TV",              "freq": 11747, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "2M Maroc",              "freq": 12015, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "Libya Al Ahrar HD",     "freq": 10815, "pol": "Vertical",   "sat_id": "3530"},
+    {"name": "DW Arabia HD",          "freq": 11137, "pol": "Vertical",   "sat_id": "3530"},
 ]
 
-# ArabSat channels
 ARABSAT_DB = [
-    {"name": "MBC 1 HD",       "freq": 12034, "pol": "Horizontal", "sat_id": "2600"},
-    {"name": "MBC 2 HD",       "freq": 12034, "pol": "Horizontal", "sat_id": "2600"},
-    {"name": "MBC 3 HD",       "freq": 12034, "pol": "Horizontal", "sat_id": "2600"},
-    {"name": "MBC 4 HD",       "freq": 12034, "pol": "Horizontal", "sat_id": "2600"},
-    {"name": "MBC Action HD",  "freq": 12034, "pol": "Horizontal", "sat_id": "2600"},
-    {"name": "MBC Masr HD",    "freq": 12034, "pol": "Horizontal", "sat_id": "2600"},
-    {"name": "beIN Sports 1",  "freq": 12245, "pol": "Vertical",   "sat_id": "2600"},
-    {"name": "beIN Sports 2",  "freq": 12245, "pol": "Vertical",   "sat_id": "2600"},
-    {"name": "beIN Sports 3",  "freq": 12245, "pol": "Vertical",   "sat_id": "2600"},
-    {"name": "Dubai TV HD",    "freq": 12092, "pol": "Horizontal", "sat_id": "2600"},
-    {"name": "Abu Dhabi TV HD","freq": 12092, "pol": "Horizontal", "sat_id": "2600"},
-    {"name": "Saudi 1 HD",     "freq": 12149, "pol": "Horizontal", "sat_id": "2600"},
-    {"name": "Saudi 2 HD",     "freq": 12149, "pol": "Horizontal", "sat_id": "2600"},
-    {"name": "Rotana Cinema HD","freq": 12034,"pol": "Horizontal", "sat_id": "2600"},
-    {"name": "Al Arabiya HD",  "freq": 12034, "pol": "Horizontal", "sat_id": "2600"},
-    {"name": "Al Jazeera HD",  "freq": 12245, "pol": "Vertical",   "sat_id": "2600"},
+    {"name": "MBC 1 HD",        "freq": 12034, "pol": "Horizontal", "sat_id": "2600"},
+    {"name": "MBC 2 HD",        "freq": 12034, "pol": "Horizontal", "sat_id": "2600"},
+    {"name": "MBC 3 HD",        "freq": 12034, "pol": "Horizontal", "sat_id": "2600"},
+    {"name": "MBC 4 HD",        "freq": 12034, "pol": "Horizontal", "sat_id": "2600"},
+    {"name": "MBC Action HD",   "freq": 12034, "pol": "Horizontal", "sat_id": "2600"},
+    {"name": "MBC Masr HD",     "freq": 12034, "pol": "Horizontal", "sat_id": "2600"},
+    {"name": "beIN Sports 1",   "freq": 12245, "pol": "Vertical",   "sat_id": "2600"},
+    {"name": "beIN Sports 2",   "freq": 12245, "pol": "Vertical",   "sat_id": "2600"},
+    {"name": "beIN Sports 3",   "freq": 12245, "pol": "Vertical",   "sat_id": "2600"},
+    {"name": "Dubai TV HD",     "freq": 12092, "pol": "Horizontal", "sat_id": "2600"},
+    {"name": "Abu Dhabi TV HD", "freq": 12092, "pol": "Horizontal", "sat_id": "2600"},
+    {"name": "Saudi 1 HD",      "freq": 12149, "pol": "Horizontal", "sat_id": "2600"},
+    {"name": "Saudi 2 HD",      "freq": 12149, "pol": "Horizontal", "sat_id": "2600"},
+    {"name": "Rotana Cinema HD","freq": 12034, "pol": "Horizontal", "sat_id": "2600"},
+    {"name": "Al Arabiya HD",   "freq": 12034, "pol": "Horizontal", "sat_id": "2600"},
+    {"name": "Al Jazeera HD",   "freq": 12245, "pol": "Vertical",   "sat_id": "2600"},
 ]
 
-# Country → ISO code map
 COUNTRY_CODE_MAP = {
-    "🇪🇬 مصر": "EGY",        "🇸🇦 السعودية": "SAU",
-    "🇦🇪 الإمارات": "ARE",   "🇯🇴 الأردن": "JOR",
-    "🇱🇧 لبنان": "LBN",       "🇸🇩 السودان": "SDN",
-    "🇩🇿 الجزائر": "DZA",    "🇲🇦 المغرب": "MAR",
-    "🇹🇳 تونس": "TUN",        "🇱🇾 ليبيا": "LBY",
-    "🇮🇶 العراق": "IRQ",      "🇸🇾 سوريا": "SYR",
-    "🇾🇪 اليمن": "YEM",       "🇰🇼 الكويت": "KWT",
-    "🇶🇦 قطر": "QAT",          "🇧🇭 البحرين": "BHR",
-    "🇴🇲 عُمان": "OMN",
-    "🇪🇬 Egypt": "EGY",        "🇸🇦 Saudi Arabia": "SAU",
-    "🇦🇪 UAE": "ARE",           "🇯🇴 Jordan": "JOR",
-    "🇱🇧 Lebanon": "LBN",       "🇸🇩 Sudan": "SDN",
-    "🇩🇿 Algeria": "DZA",       "🇲🇦 Morocco": "MAR",
-    "🇹🇳 Tunisia": "TUN",       "🇱🇾 Libya": "LBY",
-    "🇮🇶 Iraq": "IRQ",          "🇸🇾 Syria": "SYR",
-    "🇾🇪 Yemen": "YEM",         "🇰🇼 Kuwait": "KWT",
-    "🇶🇦 Qatar": "QAT",          "🇧🇭 Bahrain": "BHR",
-    "🇴🇲 Oman": "OMN",
+    "🇪🇬 مصر": "EGY",      "🇸🇦 السعودية": "SAU",  "🇦🇪 الإمارات": "ARE",
+    "🇯🇴 الأردن": "JOR",   "🇱🇧 لبنان": "LBN",      "🇸🇩 السودان": "SDN",
+    "🇩🇿 الجزائر": "DZA",  "🇲🇦 المغرب": "MAR",     "🇹🇳 تونس": "TUN",
+    "🇱🇾 ليبيا": "LBY",    "🇮🇶 العراق": "IRQ",     "🇸🇾 سوريا": "SYR",
+    "🇾🇪 اليمن": "YEM",    "🇰🇼 الكويت": "KWT",     "🇶🇦 قطر": "QAT",
+    "🇧🇭 البحرين": "BHR",  "🇴🇲 عُمان": "OMN",
 }
+
+SAT_OPTS     = ["🛰️ نايل سات 7°W", "🛰️ عرب سات / بدر 26°E", "🛰️ هوت بيرد 13°E", "🛰️ يوتلسات 8°W"]
+COUNTRY_OPTS = list(COUNTRY_CODE_MAP.keys())
+INCH_OPTS    = ["32", "43", "49", "50", "55", "65", "75", "86"]
+YEAR_OPTS    = ["2024 / 2025 (جديد)", "2022 / 2023", "2020 / 2021", "2018 / 2019", "2016 / 2017 (قديم)"]
+ALL_CATS     = ["⛪ مسيحية", "🕌 إسلامية", "🎬 دراما", "🍿 أفلام", "👶 أطفال", "⚽ رياضة", "📰 أخبار", "📺 عامة"]
+
 
 def is_modern_year(year_str):
     return "2024" in year_str or "2022" in year_str or "2020" in year_str
 
 def get_channel_db(sat_choice):
-    if "عرب سات" in sat_choice or "ArabSat" in sat_choice or "Badr" in sat_choice:
+    if "عرب سات" in sat_choice or "Badr" in sat_choice:
         return ARABSAT_DB
     return NILESAT_DB
 
 # ──────────────────────────────────────────────────────
-# 8. FILE GENERATORS
+# 10. FILE GENERATORS
 # ──────────────────────────────────────────────────────
 def generate_legacy_xml(channels, country_code, model_name, sat_choice):
-    sat_handle = "4" if ("عرب" in sat_choice or "ArabSat" in sat_choice or "Badr" in sat_choice) else "5"
+    sat_handle = "4" if "عرب" in sat_choice else "5"
     xml_header = (
         '<?xml version="1.0" encoding="UTF-8"?>\r\n\r\n'
-        '<TLLDATA>\r\n'
-        '<ModelInfo>\r\n'
+        '<TLLDATA>\r\n<ModelInfo>\r\n'
         f'<ModelName type="0">{model_name}</ModelName>\r\n'
-        '<CloneVersion type="1">\r\n'
-        '<MajorVersion>100</MajorVersion>\r\n'
-        '<MinorVersion>000</MinorVersion>\r\n'
-        '<SatelliteDBVersion>400</SatelliteDBVersion>\r\n'
-        '</CloneVersion>\r\n'
-        '<DTVInfo type="0">DTV_DVB</DTVInfo>\r\n'
+        '<CloneVersion type="1">\r\n<MajorVersion>100</MajorVersion>\r\n'
+        '<MinorVersion>000</MinorVersion>\r\n<SatelliteDBVersion>400</SatelliteDBVersion>\r\n'
+        '</CloneVersion>\r\n<DTVInfo type="0">DTV_DVB</DTVInfo>\r\n'
         f'<BroadcastCountrySetting type="0">{country_code}</BroadcastCountrySetting>\r\n'
-        '<country type="0">JA</country>\r\n'
-        '</ModelInfo>\r\n'
+        '<country type="0">JA</country>\r\n</ModelInfo>\r\n'
     )
     sat_db = (
         '<SatelliteDB>\r\n<SATDBInfo>\r\n<SatHdrInfo>\r\n'
-        '<MagicNo type="0">0</MagicNo>\r\n'
-        '<SatSlotStatusTable>\r\n'
+        '<MagicNo type="0">0</MagicNo>\r\n<SatSlotStatusTable>\r\n'
         '<slot0 type="0">255</slot0>\r\n<slot1 type="0">255</slot1>\r\n'
         '<slot2 type="0">255</slot2>\r\n<slot3 type="0">255</slot3>\r\n'
         '<slot4 type="0">255</slot4>\r\n<slot5 type="0">255</slot5>\r\n'
         '<slot6 type="0">0</slot6>\r\n<slot7 type="0">0</slot7>\r\n'
-        '</SatSlotStatusTable>\r\n'
-        '<Reserved type="0">0</Reserved>\r\n'
-        '<CurrEndIndex type="0">0</CurrEndIndex>\r\n'
-        '</SatHdrInfo>\r\n</SATDBInfo>\r\n'
-        '<SettingIDDBInfo>\r\n<SettingIDInfo>\r\n<tbl1>\r\n<TPList>\r\n</TPList>\r\n</tbl1>\r\n</SettingIDInfo>\r\n</SettingIDDBInfo>\r\n'
-        '</SatelliteDB>\r\n'
+        '</SatSlotStatusTable>\r\n<Reserved type="0">0</Reserved>\r\n'
+        '<CurrEndIndex type="0">0</CurrEndIndex>\r\n</SatHdrInfo>\r\n</SATDBInfo>\r\n'
+        '<SettingIDDBInfo>\r\n<SettingIDInfo>\r\n<tbl1>\r\n<TPList>\r\n</TPList>\r\n</tbl1>\r\n'
+        '</SettingIDInfo>\r\n</SettingIDDBInfo>\r\n</SatelliteDB>\r\n'
     )
-    channel_open = '<CHANNEL>\r\n<ATV>\r\n</ATV>\r\n<DTV>\r\n'
+    channel_open  = '<CHANNEL>\r\n<ATV>\r\n</ATV>\r\n<DTV>\r\n'
     channel_close = '\r\n</DTV>\r\n</CHANNEL>\r\n</TLLDATA>'
     items_parts = []
     for idx, ch in enumerate(channels, start=1):
@@ -669,14 +648,10 @@ def generate_legacy_xml(channels, country_code, model_name, sat_choice):
             '<mapType>1</mapType>\r\n'
             '<mapAttr>0</mapAttr>\r\n'
             f'<programNo>{service_id}</programNo>\r\n'
-            '<favoriteIdxA>250</favoriteIdxA>\r\n'
-            '<favoriteIdxB>250</favoriteIdxB>\r\n'
-            '<favoriteIdxC>250</favoriteIdxC>\r\n'
-            '<favoriteIdxD>250</favoriteIdxD>\r\n'
-            '<favoriteIdxE>250</favoriteIdxE>\r\n'
-            '<favoriteIdxF>250</favoriteIdxF>\r\n'
-            '<favoriteIdxG>250</favoriteIdxG>\r\n'
-            '<favoriteIdxH>250</favoriteIdxH>\r\n'
+            '<favoriteIdxA>250</favoriteIdxA>\r\n<favoriteIdxB>250</favoriteIdxB>\r\n'
+            '<favoriteIdxC>250</favoriteIdxC>\r\n<favoriteIdxD>250</favoriteIdxD>\r\n'
+            '<favoriteIdxE>250</favoriteIdxE>\r\n<favoriteIdxF>250</favoriteIdxF>\r\n'
+            '<favoriteIdxG>250</favoriteIdxG>\r\n<favoriteIdxH>250</favoriteIdxH>\r\n'
             '<isInvisable>0</isInvisable>\r\n'
             '<isBlocked>0</isBlocked>\r\n'
             '<isSkipped>0</isSkipped>\r\n'
@@ -702,8 +677,8 @@ def generate_legacy_xml(channels, country_code, model_name, sat_choice):
 
 def generate_modern_json(channels, country_code, model_name, country_full, sat_info):
     import base64
-    sat_name = sat_info.get("name", "NILESAT 7.0W")
-    sat_id = channels[0]["sat_id"] if channels else "3530"
+    sat_name     = sat_info.get("name", "NILESAT 7.0W")
+    sat_id       = channels[0]["sat_id"] if channels else "3530"
     sat_location = sat_info.get("loc", "7.0W")
     channel_list = []
     for idx, ch in enumerate(channels, start=1):
@@ -766,14 +741,18 @@ def generate_modern_json(channels, country_code, model_name, country_full, sat_i
     return tll_content.encode("utf-8")
 
 
-def generate_report(channels, answers, file_type, lang):
-    t = UI[lang]
-    lines = ["=" * 60, "  RAMBO — Channel File Generator Report",
-             f"  Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}", "=" * 60,
-             f"  {t['sat_lbl']}      {answers.get('sat','')}",
-             f"  {t['country_lbl']}  {answers.get('country','')}",
-             f"  {t['file_type_lbl']} {file_type}",
-             f"  {t['ch_count_lbl']}  {len(channels)}", "=" * 60, ""]
+def generate_report(channels, sat, country, file_type):
+    lines = [
+        "=" * 60,
+        "  RAMBO — تقرير مولّد ملفات القنوات",
+        f"  التاريخ: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        "=" * 60,
+        f"  القمر الصناعي: {sat}",
+        f"  بلد البث:      {country}",
+        f"  نوع الملف:     {file_type}",
+        f"  إجمالي القنوات: {len(channels)}",
+        "=" * 60, ""
+    ]
     for idx, ch in enumerate(channels, start=1):
         cat = ai_classify(ch["name"])
         lines.append(f"  {idx:03d}. {ch['name']:<35} | {ch['freq']} | {cat}")
@@ -781,208 +760,93 @@ def generate_report(channels, answers, file_type, lang):
 
 
 # ──────────────────────────────────────────────────────
-# 9. PAGE CONFIG & CSS
+# 11. STEP 1 — FORM
 # ──────────────────────────────────────────────────────
-t = UI[st.session_state.lang]
-st.set_page_config(page_title="RAMBO P3 — Generator", page_icon="📡", layout="wide")
-
-col_lang, col_theme, _ = st.columns([1.2, 1.5, 8])
-with col_lang:
-    if st.button("🌐 English" if st.session_state.lang == 'ar' else "🌐 العربية"):
-        st.session_state.lang = 'en' if st.session_state.lang == 'ar' else 'ar'
-        st.rerun()
-with col_theme:
-    if st.button("☀️ Light Mode" if st.session_state.theme == 'dark' else "🌙 Dark Mode"):
-        st.session_state.theme = 'light' if st.session_state.theme == 'dark' else 'dark'
-        st.rerun()
-
-if st.session_state.theme == 'dark':
-    bg = "radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%)"
-    tc, bb, bord = "#00f0ff", "rgba(13,7,33,0.85)", "#00f0ff"
-    bsh, tsh = "rgba(0,240,255,0.35)", "0 0 5px rgba(0,240,255,0.4)"
-else:
-    bg = "radial-gradient(circle at 50% 50%, #f4f5f7 0%, #e4e7eb 100%)"
-    tc, bb, bord = "#0d0722", "#ffffff", "#ff007f"
-    bsh, tsh = "rgba(255,0,127,0.15)", "none"
-
-ff = "'Cairo', sans-serif" if st.session_state.lang == 'ar' else "'Orbitron', sans-serif"
-
-st.markdown(f"""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;900&family=Cairo:wght@400;700&display=swap');
-.main {{ background: {bg} !important; color: {tc} !important; font-family: {ff}; }}
-h1 {{ color: #ff007f !important; text-shadow: 0 0 10px #ff007f, 0 0 25px rgba(255,0,127,0.4) !important;
-      text-align: center; font-weight: 900; margin-top: 5px; }}
-h3, p, label, .stMarkdown {{ color: {tc} !important; text-shadow: {tsh}; }}
-.stSelectbox > div > div, .stTextInput > div > div > input {{
-    background-color: {bb} !important; color: {tc} !important;
-    border: 2px solid {bord} !important; border-radius: 10px !important;
-}}
-.rambo-card {{
-    background: {bb}; border: 2px solid {bord};
-    box-shadow: 0 5px 15px {bsh}; border-radius: 14px;
-    padding: 22px; margin-bottom: 18px;
-}}
-.stButton > button {{
-    background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important;
-    color: #ffffff !important; border: 2px solid #ff007f !important;
-    border-radius: 12px !important; font-weight: bold; width: 100%;
-    font-size: 1.05rem; padding: 0.6rem;
-}}
-.stDownloadButton > button {{
-    background: linear-gradient(135deg, #00b894 0%, #00695c 100%) !important;
-    color: #fff !important; border: none !important;
-    border-radius: 12px !important; font-weight: bold; width: 100%;
-}}
-.live-badge {{
-    display: inline-block; background: linear-gradient(90deg,#00f0ff22,#ff007f22);
-    border: 1px solid #00f0ff; border-radius: 8px; padding: 6px 14px;
-    color: #00f0ff; font-size: 0.85rem; margin-bottom: 10px;
-}}
-</style>
-""", unsafe_allow_html=True)
-
-# ──────────────────────────────────────────────────────
-# 10. TITLE
-# ──────────────────────────────────────────────────────
-st.title(t['title'])
-st.markdown(f"<h3 style='text-align:center;'>{t['subtitle']}</h3>", unsafe_allow_html=True)
-st.write("---")
-
-# ──────────────────────────────────────────────────────
-# 11. LIVE DB FETCH BUTTON (زر الجلب الحي - من صفحة 2)
-# ──────────────────────────────────────────────────────
-col_fetch, col_fetch_status = st.columns([2, 4])
-with col_fetch:
-    if st.button(t['btn_fetch_live'], use_container_width=True, key="p3_fetch_live_btn"):
-        with st.spinner(t['fetching']):
-            result = fetch_nilesat_live_db_p3()
-            if result:
-                st.session_state.p3_live_db_cache = result
-                st.session_state.p3_live_db_last_fetch = datetime.now().strftime("%Y-%m-%d %H:%M")
-                st.toast("🛸 " + (f"تم جلب {len(result):,} قناة من NileSat!" if st.session_state.lang == 'ar'
-                                  else f"Fetched {len(result):,} channels!"))
-                st.rerun()
-            else:
-                st.toast("⚠️ " + t['fetch_fail'], icon="⚠️")
-
-with col_fetch_status:
-    if st.session_state.get('p3_live_db_cache'):
-        n = len(st.session_state.p3_live_db_cache)
-        lft = st.session_state.get('p3_live_db_last_fetch', '?')
-        st.markdown(
-            f"<div class='live-badge'>🟢 {t['fetch_success']}{n:,} | ⏱ {lft}</div>",
-            unsafe_allow_html=True
-        )
-    else:
-        st.markdown(
-            f"<div class='live-badge' style='border-color:#ff007f;color:#ff007f;'>"
-            f"🔴 {t['live_badge_off']}"
-            f"</div>",
-            unsafe_allow_html=True
-        )
-
-st.write("---")
-
-# ──────────────────────────────────────────────────────
-# 12. STEP 1 — FORM
-# ──────────────────────────────────────────────────────
-ALL_CATS_AR = ["⛪ مسيحية", "🕌 إسلامية", "🎬 دراما", "🍿 أفلام", "👶 أطفال", "⚽ رياضة", "📰 أخبار", "📺 عامة"]
-ALL_CATS_EN = ["⛪ Christian", "🕌 Islamic", "🎬 Drama", "🍿 Movies", "👶 Kids", "⚽ Sports", "📰 News", "📺 General"]
-CAT_MAP = dict(zip(ALL_CATS_AR, ALL_CATS_EN))
-ALL_CATS = ALL_CATS_AR if st.session_state.lang == "ar" else ALL_CATS_EN
-
-def cat_label(name):
-    ar = ai_classify(name)
-    return ar if st.session_state.lang == "ar" else CAT_MAP.get(ar, ar)
-
 if st.session_state.p3_step == 1:
-    st.markdown(f"### {t['step1_header']}")
+    st.markdown("### 🛰️ الخطوة 1: معلومات الإعداد")
 
-    with st.container():
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown('<div class="rambo-card">', unsafe_allow_html=True)
-            sat_choice = st.selectbox(t['q_sat'], options=[""] + t['sat_opts'], key="p3_sat")
-            country_choice = st.selectbox(t['q_country'], options=[""] + t['country_opts'], key="p3_country")
-            year_choice = st.selectbox(t['q_year'], options=[""] + t['year_opts'], key="p3_year")
-            st.markdown('</div>', unsafe_allow_html=True)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown('<div class="rambo-card">', unsafe_allow_html=True)
+        sat_choice     = st.selectbox("القمر الصناعي *", options=[""] + SAT_OPTS, key="p3_sat")
+        country_choice = st.selectbox("بلد البث *", options=[""] + COUNTRY_OPTS, key="p3_country")
+        year_choice    = st.selectbox("سنة الصنع *", options=[""] + YEAR_OPTS, key="p3_year")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-        with col2:
-            st.markdown('<div class="rambo-card">', unsafe_allow_html=True)
-            inch_choice = st.selectbox(t['q_inch'], options=[""] + t['inch_opts'], key="p3_inch")
-            model_choice = st.text_input(
-                t['q_model'],
-                placeholder="مثال: 55UN7340PVA" if st.session_state.lang == "ar" else "e.g. 55UN7340PVA",
-                key="p3_model"
-            )
-            if year_choice:
-                st.info(t['info_modern'] if is_modern_year(year_choice) else t['info_legacy'])
-            st.markdown('</div>', unsafe_allow_html=True)
+    with col2:
+        st.markdown('<div class="rambo-card">', unsafe_allow_html=True)
+        inch_choice  = st.selectbox("حجم الشاشة (بوصة)", options=[""] + INCH_OPTS, key="p3_inch")
+        model_choice = st.text_input("موديل الشاشة (اختياري)", placeholder="مثال: 55UN7340PVA", key="p3_model")
+        if year_choice:
+            if is_modern_year(year_choice):
+                st.info("✅ نوع الملف: **حديث (Modern JSON)** — مناسب لشاشات 2020+")
+            else:
+                st.info("✅ نوع الملف: **قديم (Legacy XML)** — مناسب لشاشات ما قبل 2020")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     st.write("---")
 
-    # ── Category Sorting ──
-    st.markdown(f"### {t['cat_section']}")
-    user_priority = st.multiselect(t['cat_multiselect'], options=ALL_CATS, default=[], key="p3_cat_order")
+    # ── ترتيب الفئات ──
+    st.markdown("### 🎛️ ترتيب الفئات")
+    user_priority = st.multiselect("اختر الفئات بالترتيب المطلوب (الأول = الأعلى):", options=ALL_CATS, default=[], key="p3_cat_order")
     final_priority = list(user_priority)
     for c in ALL_CATS:
         if c not in final_priority:
             final_priority.append(c)
 
     if sat_choice:
-        ch_db_preview = get_channel_db(sat_choice)
         from collections import defaultdict
+        ch_db_preview = get_channel_db(sat_choice)
         cats_preview = defaultdict(list)
         for ch in ch_db_preview:
-            cats_preview[cat_label(ch["name"])].append(ch["name"])
+            cats_preview[ai_classify(ch["name"])].append(ch["name"])
+        st.markdown("##### 📊 معاينة توزيع القنوات:")
         col_p1, col_p2 = st.columns(2)
         for i, cat in enumerate(final_priority):
             if cat in cats_preview:
-                lst = cats_preview[cat]
+                lst  = cats_preview[cat]
                 star = "⭐ " if cat in user_priority else ""
-                title = f"{star}{cat} — ({len(lst)} {t['cat_channels']})"
                 with (col_p1 if i % 2 == 0 else col_p2):
-                    with st.expander(title):
+                    with st.expander(f"{star}{cat} — ({len(lst)} قناة)"):
                         st.caption(", ".join(lst[:30]) + ("..." if len(lst) > 30 else ""))
 
     st.write("---")
 
     # ── ميزات التحديث الذكي ──
-    st.markdown(f"### {t['ai_section']}")
+    st.markdown("### ⚡ ميزات التحديث الذكي")
     col_ai1, col_ai2 = st.columns(2)
     with col_ai1:
-        do_update_freq = st.checkbox(t['ai_update_freq'], value=False, key="p3_do_freq")
+        do_update_freq = st.checkbox("⚛️ تحديث الترددات تلقائياً", value=False, key="p3_do_freq")
         if do_update_freq:
-            st.caption("⚡ " + t['ai_freq_info'])
+            st.caption("⚡ سيتم مقارنة الترددات الحالية بقاعدة البيانات المحدثة وتصحيح أي تردد قديم.")
     with col_ai2:
-        do_new_ch = st.checkbox(t['ai_new_ch'], value=False, key="p3_do_newch")
+        do_new_ch = st.checkbox("✨ إضافة القنوات الجديدة المتاحة", value=False, key="p3_do_newch")
         if do_new_ch:
-            st.caption("✨ " + t['ai_newch_info'])
+            st.caption("✨ سيتم فحص القنوات الجديدة المتاحة على القمر وإضافتها تلقائياً للملف.")
 
     st.write("")
     col_btn, _, _ = st.columns([2, 1, 1])
     with col_btn:
-        if st.button(t['btn_next'], use_container_width=True):
+        if st.button("▶️ توليد الملف", use_container_width=True):
             errors = []
-            if not sat_choice:     errors.append(t['warn_sat'])
-            if not country_choice: errors.append(t['warn_country'])
-            if not year_choice:    errors.append(t['warn_year'])
+            if not sat_choice:     errors.append("⚠️ اختر القمر الصناعي.")
+            if not country_choice: errors.append("⚠️ اختر بلد البث.")
+            if not year_choice:    errors.append("⚠️ اختر سنة الصنع.")
             for e in errors:
                 st.warning(e)
 
             if not errors:
-                inch_str    = inch_choice if inch_choice else "55"
-                model_name  = model_choice.strip() if model_choice.strip() else f"LG{inch_str}XXXXX"
+                inch_str     = inch_choice if inch_choice else "55"
+                model_name   = model_choice.strip() if model_choice.strip() else f"LG{inch_str}XXXXX"
                 country_code = COUNTRY_CODE_MAP.get(country_choice, "EGY")
-                is_mod      = is_modern_year(year_choice)
-                ch_db       = [dict(ch) for ch in get_channel_db(sat_choice)]
+                is_mod       = is_modern_year(year_choice)
+                ch_db        = [dict(ch) for ch in get_channel_db(sat_choice)]
 
-                if "نايل" in sat_choice or "Nile" in sat_choice:
+                if "نايل" in sat_choice:
                     sat_info = {"name": "NILESAT 7.0W", "loc": "7.0W"}
-                elif "عرب" in sat_choice or "Arab" in sat_choice or "Badr" in sat_choice:
+                elif "عرب" in sat_choice:
                     sat_info = {"name": "ARABSAT 26.0E", "loc": "26.0E"}
-                elif "هوت" in sat_choice or "HotBird" in sat_choice:
+                elif "هوت" in sat_choice:
                     sat_info = {"name": "HOTBIRD 13.0E", "loc": "13.0E"}
                 else:
                     sat_info = {"name": "EUTELSAT 8.0W", "loc": "8.0W"}
@@ -990,91 +854,44 @@ if st.session_state.p3_step == 1:
                 ai_freq_log  = []
                 ai_newch_log = []
 
-                # ══════════════════════════════════════════════════
-                # ميزة 1: تحديث الترددات (من قاعدة البيانات الحية)
-                # لا تمسح القنوات — فقط تصحح ترددها
-                # ══════════════════════════════════════════════════
                 if do_update_freq:
                     ACTIVE_DB = get_active_db_p3()
                     for ch in ch_db:
-                        name_up = ch["name"].upper().strip()
-
-                        # أولاً: ابحث في LIVE_FREQ_DB (قاعدة الترددات المحدّثة)
+                        name_up  = ch["name"].upper().strip()
                         db_match = LIVE_FREQ_DB.get(name_up)
                         new_freq = db_match["freq"] if db_match else None
-                        src = db_match["src"] if db_match else "local"
-
-                        # ثانياً: إن لم يوجد، ابحث في قاعدة dthsat الحية/المحلية
+                        src      = db_match["src"]  if db_match else "local"
                         if new_freq is None:
-                            live_entry = ACTIVE_DB.get(name_up)
-                            if not live_entry:
-                                # بحث جزئي في الاسم
-                                matched_key = next(
-                                    (k for k in ACTIVE_DB if k in name_up or name_up in k), None
-                                )
-                                live_entry = ACTIVE_DB.get(matched_key) if matched_key else None
+                            live_entry = ACTIVE_DB.get(name_up) or ACTIVE_DB.get(
+                                next((k for k in ACTIVE_DB if k in name_up or name_up in k), ""), None
+                            )
                             if live_entry:
                                 new_freq = live_entry["frequency"]
                                 src = "dthsat/local"
-
-                        # تحديث التردد فقط إذا تغيّر
                         if new_freq and int(ch["freq"]) != int(new_freq):
-                            ai_freq_log.append({
-                                "channel": ch["name"],
-                                "old": ch["freq"],
-                                "new": new_freq,
-                                "source": src
-                            })
+                            ai_freq_log.append({"channel": ch["name"], "old": ch["freq"], "new": new_freq, "source": src})
                             ch["freq"] = new_freq
 
-                # ══════════════════════════════════════════════════
-                # ميزة 2: زرع القنوات الجديدة على القمر
-                # لا تمسح الموجودة — فقط تضيف الجديدة
-                # ══════════════════════════════════════════════════
                 if do_new_ch:
                     existing_upper = {ch["name"].upper().strip() for ch in ch_db}
                     sat_id = ch_db[0].get("sat_id", "3530") if ch_db else "3530"
-
-                    # أولاً: من EXTENDED_NEW_CHANNELS (قنوات 2023-2025)
                     for nc in EXTENDED_NEW_CHANNELS:
                         if nc["name"].upper().strip() not in existing_upper:
                             new_ch = dict(nc)
                             new_ch["sat_id"] = sat_id
                             ch_db.append(new_ch)
-                            ai_newch_log.append({
-                                "name": nc["name"],
-                                "freq": nc["freq"],
-                                "cat": ai_classify(nc["name"])
-                            })
+                            ai_newch_log.append({"name": nc["name"], "freq": nc["freq"], "cat": ai_classify(nc["name"])})
                             existing_upper.add(nc["name"].upper().strip())
-
-                    # ثانياً: من قاعدة dthsat الحية (إن كانت محمّلة)
                     ACTIVE_DB = get_active_db_p3()
                     for db_name_upper, db_info in ACTIVE_DB.items():
-                        is_present = any(
-                            db_name_upper in ex or ex in db_name_upper
-                            for ex in existing_upper
-                        )
+                        is_present = any(db_name_upper in ex or ex in db_name_upper for ex in existing_upper)
                         if not is_present:
-                            new_ch = {
-                                "name": db_name_upper.title(),
-                                "freq": db_info["frequency"],
-                                "pol": db_info["polarization"],
-                                "sat_id": sat_id,
-                            }
+                            new_ch = {"name": db_name_upper.title(), "freq": db_info["frequency"], "pol": db_info["polarization"], "sat_id": sat_id}
                             ch_db.append(new_ch)
-                            ai_newch_log.append({
-                                "name": new_ch["name"],
-                                "freq": new_ch["freq"],
-                                "cat": ai_classify(new_ch["name"])
-                            })
+                            ai_newch_log.append({"name": new_ch["name"], "freq": new_ch["freq"], "cat": ai_classify(new_ch["name"])})
                             existing_upper.add(db_name_upper)
 
-                # ── ترتيب حسب الفئة ──
-                def sort_key_cat(ch):
-                    lbl = cat_label(ch["name"])
-                    return final_priority.index(lbl) if lbl in final_priority else len(final_priority)
-                ch_db.sort(key=sort_key_cat)
+                ch_db.sort(key=lambda ch: final_priority.index(ai_classify(ch["name"])) if ai_classify(ch["name"]) in final_priority else len(final_priority))
 
                 country_full_map = {
                     "EGY":"Egypt","SAU":"Saudi Arabia","ARE":"United Arab Emirates",
@@ -1086,18 +903,13 @@ if st.session_state.p3_step == 1:
                 country_full = country_full_map.get(country_code, "Egypt")
 
                 if is_mod:
-                    out_bytes = generate_modern_json(ch_db, country_code, model_name, country_full, sat_info)
+                    out_bytes       = generate_modern_json(ch_db, country_code, model_name, country_full, sat_info)
                     file_type_label = "Modern JSON (2020+)"
                 else:
-                    out_bytes = generate_legacy_xml(ch_db, country_code, model_name, sat_choice)
+                    out_bytes       = generate_legacy_xml(ch_db, country_code, model_name, sat_choice)
                     file_type_label = "Legacy XML (pre-2020)"
 
-                report_txt = generate_report(
-                    ch_db,
-                    {"sat": sat_choice, "country": country_choice},
-                    file_type_label,
-                    st.session_state.lang
-                )
+                report_txt = generate_report(ch_db, sat_choice, country_choice, file_type_label)
 
                 st.session_state.p3_answers = {
                     "sat": sat_choice, "country": country_choice, "inch": inch_str,
@@ -1106,116 +918,78 @@ if st.session_state.p3_step == 1:
                     "ai_freq_log": ai_freq_log, "ai_newch_log": ai_newch_log,
                     "cat_priority": final_priority,
                 }
-                st.session_state.p3_output_bytes = out_bytes
-                st.session_state.p3_report_txt   = report_txt
+                st.session_state.p3_output_bytes     = out_bytes
+                st.session_state.p3_report_txt       = report_txt
                 st.session_state.p3_channels_preview = ch_db
-                st.session_state.p3_step = 2
+                st.session_state.p3_step             = 2
                 st.rerun()
 
 # ──────────────────────────────────────────────────────
-# 13. STEP 2 — PREVIEW & DOWNLOAD
+# 12. STEP 2 — PREVIEW & DOWNLOAD
 # ──────────────────────────────────────────────────────
 elif st.session_state.p3_step == 2:
     ans = st.session_state.p3_answers
-    t = UI[st.session_state.lang]
 
-    st.success(t['success_msg'])
-    st.markdown(f"### {t['step2_header']}")
+    st.success("🎉 تم توليد الملف بنجاح! جاهز للتحميل.")
+    st.markdown("### 📊 الخطوة 2: معاينة الملف المولَّد")
 
     col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric(t['sat_lbl'], ans.get('sat', '')[:20])
-    with col2:
-        st.metric(t['country_lbl'], ans.get('country', '')[:15])
-    with col3:
-        st.metric(t['file_type_lbl'], "Modern JSON" if ans.get('is_modern') else "Legacy XML")
-    with col4:
-        st.metric(t['ch_count_lbl'], ans.get('ch_count', 0))
+    with col1: st.metric("القمر الصناعي:", ans.get('sat', '')[:20])
+    with col2: st.metric("بلد البث:", ans.get('country', '')[:15])
+    with col3: st.metric("نوع الملف:", "Modern JSON" if ans.get('is_modern') else "Legacy XML")
+    with col4: st.metric("إجمالي القنوات:", ans.get('ch_count', 0))
 
     st.write("---")
 
-    # ── سجل تحديث الترددات ──
     freq_log  = ans.get('ai_freq_log', [])
     newch_log = ans.get('ai_newch_log', [])
     cat_prio  = ans.get('cat_priority', [])
 
     if freq_log:
-        with st.expander(f"⚛️ {t['ai_freq_done']} — {len(freq_log)} {t['ai_freq_updated']}", expanded=True):
-            freq_table = []
-            for entry in freq_log:
-                freq_table.append({
-                    t['ai_freq_col_ch']:  entry['channel'],
-                    t['ai_freq_col_old']: entry['old'],
-                    t['ai_freq_col_new']: entry['new'],
-                    t['ai_freq_col_src']: entry.get('source', 'lyngsat'),
-                })
-            st.table(freq_table)
+        with st.expander(f"⚛️ تم تحديث الترددات — {len(freq_log)} قناة تم تحديث ترددها", expanded=True):
+            st.table([{"القناة": e['channel'], "التردد القديم": e['old'], "التردد الجديد": e['new'], "المصدر": e.get('source','')} for e in freq_log])
 
     if newch_log:
-        with st.expander(f"✨ {t['ai_newch_done']} — {len(newch_log)} {t['ai_new_found']}", expanded=True):
-            new_table = []
-            for entry in newch_log:
-                new_table.append({
-                    t['ai_newch_col_name']: entry['name'],
-                    t['ai_newch_col_freq']: entry['freq'],
-                    t['ai_newch_col_cat']:  entry['cat'],
-                })
-            st.table(new_table)
+        with st.expander(f"✨ تم إضافة قنوات جديدة — {len(newch_log)} قناة جديدة تم إضافتها", expanded=True):
+            st.table([{"اسم القناة": e['name'], "التردد": e['freq'], "الفئة": e['cat']} for e in newch_log])
 
     if freq_log or newch_log:
         st.write("---")
 
-    # ── معاينة الفئات ──
+    # معاينة الفئات
     from collections import defaultdict as _dd
-    ALL_CATS_AR2 = ["⛪ مسيحية","🕌 إسلامية","🎬 دراما","🍿 أفلام","👶 أطفال","⚽ رياضة","📰 أخبار","📺 عامة"]
-    ALL_CATS_EN2 = ["⛪ Christian","🕌 Islamic","🎬 Drama","🍿 Movies","👶 Kids","⚽ Sports","📰 News","📺 General"]
-    CAT_MAP2 = dict(zip(ALL_CATS_AR2, ALL_CATS_EN2))
-    def cat_lbl2(name):
-        ar = ai_classify(name)
-        return ar if st.session_state.lang == "ar" else CAT_MAP2.get(ar, ar)
-
     cats_dist = _dd(list)
     for ch in st.session_state.p3_channels_preview:
-        cats_dist[cat_lbl2(ch["name"])].append(ch["name"])
+        cats_dist[ai_classify(ch["name"])].append(ch["name"])
 
-    st.markdown(f"#### {t['cat_preview']}")
+    st.markdown("#### 📊 معاينة توزيع القنوات:")
     col_p1, col_p2 = st.columns(2)
-    display_order = cat_prio if cat_prio else (ALL_CATS_AR2 if st.session_state.lang == "ar" else ALL_CATS_EN2)
+    display_order = cat_prio if cat_prio else ALL_CATS
     for i, cat in enumerate(display_order):
         if cat in cats_dist:
             lst = cats_dist[cat]
             with (col_p1 if i % 2 == 0 else col_p2):
-                with st.expander(f"{cat} — ({len(lst)} {t['cat_channels']})"):
+                with st.expander(f"{cat} — ({len(lst)} قناة)"):
                     st.caption(", ".join(lst[:40]) + ("..." if len(lst) > 40 else ""))
 
     st.write("---")
 
-    # ── معاينة الجدول ──
-    st.markdown(f"#### {t['preview_ch']}")
+    # معاينة الجدول
+    st.markdown("#### 📋 عينة من القنوات المضمنة:")
     preview_data = []
     for idx, ch in enumerate(st.session_state.p3_channels_preview[:30], start=1):
-        preview_data.append({
-            t['col_num']: idx,
-            t['col_name']: ch['name'],
-            t['col_freq']: ch['freq'],
-            t['col_cat']: cat_lbl2(ch['name']),
-        })
+        preview_data.append({"الرقم": idx, "اسم القناة": ch['name'], "التردد": ch['freq'], "الفئة": ai_classify(ch['name'])})
     st.table(preview_data)
     if len(st.session_state.p3_channels_preview) > 30:
-        remaining = len(st.session_state.p3_channels_preview) - 30
-        st.caption(
-            f"... و {remaining} قناة أخرى في الملف الكامل."
-            if st.session_state.lang == 'ar'
-            else f"... and {remaining} more channels in the full file."
-        )
+        st.caption(f"... و {len(st.session_state.p3_channels_preview) - 30} قناة أخرى في الملف الكامل.")
 
     st.write("---")
 
-    # ── أزرار التحميل ──
+    # أزرار التحميل
     col_d1, col_d2, col_d3 = st.columns([2, 2, 1])
     with col_d1:
         st.download_button(
-            label=t['btn_download'],
+            label="📥 تحميل ملف الشاشة (GlobalClone00001.TLL)",
             data=st.session_state.p3_output_bytes,
             file_name="GlobalClone00001.TLL",
             mime="application/octet-stream",
@@ -1223,28 +997,35 @@ elif st.session_state.p3_step == 2:
         )
     with col_d2:
         st.download_button(
-            label=t['btn_report'],
+            label="📄 تحميل تقرير القنوات (Channels_List.txt)",
             data=st.session_state.p3_report_txt,
             file_name="Channels_List.txt",
             mime="text/plain; charset=utf-8",
             use_container_width=True,
         )
     with col_d3:
-        if st.button(t['btn_back'], use_container_width=True):
-            st.session_state.p3_step = 1
-            st.session_state.p3_output_bytes = None
-            st.session_state.p3_report_txt = None
+        if st.button("🔄 إنشاء ملف جديد", use_container_width=True):
+            st.session_state.p3_step             = 1
+            st.session_state.p3_output_bytes     = None
+            st.session_state.p3_report_txt       = None
             st.session_state.p3_channels_preview = []
             st.rerun()
 
-    # ── ملحوظة LG ──
+    # ملحوظة LG
     st.write("---")
-    trick_lines = t['lg_trick_text'].split('\n')
+    lg_trick_text = (
+        "في بعض الحالات، بعد تنزيل ملف القنوات على الشاشة، قد تشعر أن القنوات ليست منظمة كما رتبتها. "
+        "لحل هذا الأمر فوراً واجبار الشاشة على تفعيل الترتيب الصحيح، قم بالآتي:\n\n"
+        "1. من إعدادات التلفزيون اختار القنوات (Channels).\n"
+        "2. بعد ذلك اختار مدير القنوات (Channel Manager).\n"
+        "3. اختار التعديل على كل القنوات (Edit All Channels).\n"
+        "4. ستظهر لك القنوات المرتبة ويكون بعضها في وضع مخفي، قم بتحديد كل القنوات واختار استعادة (Restore).\n\n"
+        "ملحوظة: تفعل هذه الخطوة فقط إذا شعرت أن الملف بعد التنزيل غير مرتب كما حددته على الموقع."
+    )
+    trick_lines = lg_trick_text.split('\n')
     st.markdown(f"""
-<div style="background:rgba(255,193,7,0.1);border:2px solid #ffc107;border-radius:14px;
-padding:22px;margin-top:10px;">
-<div style="color:#ffc107;font-size:1.1rem;font-weight:bold;margin-bottom:12px;">
-{t['lg_trick_title']}</div>
-{''.join(f'<div style="margin:6px 0;line-height:1.7;">{line}</div>' for line in trick_lines if line.strip())}
+<div style="background:rgba(255,193,7,0.1);border:2px solid #ffc107;border-radius:14px;padding:22px;margin-top:10px;">
+<div style="color:#ffc107;font-size:1.1rem;font-weight:bold;margin-bottom:12px;">💡 ملحوظة فنية هامة جداً بعد تنزيل الملف على شاشة LG:</div>
+{''.join(f'<div style="margin:6px 0;line-height:1.7;color:#e0e0e0;">{line}</div>' for line in trick_lines if line.strip())}
 </div>
 """, unsafe_allow_html=True)
