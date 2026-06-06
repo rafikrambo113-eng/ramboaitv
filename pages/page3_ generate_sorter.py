@@ -1,4 +1,3 @@
-
 import streamlit as st
 import xml.etree.ElementTree as ET
 import json
@@ -22,7 +21,7 @@ for key, val in {
         st.session_state[key] = val
 
 # ──────────────────────────────────────────────────────
-# 2. PAGE CONFIG & CSS (نفس استايل صفحة 1 بالكامل)
+# 2. PAGE CONFIG & CSS
 # ──────────────────────────────────────────────────────
 st.set_page_config(page_title="RAMBO P3 — مولّد الملفات", page_icon="📡", layout="wide")
 
@@ -767,14 +766,11 @@ if st.session_state.p3_step == 1:
 
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown('<div class="rambo-card">', unsafe_allow_html=True)
         sat_choice     = st.selectbox("القمر الصناعي *", options=[""] + SAT_OPTS, key="p3_sat")
         country_choice = st.selectbox("بلد البث *", options=[""] + COUNTRY_OPTS, key="p3_country")
         year_choice    = st.selectbox("سنة الصنع *", options=[""] + YEAR_OPTS, key="p3_year")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="rambo-card">', unsafe_allow_html=True)
         inch_choice  = st.selectbox("حجم الشاشة (بوصة)", options=[""] + INCH_OPTS, key="p3_inch")
         model_choice = st.text_input("موديل الشاشة (اختياري)", placeholder="مثال: 55UN7340PVA", key="p3_model")
         if year_choice:
@@ -782,7 +778,6 @@ if st.session_state.p3_step == 1:
                 st.info("✅ نوع الملف: **حديث (Modern JSON)** — مناسب لشاشات 2020+")
             else:
                 st.info("✅ نوع الملف: **قديم (Legacy XML)** — مناسب لشاشات ما قبل 2020")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     st.write("---")
 
