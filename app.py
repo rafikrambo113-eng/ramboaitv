@@ -128,7 +128,7 @@ st.markdown("---")
 # ─────────────────────────────────────────────
 # ليه تختار RamboAITV؟
 # ─────────────────────────────────────────────
-st.header("🌟 ليه تختار RamboAITV؟")
+st.header("🌟 ليه تختار Rambo AI TV؟")
 
 st.markdown("<p class='center-text'>🎨 الموقع مصمم بـ **3 صفحات احترافية** لخدمتك:</p>", unsafe_allow_html=True)
 
