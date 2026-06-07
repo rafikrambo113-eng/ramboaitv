@@ -79,6 +79,19 @@ p, label, .stMarkdown, .stBody {
     text-align: center !important;
 }
 
+.stLinkButton>a {
+    background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important;
+    color: #ffffff !important;
+    border: 2px solid #ff007f !important;
+    border-radius: 14px !important;
+    font-weight: bold !important;
+    font-size: 18px !important;
+    padding: 12px 24px !important;
+    box-shadow: 0 0 15px rgba(255,0,127,0.4) !important;
+    font-family: 'Cairo' !important;
+    text-decoration: none !important;
+}
+
 .stInfo {
     background: rgba(0,240,255,0.15) !important;
     border-left: 5px solid #00f0ff !important;
@@ -175,26 +188,20 @@ with col_ai2:
 st.markdown("---")
 
 # ─────────────────────────────────────────────
-# أزرار التنقل للصفحات
+# أزرار التنقل للصفحات — link_button للوصول السريع
 # ─────────────────────────────────────────────
 st.header("🚀 جرب الموقع دلوقتي")
 
 col_btn1, col_btn2, col_btn3 = st.columns(3)
 
 with col_btn1:
-    if st.button("🧠 الترتيب الذكي (بالفئات)", key="btn_smart_sort"):
-        st.session_state.page = 'page1_catogary_sorter'
-        st.rerun()
+    st.link_button("🧠 الترتيب الذكي (بالفئات)", "https://ramboaitv.streamlit.app/page1_catogary_sorter")
 
 with col_btn2:
-    if st.button("✋ الترتيب اليدوي", key="btn_manual_sort"):
-        st.session_state.page = 'page2_manual_sorter'
-        st.rerun()
+    st.link_button("✋ الترتيب اليدوي", "https://ramboaitv.streamlit.app/page2_manual_sorter")
 
 with col_btn3:
-    if st.button("🤖 توليد بالذكاء الاصطناعي", key="btn_ai_generate"):
-        st.session_state.page = 'page3_generate_sorter'
-        st.rerun()
+    st.link_button("🤖 توليد بالذكاء الاصطناعي", "https://ramboaitv.streamlit.app/page3_generate_sorter")
 
 # ─────────────────────────────────────────────
 # الفوتر
