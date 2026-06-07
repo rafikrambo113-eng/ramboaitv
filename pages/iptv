@@ -1,1 +1,167 @@
+import streamlit as st
+import requests
+import json
 
+st.set_page_config(
+    page_title="📺 مشغل القنوات العربية",
+    page_icon="📺",
+    layout="wide"
+)
+
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+* { font-family: 'Cairo', sans-serif !important; }
+.main { direction: rtl; }
+h1, h2, h3 { color: #ff007f !important; font-family: 'Cairo', sans-serif !important; }
+.ch-card {
+    background: #111118;
+    border: 1px solid #2a2a3a;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.ch-card:hover { border-color: #00f0ff; }
+.stButton > button {
+    width: 100%;
+    background: #1a1a25 !important;
+    border: 1px solid #2a2a3a !important;
+    color: #e0e0f0 !important;
+    border-radius: 8px !important;
+    font-family: 'Cairo', sans-serif !important;
+    font-size: 13px !important;
+    padding: 6px 10px !important;
+    text-align: right !important;
+}
+.stButton > button:hover { border-color: #ff007f !important; color: #ff007f !important; }
+</style>
+""", unsafe_allow_html=True)
+
+ARAB_COUNTRIES = ['EG','SA','AE','KW','QA','BH','OM','JO','LB','SY','IQ','LY','TN','DZ','MA','SD','YE','PS','MR','SO','DJ','KM']
+
+@st.cache_data(ttl=3600)
+def load_channels():
+    try:
+        channels_res = requests.get('https://iptv-org.github.io/api/channels.json', timeout=15)
+        channels = channels_res.json()
+
+        streams_res = requests.get('https://iptv-org.github.io/api/streams.json', timeout=15)
+        streams = streams_res.json()
+
+        stream_map = {}
+        for s in streams:
+            if s.get('channel') and s.get('url') and s['channel'] not in stream_map:
+                stream_map[s['channel']] = s['url']
+
+        arabic = []
+        for ch in channels:
+            is_arabic = (
+                ('ara' in (ch.get('languages') or [])) or
+                (ch.get('country') in ARAB_COUNTRIES)
+            )
+            if is_arabic and ch['id'] in stream_map:
+                arabic.append({
+                    'id': ch['id'],
+                    'name': ch.get('name', ''),
+                    'country': ch.get('country', ''),
+                    'categories': ch.get('categories') or [],
+                    'logo': ch.get('logo', ''),
+                    'url': stream_map[ch['id']]
+                })
+
+        return arabic
+    except Exception as e:
+        st.error(f"فشل التحميل: {e}")
+        return []
+
+# ---- HEADER ----
+st.markdown("<h1 style='text-align:center'>📺 مشغل القنوات العربية</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align:center; color:#666680'>مصدر مجاني من iptv-org</p>", unsafe_allow_html=True)
+
+# ---- LOAD ----
+with st.spinner("جاري تحميل القنوات..."):
+    channels = load_channels()
+
+if not channels:
+    st.error("مفيش قنوات — تأكد من الاتصال بالنت")
+    st.stop()
+
+# ---- LAYOUT ----
+col_list, col_player = st.columns([1, 2])
+
+with col_list:
+    st.markdown(f"**{len(channels)} قناة عربية شغالة**")
+
+    search = st.text_input("🔍 ابحث عن قناة", placeholder="مثلاً: MBC، الجزيرة...")
+
+    all_cats = ['الكل']
+    for ch in channels:
+        for c in ch['categories']:
+            if c not in all_cats:
+                all_cats.append(c)
+    cat = st.selectbox("التصنيف", all_cats)
+
+    filtered = [
+        ch for ch in channels
+        if (not search or search.lower() in ch['name'].lower())
+        and (cat == 'الكل' or cat in ch['categories'])
+    ]
+
+    st.markdown(f"<small style='color:#666680'>{len(filtered)} نتيجة</small>", unsafe_allow_html=True)
+
+    if 'selected' not in st.session_state:
+        st.session_state.selected = None
+
+    for ch in filtered[:80]:
+        label = f"{ch['name']}  —  {ch['country']}  {('· ' + ch['categories'][0]) if ch['categories'] else ''}"
+        if st.button(label, key=ch['id']):
+            st.session_state.selected = ch
+
+with col_player:
+    if st.session_state.selected:
+        ch = st.session_state.selected
+        st.markdown(f"### ▶ {ch['name']}")
+
+        if ch['logo']:
+            st.image(ch['logo'], width=80)
+
+        st.markdown(f"""
+        <video controls autoplay style="width:100%; border-radius:12px; background:#000; max-height:400px;">
+          <source src="{ch['url']}">
+        </video>
+        """, unsafe_allow_html=True)
+
+        st.markdown(f"**الدولة:** {ch['country']}")
+        st.markdown(f"**التصنيف:** {', '.join(ch['categories']) or 'عام'}")
+
+        m3u = f"#EXTM3U\n#EXTINF:-1,{ch['name']}\n{ch['url']}\n"
+        st.download_button(
+            label="⬇️ تحميل M3U لهذه القناة",
+            data=m3u,
+            file_name=f"{ch['name']}.m3u",
+            mime="audio/mpegurl"
+        )
+
+        if st.button("⬇️ تحميل كل القنوات الظاهرة كملف M3U"):
+            all_m3u = "#EXTM3U\n"
+            for c in filtered[:80]:
+                all_m3u += f"#EXTINF:-1,{c['name']}\n{c['url']}\n"
+            st.download_button(
+                label="تأكيد التحميل",
+                data=all_m3u,
+                file_name="arabic_channels.m3u",
+                mime="audio/mpegurl"
+            )
+    else:
+        st.markdown("""
+        <div style='text-align:center; padding:80px 20px; color:#666680;'>
+            <div style='font-size:60px'>📡</div>
+            <p>اختار قناة من القائمة لتشغيلها</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+# ---- FOOTER ----
+st.markdown("---")
+st.markdown("<p style='text-align:center; color:#666680; font-size:12px'>مصدر البيانات: iptv-org.github.io — قنوات مجانية ومرخصة</p>", unsafe_allow_html=True)
