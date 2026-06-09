@@ -11,15 +11,6 @@ if 'page' not in st.session_state:
     st.session_state.page = 'home'
 
 # ─────────────────────────────────────────────
-# عداد الزوار
-# ─────────────────────────────────────────────
-if 'visit_counted' not in st.session_state:
-    st.session_state.visit_counted = True
-    if 'total_visits' not in st.session_state:
-        st.session_state.total_visits = 0
-    st.session_state.total_visits += 1
-
-# ─────────────────────────────────────────────
 # إعداد الصفحة + CSS مستقبلي
 # ─────────────────────────────────────────────
 st.set_page_config(page_title="Rambo_ AI_ TV — مرتب القنوات الذكي", page_icon="📺", layout="wide")
@@ -216,8 +207,6 @@ with col_btn3:
 # الفوتر
 # ─────────────────────────────────────────────
 st.markdown("---")
-
-st.markdown(f"<p class='center-text' style='font-size:20px; color:#00f0ff; font-weight:bold;'>👁️ عدد الزيارات: {st.session_state.get('total_visits', 1)}</p>", unsafe_allow_html=True)
 
 st.markdown("<p class='center-text' style='font-size:22px; color:#ff007f; font-weight:bold;'>🛠️ DEVELOPER ENG: RAFIK NATHAN</p>", unsafe_allow_html=True)
 st.markdown("<p class='center-text'>📱 MOBILE / الموبايل: +201280339779</p>", unsafe_allow_html=True)
