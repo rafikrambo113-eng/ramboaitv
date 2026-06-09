@@ -1,5 +1,15 @@
 import streamlit as st
 
+# عداد الزوار
+if "visit_counted" not in st.session_state:
+    st.session_state.visit_counted = True
+    if "total_visits" not in st.session_state:
+        st.session_state.total_visits = 0
+    st.session_state.total_visits += 1
+
+# عرض العداد
+st.metric("👁️ عدد الزيارات", st.session_state.total_visits)import streamlit as st
+
 # ─────────────────────────────────────────────
 # تهيئة الجلسة (Session State)
 # ─────────────────────────────────────────────
