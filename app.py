@@ -19,6 +19,29 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Cairo:wght@400;600;700;900&display=swap');
 
+/* ── إخفاء شريط Streamlit العلوي (Manage / Share / Deploy) ── */
+header[data-testid="stHeader"] { display: none !important; }
+#MainMenu { display: none !important; }
+div[data-testid="stToolbar"] { display: none !important; }
+div[data-testid="stDecoration"] { display: none !important; }
+div[data-testid="stStatusWidget"] { display: none !important; }
+footer { display: none !important; }
+
+/* ── فرض الخلفية السوداء على كل العناصر ── */
+html, body,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewBlockContainer"],
+[data-testid="stMainBlockContainer"],
+section.main,
+.main,
+.block-container,
+[data-testid="block-container"],
+div.stApp,
+.stApp {
+    background: radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%) !important;
+    background-color: #05020d !important;
+}
+
 .main {
     background: radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%) !important;
     font-family: 'Cairo', sans-serif !important;
