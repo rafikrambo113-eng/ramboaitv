@@ -31,13 +31,36 @@ for key, val in defaults.items():
         st.session_state[key] = val
 
 # ─────────────────────────────────────────────
-# 2. إعداد الصفحة والـ CSS (نفس استايل صفحة 1)
+# 2. إعداد الصفحة والـ CSS
 # ─────────────────────────────────────────────
 st.set_page_config(page_title="RAMBO P2 — المُرتب اليدوي", page_icon="🎛️", layout="wide")
 
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Cairo:wght@400;600;700;900&display=swap');
+
+/* ── إخفاء شريط Streamlit العلوي ── */
+header[data-testid="stHeader"] { display: none !important; }
+#MainMenu { display: none !important; }
+div[data-testid="stToolbar"] { display: none !important; }
+div[data-testid="stDecoration"] { display: none !important; }
+div[data-testid="stStatusWidget"] { display: none !important; }
+footer { display: none !important; }
+
+/* ── فرض الخلفية السوداء ── */
+html, body,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewBlockContainer"],
+[data-testid="stMainBlockContainer"],
+section.main,
+.main,
+.block-container,
+[data-testid="block-container"],
+div.stApp,
+.stApp {
+    background: radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%) !important;
+    background-color: #05020d !important;
+}
 
 .main {
     background: radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%) !important;
@@ -765,7 +788,6 @@ elif st.session_state.edit_finished:
             st.session_state.p2_uploader_key = new_key
             st.rerun()
 
-    # ── ملحوظة LG ──
     lg_trick_text = (
         "في بعض الحالات، بعد تنزيل ملف القنوات على الشاشة، قد تشعر أن القنوات ليست منظمة كما رتبتها. "
         "لحل هذا الأمر فوراً واجبار الشاشة على تفعيل الترتيب الصحيح، قم بالآتي:\n\n"
