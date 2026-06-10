@@ -34,6 +34,29 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Cairo:wght@400;600;700;900&display=swap');
 
+/* ── إخفاء شريط Streamlit العلوي ── */
+header[data-testid="stHeader"] { display: none !important; }
+#MainMenu { display: none !important; }
+div[data-testid="stToolbar"] { display: none !important; }
+div[data-testid="stDecoration"] { display: none !important; }
+div[data-testid="stStatusWidget"] { display: none !important; }
+footer { display: none !important; }
+
+/* ── فرض الخلفية السوداء ── */
+html, body,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewBlockContainer"],
+[data-testid="stMainBlockContainer"],
+section.main,
+.main,
+.block-container,
+[data-testid="block-container"],
+div.stApp,
+.stApp {
+    background: radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%) !important;
+    background-color: #05020d !important;
+}
+
 .main {
     background: radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%) !important;
     font-family: 'Cairo', sans-serif !important;
@@ -456,9 +479,6 @@ else:
         f"الإجمالي: {total_ch:,} قناة."
     )
 
-    # ══════════════════════════════════════════════════
-    # قسم الفحص والصيانة
-    # ══════════════════════════════════════════════════
     st.write("---")
     st.write("### ⚙️ خيارات الفحص الذكي والصيانة الفورية للملف")
 
@@ -598,16 +618,12 @@ else:
                 st.markdown("<div style='color:#888;margin-top:10px;'>ℹ️ جميع الترددات الحالية مطابقة لأحدث نسخة.</div>",
                             unsafe_allow_html=True)
 
-    # ══════════════════════════════════════════════════
-    # منطق الترتيب
-    # ══════════════════════════════════════════════════
     st.write("---")
 
     channels_to_sort     = []
     report_changes       = []
     existing_names_upper = set()
 
-    # ── Modern JSON ──
     if is_modern:
         broadcast_data = json.loads(legacy_broadcast_tag.text.strip())
         channels_list  = broadcast_data.get("channelList", [])
@@ -649,7 +665,6 @@ else:
                 })
                 existing_names_upper.add(nc['name'].upper())
 
-    # ── Legacy XML ──
     else:
         item_blocks  = re.findall(r'(<ITEM>.*?</ITEM>)', file_text, re.DOTALL)
         freq_patches = st.session_state.get('p1_freq_patches', {})
@@ -687,7 +702,6 @@ else:
                     })
                     existing_names_upper.add(nc['name'].upper())
 
-    # ── Search ──
     st.markdown("### 🔍 البحث عن قناة داخل الملف:")
     search_query = st.text_input("", placeholder="اكتب اسم القناة هنا...", key="p1_search").strip().upper()
     if search_query:
@@ -699,7 +713,6 @@ else:
         ]
         st.table(results) if results else st.warning("⚠️ لا توجد نتائج مطابقة.")
 
-    # ── Category sort ──
     st.write("---")
     st.markdown("### 🎛️ ترتيب الفئات:")
     user_priority = st.multiselect("اختر الفئات بالترتيب المطلوب:",
@@ -712,7 +725,6 @@ else:
     channels_sorted = sorted(channels_to_sort,
                              key=lambda x: final_priority.index(ai_classify(x["name"])))
 
-    # ── Preview ──
     categorized = {}
     for ch in channels_sorted:
         categorized.setdefault(ai_classify(ch["name"]), []).append(ch["name"])
@@ -734,7 +746,6 @@ else:
         st.markdown("### 🔁 التعديلات")
         st.table(report_changes)
 
-    # ── Build output ──
     text_report  = f"📄 تقرير ترتيب القنوات النهائي ({model_name})\n" + "=" * 50 + "\n"
     text_report += "🛠️ ترتيب الفئات المختار: " + " -> ".join(final_priority) + "\n" + "=" * 50 + "\n\n"
 
@@ -768,7 +779,6 @@ else:
         except UnicodeEncodeError:
             final_xml_bytes = final_text_output.encode('latin-1')
 
-    # ── Download ──
     st.write("---")
     st.success("✅ تم تجهيز الملف النهائي للتحميل:")
 
@@ -793,7 +803,6 @@ else:
             st.session_state.p1_uploader_key = new_key
             st.rerun()
 
-    # ── LG trick note ──
     st.write("---")
     lg_trick_text = (
         "في بعض الحالات، بعد تنزيل ملف القنوات على الشاشة، قد تشعر أن القنوات ليست منظمة كما رتبتها. "
