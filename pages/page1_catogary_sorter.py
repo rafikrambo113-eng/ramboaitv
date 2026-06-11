@@ -386,12 +386,10 @@ def ai_classify(channel_name):
 # ──────────────────────────────────────────────────────
 # 8. HELPERS
 # ──────────────────────────────────────────────────────
-def set_item_prnum(raw, index):
-    if "<prNum>" in raw:
-        raw = re.sub(r"<prNum>\d+</prNum>", f"<prNum>{index}</prNum>", raw)
-    else:
-        raw = raw.replace("<ITEM>", f"<ITEM>\r\n<prNum>{index}</prNum>")
-    return raw
+
+# ✅ الإصلاح الجوهري: لا نعدل في prNum إطلاقاً
+# prNum في ملفات LG Legacy هو ID حقيقي للقناة على القمر
+# وليس مجرد رقم ترتيب — تعديله يكسر الملف في LG Channel Editor
 
 def normalize_modern_node(node, index):
     node["majorNumber"] = index
@@ -690,7 +688,7 @@ else:
 
     else:
         # ════════════════════════════════════════════════
-        # LEGACY XML — الجزء المُصلح
+        # LEGACY XML
         # ════════════════════════════════════════════════
         item_blocks  = re.findall(r'(<ITEM>.*?</ITEM>)', file_text, re.DOTALL)
         freq_patches = st.session_state.get('p1_freq_patches', {})
@@ -784,18 +782,18 @@ else:
             text_report += " [NEW]\n" if ch["is_injected"] else "\n"
 
         broadcast_data["channelList"] = final_list_modern
-
         new_json_str = json.dumps(broadcast_data, ensure_ascii=False, separators=(',', ':'))
         final_xml_bytes = build_final_xml_bytes(original_file_text, new_json_str)
 
     else:
         # ════════════════════════════════════════════════
-        # LEGACY XML — بناء الملف النهائي المُصلح ✅
+        # LEGACY XML — بناء الملف النهائي
+        # ✅ الإصلاح: لا نعدل prNum إطلاقاً — نحافظ عليه كما هو
         # ════════════════════════════════════════════════
         item_strings_sorted = []
         for index, ch in enumerate(channels_sorted, start=1):
-            raw = set_item_prnum(ch["raw_str"], index)
-            item_strings_sorted.append(raw)
+            # ✅ نحافظ على raw_str كما هو بدون تعديل prNum
+            item_strings_sorted.append(ch["raw_str"])
             text_report += f"No. {index:03d} : {ch['name']:<25} | Freq: {ch['freq']}"
             text_report += " [NEW]\n" if ch["is_injected"] else "\n"
 
@@ -805,19 +803,16 @@ else:
         end_idx   = file_text.rfind("</ITEM>") + len("</ITEM>")
 
         if start_idx != -1:
-            # ✅ الإصلاح: نضمن مفيش سطر فاضي زيادة حوالين الـ items
+            # ✅ نحافظ على نفس الـ whitespace تماماً زي الأصل
             before = file_text[:start_idx].rstrip("\r\n")
             after  = file_text[end_idx:].lstrip("\r\n")
             final_text_output = before + "\r\n" + combined_items_str + "\r\n" + after
         else:
             final_text_output = combined_items_str
 
-        try:
-            final_xml_bytes = final_text_output.encode('utf-8')
-        except UnicodeEncodeError:
-            final_xml_bytes = final_text_output.encode('latin-1')
+        final_xml_bytes = final_text_output.encode('utf-8')
 
-        # ✅ إزالة BOM لو اتضاف عند الـ encode
+        # ✅ إزالة BOM لو اتضاف
         if final_xml_bytes.startswith(b'\xef\xbb\xbf'):
             final_xml_bytes = final_xml_bytes[3:]
 
