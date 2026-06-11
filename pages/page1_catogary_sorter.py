@@ -404,27 +404,26 @@ def normalize_modern_node(node, index):
 
 
 # ──────────────────────────────────────────────────────
-# 9. ─── الدالة الجديدة لتوليد الـ XML بنفس شكل الأصل ───
+# 9. دالة بناء الملف النهائي — تبدّل JSON جوا الـ XML بدون ما تمس الهيكل
 # ──────────────────────────────────────────────────────
-def build_final_xml_bytes(root, original_file_text):
+def build_final_xml_bytes(original_file_text, new_json_str):
     """
-    يحاول يحافظ على XML declaration وترتيب الـ attributes
-    عشان برنامج LG Channel Editor يقدر يفتح الملف.
+    تبحث عن محتوى legacybroadcast في النص الاصلي
+    وتستبدله بالـ JSON الجديد فقط بدون إعادة parse للـ XML كلها.
+    ده بيضمن إن LG Channel Editor يقدر يفتح الملف.
     """
     try:
-        # استخرج الـ XML declaration الأصلي لو موجود
-        decl_match = re.match(r'(<\?xml[^?]*\?>)', original_file_text.strip())
-        xml_decl = decl_match.group(1) if decl_match else '<?xml version="1.0" encoding="UTF-8"?>'
-
-        # نص الـ XML بدون declaration
-        body = ET.tostring(root, encoding="unicode", xml_declaration=False)
-
-        # دمج الـ declaration مع الـ body
-        final_text = xml_decl + "\n" + body
-        return final_text.encode("utf-8")
-    except Exception:
-        # Fallback
-        return ET.tostring(root, encoding="utf-8", xml_declaration=True)
+        pattern = r'(<legacybroadcast[^>]*>)(.*?)(</legacybroadcast>)'
+        new_text = re.sub(
+            pattern,
+            lambda m: m.group(1) + new_json_str + m.group(3),
+            original_file_text,
+            flags=re.DOTALL
+        )
+        return new_text.encode("utf-8")
+    except Exception as e:
+        st.error(f"خطأ في بناء الملف: {e}")
+        return original_file_text.encode("utf-8")
 
 
 # ──────────────────────────────────────────────────────
@@ -469,7 +468,6 @@ else:
 
     file_bytes = uploaded_file.read()
 
-    # ─── حفظ النص الأصلي قبل أي تعديل ───
     try:
         original_file_text = file_bytes.decode('utf-8')
     except UnicodeDecodeError:
@@ -784,10 +782,10 @@ else:
             text_report += " [NEW]\n" if ch["is_injected"] else "\n"
 
         broadcast_data["channelList"] = final_list_modern
-        legacy_broadcast_tag.text = json.dumps(broadcast_data, ensure_ascii=False, separators=(',', ':'))
 
-        # ─── الإصلاح الجوهري: الحفاظ على بنية الـ XML الأصلية ───
-        final_xml_bytes = build_final_xml_bytes(root, original_file_text)
+        # الاصلاح الجوهري: نبدل الـ JSON جوا الـ XML بدون ما نمس الهيكل
+        new_json_str = json.dumps(broadcast_data, ensure_ascii=False, separators=(',', ':'))
+        final_xml_bytes = build_final_xml_bytes(original_file_text, new_json_str)
 
     else:
         item_strings_sorted = []
@@ -806,7 +804,6 @@ else:
         else:
             final_text_output = combined_items_str
 
-        # ─── الإصلاح الجوهري: الحفاظ على نفس الـ encoding بدون إعادة parse ───
         try:
             final_xml_bytes = final_text_output.encode('utf-8')
         except UnicodeEncodeError:
