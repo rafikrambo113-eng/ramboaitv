@@ -407,11 +407,6 @@ def normalize_modern_node(node, index):
 # 9. دالة بناء الملف النهائي — تبدّل JSON جوا الـ XML بدون ما تمس الهيكل
 # ──────────────────────────────────────────────────────
 def build_final_xml_bytes(original_file_text, new_json_str):
-    """
-    تبحث عن محتوى legacybroadcast في النص الاصلي
-    وتستبدله بالـ JSON الجديد فقط بدون إعادة parse للـ XML كلها.
-    ده بيضمن إن LG Channel Editor يقدر يفتح الملف.
-    """
     try:
         pattern = r'(<legacybroadcast[^>]*>)(.*?)(</legacybroadcast>)'
         new_text = re.sub(
@@ -472,6 +467,10 @@ else:
         original_file_text = file_bytes.decode('utf-8')
     except UnicodeDecodeError:
         original_file_text = file_bytes.decode('latin-1')
+
+    # ✅ إزالة BOM لو موجود
+    if original_file_text.startswith('\ufeff'):
+        original_file_text = original_file_text[1:]
 
     file_text = original_file_text
     file_text_cleaned = re.sub(r'^\s+', '', file_text)
@@ -690,6 +689,9 @@ else:
                 existing_names_upper.add(nc['name'].upper())
 
     else:
+        # ════════════════════════════════════════════════
+        # LEGACY XML — الجزء المُصلح
+        # ════════════════════════════════════════════════
         item_blocks  = re.findall(r'(<ITEM>.*?</ITEM>)', file_text, re.DOTALL)
         freq_patches = st.session_state.get('p1_freq_patches', {})
 
@@ -783,11 +785,13 @@ else:
 
         broadcast_data["channelList"] = final_list_modern
 
-        # الاصلاح الجوهري: نبدل الـ JSON جوا الـ XML بدون ما نمس الهيكل
         new_json_str = json.dumps(broadcast_data, ensure_ascii=False, separators=(',', ':'))
         final_xml_bytes = build_final_xml_bytes(original_file_text, new_json_str)
 
     else:
+        # ════════════════════════════════════════════════
+        # LEGACY XML — بناء الملف النهائي المُصلح ✅
+        # ════════════════════════════════════════════════
         item_strings_sorted = []
         for index, ch in enumerate(channels_sorted, start=1):
             raw = set_item_prnum(ch["raw_str"], index)
@@ -796,11 +800,15 @@ else:
             text_report += " [NEW]\n" if ch["is_injected"] else "\n"
 
         combined_items_str = "\r\n".join(item_strings_sorted)
+
         start_idx = file_text.find("<ITEM>")
         end_idx   = file_text.rfind("</ITEM>") + len("</ITEM>")
 
         if start_idx != -1:
-            final_text_output = file_text[:start_idx] + combined_items_str + file_text[end_idx:]
+            # ✅ الإصلاح: نضمن مفيش سطر فاضي زيادة حوالين الـ items
+            before = file_text[:start_idx].rstrip("\r\n")
+            after  = file_text[end_idx:].lstrip("\r\n")
+            final_text_output = before + "\r\n" + combined_items_str + "\r\n" + after
         else:
             final_text_output = combined_items_str
 
@@ -808,6 +816,10 @@ else:
             final_xml_bytes = final_text_output.encode('utf-8')
         except UnicodeEncodeError:
             final_xml_bytes = final_text_output.encode('latin-1')
+
+        # ✅ إزالة BOM لو اتضاف عند الـ encode
+        if final_xml_bytes.startswith(b'\xef\xbb\xbf'):
+            final_xml_bytes = final_xml_bytes[3:]
 
     st.write("---")
     st.success("✅ تم تجهيز الملف النهائي للتحميل:")
