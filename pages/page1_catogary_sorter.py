@@ -34,7 +34,6 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Cairo:wght@400;600;700;900&display=swap');
 
-/* ── إخفاء شريط Streamlit العلوي ── */
 header[data-testid="stHeader"] { display: none !important; }
 #MainMenu { display: none !important; }
 div[data-testid="stToolbar"] { display: none !important; }
@@ -42,7 +41,6 @@ div[data-testid="stDecoration"] { display: none !important; }
 div[data-testid="stStatusWidget"] { display: none !important; }
 footer { display: none !important; }
 
-/* ── فرض الخلفية السوداء ── */
 html, body,
 [data-testid="stAppViewContainer"],
 [data-testid="stAppViewBlockContainer"],
@@ -406,7 +404,31 @@ def normalize_modern_node(node, index):
 
 
 # ──────────────────────────────────────────────────────
-# 9. FILE UPLOADER + RESET
+# 9. ─── الدالة الجديدة لتوليد الـ XML بنفس شكل الأصل ───
+# ──────────────────────────────────────────────────────
+def build_final_xml_bytes(root, original_file_text):
+    """
+    يحاول يحافظ على XML declaration وترتيب الـ attributes
+    عشان برنامج LG Channel Editor يقدر يفتح الملف.
+    """
+    try:
+        # استخرج الـ XML declaration الأصلي لو موجود
+        decl_match = re.match(r'(<\?xml[^?]*\?>)', original_file_text.strip())
+        xml_decl = decl_match.group(1) if decl_match else '<?xml version="1.0" encoding="UTF-8"?>'
+
+        # نص الـ XML بدون declaration
+        body = ET.tostring(root, encoding="unicode", xml_declaration=False)
+
+        # دمج الـ declaration مع الـ body
+        final_text = xml_decl + "\n" + body
+        return final_text.encode("utf-8")
+    except Exception:
+        # Fallback
+        return ET.tostring(root, encoding="utf-8", xml_declaration=True)
+
+
+# ──────────────────────────────────────────────────────
+# 10. FILE UPLOADER + RESET
 # ──────────────────────────────────────────────────────
 if 'p1_uploader_key' not in st.session_state:
     st.session_state.p1_uploader_key = 0
@@ -431,7 +453,7 @@ with col_reset:
         st.rerun()
 
 # ──────────────────────────────────────────────────────
-# 10. MAIN LOGIC
+# 11. MAIN LOGIC
 # ──────────────────────────────────────────────────────
 if uploaded_file is None:
     st.info("⬆️ ارفع ملف TLL أولاً لتبدأ العمل.")
@@ -446,12 +468,16 @@ else:
         st.session_state.p1_last_file_name = uploaded_file.name
 
     file_bytes = uploaded_file.read()
-    try:
-        file_text = file_bytes.decode('utf-8')
-    except UnicodeDecodeError:
-        file_text = file_bytes.decode('latin-1')
 
+    # ─── حفظ النص الأصلي قبل أي تعديل ───
+    try:
+        original_file_text = file_bytes.decode('utf-8')
+    except UnicodeDecodeError:
+        original_file_text = file_bytes.decode('latin-1')
+
+    file_text = original_file_text
     file_text_cleaned = re.sub(r'^\s+', '', file_text)
+
     try:
         root = ET.fromstring(file_text_cleaned.encode('utf-8'))
     except Exception:
@@ -759,7 +785,9 @@ else:
 
         broadcast_data["channelList"] = final_list_modern
         legacy_broadcast_tag.text = json.dumps(broadcast_data, ensure_ascii=False, separators=(',', ':'))
-        final_xml_bytes = ET.tostring(root, encoding="utf-8")
+
+        # ─── الإصلاح الجوهري: الحفاظ على بنية الـ XML الأصلية ───
+        final_xml_bytes = build_final_xml_bytes(root, original_file_text)
 
     else:
         item_strings_sorted = []
@@ -772,8 +800,13 @@ else:
         combined_items_str = "\r\n".join(item_strings_sorted)
         start_idx = file_text.find("<ITEM>")
         end_idx   = file_text.rfind("</ITEM>") + len("</ITEM>")
-        final_text_output = (file_text[:start_idx] + combined_items_str + file_text[end_idx:]
-                             if start_idx != -1 else combined_items_str)
+
+        if start_idx != -1:
+            final_text_output = file_text[:start_idx] + combined_items_str + file_text[end_idx:]
+        else:
+            final_text_output = combined_items_str
+
+        # ─── الإصلاح الجوهري: الحفاظ على نفس الـ encoding بدون إعادة parse ───
         try:
             final_xml_bytes = final_text_output.encode('utf-8')
         except UnicodeEncodeError:
@@ -820,3 +853,4 @@ else:
 {''.join(f'<div style="margin:6px 0;line-height:1.7;color:#e0e0e0;">{line}</div>' for line in trick_lines if line.strip())}
 </div>
 """, unsafe_allow_html=True)
+Done
