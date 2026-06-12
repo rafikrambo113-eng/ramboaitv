@@ -234,6 +234,7 @@ st.markdown("---")
 st.markdown("<p class='center-text' style='font-size:22px; color:#ff007f; font-weight:bold;'>🛠️ DEVELOPER ENG: RAFIK NATHAN</p>", unsafe_allow_html=True)
 st.markdown("<p class='center-text'>📱 MOBILE / الموبايل: +</p>", unsafe_allow_html=True)
 st.markdown("<p class='center-text'>✉️ E-MAIL: </p>", unsafe_allow_html=True)
+st.markdown("<p class='center-text'>ملحوظه عند فتح اي صفحه   لكي تري الصفحه بلون اسود مناسب الرجاء الضغط علي الثلاث نقاط فالجهه العلويه اليمين واختيار Dark حتي الشاشه بطريقه مناسبه </p>", unsafe_allow_html=True)
 
 whatsapp_url = "https://api.whatsapp.com/send?phone=&text=Hello%20Developer%20Rafik%20Rambo"
 st.link_button("WhatsApp 💬", whatsapp_url)
