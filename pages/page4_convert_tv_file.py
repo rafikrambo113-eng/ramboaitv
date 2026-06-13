@@ -1,639 +1,587 @@
 import streamlit as st
-import json
 import re
-import base64
-import xml.etree.ElementTree as ET
+import json
+from datetime import datetime
 
-st.set_page_config(page_title="محول ملفات القنوات", page_icon="🔄", layout="wide")
+# ──────────────────────────────────────────────────────
+# 1. SESSION STATE
+# ──────────────────────────────────────────────────────
+for key, val in {
+    'lang': 'ar',
+    'theme': 'dark',
+    'p4_file_bytes': None,
+    'p4_file_name': None,
+    'p4_info': {},
+    'p4_result_bytes': None,
+    'p4_changes': [],
+    'p4_done': False,
+    'p4_uploader_key': 0,
+}.items():
+    if key not in st.session_state:
+        st.session_state[key] = val
 
-st.markdown("""
+# ──────────────────────────────────────────────────────
+# 2. بيانات البلدان
+# ──────────────────────────────────────────────────────
+COUNTRIES = {
+    "🇪🇬 مصر / Egypt":           {"code2": "EG",  "code3": "EGY", "full": "Egypt"},
+    "🇸🇦 السعودية / Saudi":       {"code2": "SA",  "code3": "SAU", "full": "Saudi Arabia"},
+    "🇦🇪 الإمارات / UAE":          {"code2": "AE",  "code3": "ARE", "full": "United Arab Emirates"},
+    "🇯🇴 الأردن / Jordan":         {"code2": "JO",  "code3": "JOR", "full": "Jordan"},
+    "🇱🇧 لبنان / Lebanon":         {"code2": "LB",  "code3": "LBN", "full": "Lebanon"},
+    "🇸🇩 السودان / Sudan":         {"code2": "SD",  "code3": "SDN", "full": "Sudan"},
+    "🇩🇿 الجزائر / Algeria":       {"code2": "DZ",  "code3": "DZA", "full": "Algeria"},
+    "🇲🇦 المغرب / Morocco":        {"code2": "MA",  "code3": "MAR", "full": "Morocco"},
+    "🇹🇳 تونس / Tunisia":          {"code2": "TN",  "code3": "TUN", "full": "Tunisia"},
+    "🇱🇾 ليبيا / Libya":           {"code2": "LY",  "code3": "LBY", "full": "Libya"},
+    "🇮🇶 العراق / Iraq":           {"code2": "IQ",  "code3": "IRQ", "full": "Iraq"},
+    "🇸🇾 سوريا / Syria":           {"code2": "SY",  "code3": "SYR", "full": "Syria"},
+    "🇾🇪 اليمن / Yemen":           {"code2": "YE",  "code3": "YEM", "full": "Yemen"},
+    "🇰🇼 الكويت / Kuwait":         {"code2": "KW",  "code3": "KWT", "full": "Kuwait"},
+    "🇶🇦 قطر / Qatar":             {"code2": "QA",  "code3": "QAT", "full": "Qatar"},
+    "🇧🇭 البحرين / Bahrain":       {"code2": "BH",  "code3": "BHR", "full": "Bahrain"},
+    "🇴🇲 عُمان / Oman":            {"code2": "OM",  "code3": "OMN", "full": "Oman"},
+    "🇵🇸 فلسطين / Palestine":      {"code2": "PS",  "code3": "PSE", "full": "Palestine"},
+    "🌐 عالمي / Global (JA)":      {"code2": "JA",  "code3": "JA",  "full": "Japan"},
+}
+
+# عكس للبحث عن اسم البلد من الكود
+CODE_TO_NAME = {}
+for name, d in COUNTRIES.items():
+    CODE_TO_NAME[d["code2"].upper()] = name
+    CODE_TO_NAME[d["code3"].upper()] = name
+    CODE_TO_NAME[d["full"].upper()]  = name
+
+# موديلات LG
+LG_MODELS = sorted([
+    # 2024/2025
+    "OLED65G4PSA","OLED55C4PSA","OLED77C4PSA","65QNED85T6A","55QNED80T6A",
+    "75UR78006LK","65UR78006LK","65UR78006LL","55UR78006LK","43UR78006LK",
+    "32LQ63806LC","43LQ63006LA","50LQ63006LA",
+    # 2022/2023
+    "OLED65C3PSA","OLED55C3PSA","65QNED85VPA","55QNED85VPA",
+    "75UR80006LJ","65UR80006LJ","55UR80006LJ","43UR80006LJ","50UR80006LJ",
+    "32LQ630BPSA","43LQ630BPSA","50LQ630BPSA",
+    "65UQ80006LB","55UQ80006LB","50UQ80006LB","43UQ80006LB",
+    # 2020/2021
+    "OLED65CX6LA","OLED55CX6LA","65NANO86VPA","55NANO86VPA",
+    "75UP80006LR","65UP80006LR","55UP80006LR","43UP80006LR","50UP80006LR",
+    "43UP75006LF","50UP75006LF",
+    # 2018/2019
+    "65SM9010PLA","55SM9010PLA","65SK8500PLA","55SK8500PLA",
+    "43UK6300PLB","49UK6300PLB","55UK6300PLB","65UK6300PLB",
+    "32LK6100PLB","43LK6100PLB","49LK6100PLB","55LK6100PLB",
+    "32LM550BPVA","43LM5500PLA","49LM5500PLA","55LM5500PLA",
+    # 2016/2017
+    "65UH950V","55UH950V","49UH850V","43UH850V",
+    "32LH604U-TB","43LH604V","49LH604V","55LH604V",
+    "32LH570U","43LH570V","49LH570V","55LH570V",
+    "32LH530V","43LH530V","49LH530V",
+    "55UA85006LA.DFUYLWE","65UA80006LA",
+])
+
+# ──────────────────────────────────────────────────────
+# 3. دوال التحليل والتحويل
+# ──────────────────────────────────────────────────────
+def parse_tll(file_bytes):
+    try:
+        txt = file_bytes.decode('utf-8', errors='ignore')
+    except:
+        txt = file_bytes.decode('latin-1', errors='ignore')
+
+    info = {}
+    info['txt'] = txt
+    info['is_modern'] = 'legacybroadcast' in txt
+
+    # الموديل
+    m = re.search(r'<ModelName[^>]*>([^<]+)</ModelName>', txt)
+    info['model'] = m.group(1).strip() if m else ""
+
+    if info['is_modern']:
+        # ── Modern JSON ──
+        # BroadcastCountrySetting (code3)
+        m = re.search(r'<BroadcastCountrySetting[^>]*>([^<]+)</BroadcastCountrySetting>', txt)
+        info['broadcast_country'] = m.group(1).strip() if m else ""
+
+        # country XML (عادةً JA)
+        m = re.search(r'<country[^>]*>([^<]+)</country>', txt)
+        info['country_xml'] = m.group(1).strip() if m else ""
+
+        # country في JSON (الاسم الكامل)
+        jm = re.search(r'<legacybroadcast>(.*?)</legacybroadcast>', txt, re.DOTALL)
+        if jm:
+            try:
+                data = json.loads(jm.group(1))
+                info['country_json'] = data.get('modelInfo', {}).get('country', '')
+                info['ch_count'] = len(data.get('channelList', []))
+            except:
+                info['country_json'] = ''
+                info['ch_count'] = len(re.findall(r'"channelName"', txt))
+        else:
+            info['country_json'] = ''
+            info['ch_count'] = 0
+
+        # البلد المعروض = BroadcastCountrySetting أو country_json
+        info['display_country'] = info['broadcast_country'] or info['country_json']
+
+    else:
+        # ── Legacy XML ──
+        m = re.search(r'<BroadcastCountrySetting[^>]*>([^<]+)</BroadcastCountrySetting>', txt)
+        info['broadcast_country'] = m.group(1).strip() if m else ""
+
+        m = re.search(r'<country[^>]*>([^<]+)</country>', txt)
+        info['country_xml'] = m.group(1).strip() if m else ""
+
+        info['country_json'] = ''
+        info['display_country'] = info['country_xml'] or info['broadcast_country']
+        info['ch_count'] = len(re.findall(r'<ITEM>', txt))
+
+    # اسم البلد بالعربي
+    dc = info['display_country'].upper()
+    info['country_label'] = CODE_TO_NAME.get(dc, info['display_country'])
+
+    return info
+
+
+def convert_tll(info, new_model, new_country_name):
+    txt = info['txt']
+    changes = []
+    is_modern = info['is_modern']
+
+    # ══════════════════════════════════
+    # تغيير الموديل
+    # ══════════════════════════════════
+    if new_model and new_model.strip() and new_model.strip() != info['model']:
+        old = info['model']
+        new = new_model.strip()
+        txt = re.sub(
+            r'(<ModelName[^>]*>)([^<]+)(</ModelName>)',
+            lambda m: m.group(1) + new + m.group(3),
+            txt
+        )
+        changes.append(('model', old, new))
+
+    # ══════════════════════════════════
+    # تغيير البلد
+    # ══════════════════════════════════
+    if new_country_name and new_country_name in COUNTRIES:
+        cd = COUNTRIES[new_country_name]
+
+        if is_modern:
+            # ── Modern: غيّر في 3 أماكن ──
+
+            # 1. BroadcastCountrySetting → code3
+            old_bc = info['broadcast_country']
+            if old_bc:
+                txt = re.sub(
+                    r'(<BroadcastCountrySetting[^>]*>)([^<]+)(</BroadcastCountrySetting>)',
+                    lambda m: m.group(1) + cd['code3'] + m.group(3),
+                    txt
+                )
+            else:
+                # أضفها لو مش موجودة
+                txt = txt.replace(
+                    '</ModelInfo>',
+                    f'<BroadcastCountrySetting type="0">{cd["code3"]}</BroadcastCountrySetting>\n</ModelInfo>'
+                )
+
+            # 2. country XML → اتركها JA (ده بيخلي الشاشة تقبل الملف)
+            # مش بنغيرها عشان دي بتتحكم في قبول الملف
+
+            # 3. country في JSON → full name
+            def replace_json_country(match):
+                try:
+                    data = json.loads(match.group(1))
+                    data['modelInfo']['country'] = cd['full']
+                    return '<legacybroadcast>' + json.dumps(data, ensure_ascii=False, separators=(',', ':')) + '</legacybroadcast>'
+                except:
+                    return match.group(0)
+            txt = re.sub(
+                r'<legacybroadcast>(.*?)</legacybroadcast>',
+                replace_json_country,
+                txt,
+                flags=re.DOTALL
+            )
+
+            old_display = info['broadcast_country'] or info['country_json']
+            new_display = cd['code3']
+
+        else:
+            # ── Legacy XML: غيّر country ──
+            old_display = info['country_xml'] or info['broadcast_country']
+
+            # BroadcastCountrySetting لو موجود
+            if info['broadcast_country']:
+                txt = re.sub(
+                    r'(<BroadcastCountrySetting[^>]*>)([^<]+)(</BroadcastCountrySetting>)',
+                    lambda m: m.group(1) + cd['code3'] + m.group(3),
+                    txt
+                )
+
+            # country tag - نحدد الطول المناسب
+            old_len = len(info['country_xml'])
+            new_code = cd['code2'] if old_len <= 2 else cd['code3']
+            txt = re.sub(
+                r'(<country[^>]*>)([^<]+)(</country>)',
+                lambda m: m.group(1) + new_code + m.group(3),
+                txt
+            )
+            new_display = new_code
+
+        if old_display != new_display:
+            changes.append(('country', old_display, new_display, new_country_name))
+
+    return txt.encode('utf-8'), changes
+
+
+# ──────────────────────────────────────────────────────
+# 4. إعداد الصفحة والـ CSS
+# ──────────────────────────────────────────────────────
+t_lang = st.session_state.lang
+st.set_page_config(page_title="RAMBO P4 — Converter", page_icon="🔄", layout="wide")
+
+col_lang, col_theme, _ = st.columns([1.2, 1.5, 8])
+with col_lang:
+    if st.button("🌐 English" if t_lang == 'ar' else "🌐 العربية"):
+        st.session_state.lang = 'en' if t_lang == 'ar' else 'ar'
+        st.rerun()
+with col_theme:
+    if st.button("☀️ Light Mode" if st.session_state.theme == 'dark' else "🌙 Dark Mode"):
+        st.session_state.theme = 'light' if st.session_state.theme == 'dark' else 'dark'
+        st.rerun()
+
+dk = st.session_state.theme == 'dark'
+bg    = "radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%)" if dk else "radial-gradient(circle at 50% 50%, #f4f5f7 0%, #e4e7eb 100%)"
+tc    = "#00f0ff" if dk else "#0d0722"
+bb    = "rgba(13,7,33,0.85)" if dk else "#ffffff"
+bord  = "#00f0ff" if dk else "#ff007f"
+bsh   = "rgba(0,240,255,0.35)" if dk else "rgba(255,0,127,0.15)"
+tsh   = "0 0 5px rgba(0,240,255,0.4)" if dk else "none"
+ff    = "'Cairo', sans-serif" if t_lang == 'ar' else "'Orbitron', sans-serif"
+
+st.markdown(f"""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Cairo:wght@400;600;700;900&display=swap');
-html, body, [class*="css"] { font-family: 'Cairo', sans-serif !important; direction: rtl !important; }
-.main { background: radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%) !important; }
-section[data-testid="stSidebar"] { display: none !important; }
-#MainMenu, header, footer { visibility: hidden !important; }
-h1 {
-    color: #ff007f !important;
-    text-shadow: 0 0 10px #ff007f, 0 0 25px rgba(255,0,127,0.5) !important;
-    font-family: 'Orbitron', sans-serif !important;
-    font-weight: 900 !important; text-align: center !important; font-size: 38px !important;
-}
-h2, h3 { color: #00f0ff !important; font-family: 'Cairo', sans-serif !important; font-weight: 700 !important; }
-p, label, div, span { color: #e0e0e0 !important; font-size: 16px !important; line-height: 1.8 !important; }
-.stButton>button {
-    background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important;
-    color: #fff !important; border: 2px solid #ff007f !important; border-radius: 14px !important;
-    font-weight: bold !important; font-size: 17px !important; padding: 12px 30px !important;
-    box-shadow: 0 0 15px rgba(255,0,127,0.4) !important; font-family: 'Cairo' !important; width: 100% !important;
-}
-.stDownloadButton>button {
-    background: linear-gradient(135deg, #00f0ff 0%, #0077aa 100%) !important;
-    color: #000 !important; border: 2px solid #00f0ff !important; border-radius: 14px !important;
-    font-weight: bold !important; font-size: 17px !important; padding: 12px 30px !important;
-    box-shadow: 0 0 15px rgba(0,240,255,0.4) !important; font-family: 'Cairo' !important; width: 100% !important;
-}
-.info-box {
-    background: rgba(0,240,255,0.08); border: 1px solid #00f0ff;
-    border-radius: 12px; padding: 14px 18px; margin: 8px 0; direction: rtl;
-}
-.warn-box {
-    background: rgba(255,200,0,0.08); border: 1px solid #ffc800;
-    border-radius: 12px; padding: 14px 18px; margin: 8px 0; direction: rtl;
-}
-.success-box {
-    background: rgba(0,255,100,0.08); border: 1px solid #00ff64;
-    border-radius: 12px; padding: 16px 20px; margin: 10px 0; direction: rtl; text-align: center;
-}
-.step-box {
-    background: rgba(255,255,255,0.04); border: 1px solid #333;
-    border-radius: 12px; padding: 14px 18px; margin: 8px 0; text-align: center;
-}
-hr { border-color: #00f0ff !important; opacity: 0.3 !important; }
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;900&family=Cairo:wght@400;700&display=swap');
+.main {{ background: {bg} !important; color: {tc} !important; font-family: {ff}; }}
+h1 {{ color: #ff007f !important; text-shadow: 0 0 10px #ff007f,0 0 25px rgba(255,0,127,0.4) !important;
+      text-align:center; font-weight:900; margin-top:5px; }}
+h3,p,label,.stMarkdown,div[data-testid="stMarkdownContainer"] p {{
+    color:{tc} !important; text-shadow:{tsh}; }}
+.stTextInput>div>div>input,.stSelectbox>div>div {{
+    background-color:{bb} !important; color:{tc} !important;
+    border:2px solid {bord} !important; border-radius:10px !important; }}
+div[data-testid="stFileUploader"] {{
+    background:{bb} !important; border:2px solid {bord} !important;
+    box-shadow:0 5px 15px {bsh} !important; border-radius:14px !important;
+    padding:18px !important; margin-bottom:20px !important; }}
+.stButton>button {{
+    background:linear-gradient(135deg,#ff007f 0%,#aa0055 100%) !important;
+    color:#fff !important; border:2px solid #ff007f !important;
+    border-radius:12px !important; font-weight:bold; width:100%; }}
+.stDownloadButton>button {{
+    background:linear-gradient(135deg,#00b894 0%,#00695c 100%) !important;
+    color:#fff !important; border:none !important;
+    border-radius:12px !important; font-weight:bold; width:100%; }}
+.card {{
+    background:{bb}; border:2px solid {bord};
+    box-shadow:0 5px 15px {bsh}; border-radius:14px;
+    padding:20px; margin-bottom:16px; }}
+.badge {{
+    display:inline-block; background:linear-gradient(135deg,#ff007f,#aa0055);
+    color:white; border-radius:50%; width:30px; height:30px;
+    text-align:center; line-height:30px; font-weight:bold;
+    margin-left:8px; margin-right:8px; }}
+.change-row {{
+    background:rgba(0,240,255,0.08); border-left:4px solid #00f0ff;
+    border-radius:8px; padding:10px 16px; margin:6px 0; }}
+.tag {{
+    display:inline-block; border-radius:6px; padding:3px 10px;
+    font-size:0.85rem; font-weight:bold; margin:2px; }}
+.tag-modern {{ background:rgba(0,240,255,0.15); border:1px solid #00f0ff; color:#00f0ff; }}
+.tag-legacy {{ background:rgba(255,165,0,0.15); border:1px solid orange; color:orange; }}
+.tag-country {{ background:rgba(255,0,127,0.15); border:1px solid #ff007f; color:#ff007f; }}
 </style>
 """, unsafe_allow_html=True)
 
-# ════════════════════════════════════════════
-# البيانات الثابتة
-# ════════════════════════════════════════════
+# ──────────────────────────────────────────────────────
+# 5. العنوان
+# ──────────────────────────────────────────────────────
+title_ar = "🔄 RAMBO — محوّل ملفات TLL"
+title_en = "🔄 RAMBO — TLL File Converter"
+sub_ar   = "⚡ غيّر الموديل أو بلد البث لأي شاشة LG في ثوانٍ"
+sub_en   = "⚡ Change model or broadcast country for any LG TV in seconds"
 
-COUNTRIES = {
-    "مصر 🇪🇬": ("EGY", "Egypt"),
-    "السعودية 🇸🇦": ("SAU", "Saudi Arabia"),
-    "الإمارات 🇦🇪": ("ARE", "United Arab Emirates"),
-    "الكويت 🇰🇼": ("KWT", "Kuwait"),
-    "قطر 🇶🇦": ("QAT", "Qatar"),
-    "البحرين 🇧🇭": ("BHR", "Bahrain"),
-    "عُمان 🇴🇲": ("OMN", "Oman"),
-    "الأردن 🇯🇴": ("JOR", "Jordan"),
-    "لبنان 🇱🇧": ("LBN", "Lebanon"),
-    "العراق 🇮🇶": ("IRQ", "Iraq"),
-    "سوريا 🇸🇾": ("SYR", "Syria"),
-    "ليبيا 🇱🇾": ("LBY", "Libya"),
-    "تونس 🇹🇳": ("TUN", "Tunisia"),
-    "الجزائر 🇩🇿": ("DZA", "Algeria"),
-    "المغرب 🇲🇦": ("MAR", "Morocco"),
-    "السودان 🇸🇩": ("SDN", "Sudan"),
-}
+st.title(title_ar if t_lang == 'ar' else title_en)
+st.markdown(f"<h3 style='text-align:center;'>{sub_ar if t_lang == 'ar' else sub_en}</h3>", unsafe_allow_html=True)
+st.write("---")
 
-# الموديلات مرتبة حسب الحجم
-LG_MODELS = {
-    "━━━ 32 بوصة ━━━": [],
-    "32LM6300PLA.AFUQLWE": ["32LM6300PLA.AFUQLWE", "32 بوصة - LM6300 (2020)"],
-    "32LQ63006LA.AFUQLWE": ["32LQ63006LA.AFUQLWE", "32 بوصة - LQ6300 (2022)"],
-    "32LQ570B6LA.AFUQLWE": ["32LQ570B6LA.AFUQLWE", "32 بوصة - LQ570B (2022)"],
-    "32LK500BPLA.AFUQLWE": ["32LK500BPLA.AFUQLWE", "32 بوصة - LK500 (2018)"],
-    "32LK610BPLA.AFUQLWE": ["32LK610BPLA.AFUQLWE", "32 بوصة - LK610 (2018)"],
-    "━━━ 43 بوصة ━━━ ": [],
-    "43LM6300PLA.AFUQLWE": ["43LM6300PLA.AFUQLWE", "43 بوصة - LM6300 (2020)"],
-    "43LQ63006LA.AFUQLWE": ["43LQ63006LA.AFUQLWE", "43 بوصة - LQ6300 (2022)"],
-    "43UQ75006LF.AFUQLWE": ["43UQ75006LF.AFUQLWE", "43 بوصة - UQ7500 (2022)"],
-    "43UR78006LK.AFUQLWE": ["43UR78006LK.AFUQLWE", "43 بوصة - UR7800 (2023)"],
-    "43UK6300PLB.AFUQLWE": ["43UK6300PLB.AFUQLWE", "43 بوصة - UK6300 (2018)"],
-    "43LK5900PLA.AFUQLWE": ["43LK5900PLA.AFUQLWE", "43 بوصة - LK5900 (2018)"],
-    "43UJ634V.AFU": ["43UJ634V.AFU", "43 بوصة - UJ634V (2017)"],
-    "━━━ 49 بوصة ━━━  ": [],
-    "49UJ634V.AFU": ["49UJ634V.AFU", "49 بوصة - UJ634V (2017)"],
-    "49UK6300PLB.AFUQLWE": ["49UK6300PLB.AFUQLWE", "49 بوصة - UK6300 (2018)"],
-    "49SM8600PLA.AFUQLWE": ["49SM8600PLA.AFUQLWE", "49 بوصة - SM8600 (2019)"],
-    "━━━ 50 بوصة ━━━   ": [],
-    "50UQ80006LJ.AFUQLWE": ["50UQ80006LJ.AFUQLWE", "50 بوصة - UQ8000 (2022)"],
-    "50UR78006LK.AFUQLWE": ["50UR78006LK.AFUQLWE", "50 بوصة - UR7800 (2023)"],
-    "50UP75006LF.AFUQLWE": ["50UP75006LF.AFUQLWE", "50 بوصة - UP7500 (2021)"],
-    "50NANO756PA.AFUQLWE": ["50NANO756PA.AFUQLWE", "50 بوصة - NANO75 (2021)"],
-    "━━━ 55 بوصة ━━━    ": [],
-    "55UA85006LA.DFUYLWE": ["55UA85006LA.DFUYLWE", "55 بوصة - UA8500 (2024)"],
-    "55UQ80006LJ.AFUQLWE": ["55UQ80006LJ.AFUQLWE", "55 بوصة - UQ8000 (2022)"],
-    "55UR78006LK.AFUQLWE": ["55UR78006LK.AFUQLWE", "55 بوصة - UR7800 (2023)"],
-    "55NANO756PA.AFUQLWE": ["55NANO756PA.AFUQLWE", "55 بوصة - NANO75 (2021)"],
-    "55SM8600PLA.AFUQLWE": ["55SM8600PLA.AFUQLWE", "55 بوصة - SM8600 (2019)"],
-    "55UK6300PLB.AFUQLWE": ["55UK6300PLB.AFUQLWE", "55 بوصة - UK6300 (2018)"],
-    "55UJ634V.AFU": ["55UJ634V.AFU", "55 بوصة - UJ634V (2017)"],
-    "━━━ 65 بوصة ━━━     ": [],
-    "65UQ80006LJ.AFUQLWE": ["65UQ80006LJ.AFUQLWE", "65 بوصة - UQ8000 (2022)"],
-    "65UR78006LK.AFUQLWE": ["65UR78006LK.AFUQLWE", "65 بوصة - UR7800 (2023)"],
-    "65NANO756PA.AFUQLWE": ["65NANO756PA.AFUQLWE", "65 بوصة - NANO75 (2021)"],
-    "65SM9000PLA.AFUQLWE": ["65SM9000PLA.AFUQLWE", "65 بوصة - SM9000 (2019)"],
-    "━━━ 75 بوصة ━━━      ": [],
-    "75UQ80006LJ.AFUQLWE": ["75UQ80006LJ.AFUQLWE", "75 بوصة - UQ8000 (2022)"],
-    "75UR78006LK.AFUQLWE": ["75UR78006LK.AFUQLWE", "75 بوصة - UR7800 (2023)"],
-    "75NANO756PA.AFUQLWE": ["75NANO756PA.AFUQLWE", "75 بوصة - NANO75 (2021)"],
-}
+# ──────────────────────────────────────────────────────
+# 6. رفع الملف
+# ──────────────────────────────────────────────────────
+lbl_ar = "📂 ارفع ملف TLL هنا:"
+lbl_en = "📂 Upload your TLL file here:"
+rst_ar = "🔄 ملف جديد"
+rst_en = "🔄 New File"
 
-# قائمة الاختيارات للـ selectbox
-MODEL_OPTIONS = ["✏️ اكتب موديلك يدوياً"]
-for k, v in LG_MODELS.items():
-    if not v:  # separator
-        MODEL_OPTIONS.append(k)
-    else:
-        MODEL_OPTIONS.append(f"{v[1]}  [{v[0]}]")
-
-# ════════════════════════════════════════════
-# دوال المعالجة
-# ════════════════════════════════════════════
-
-def detect_format(content):
-    if '<legacybroadcast>' in content:
-        return 'modern'
-    elif '<ITEM>' in content or '<item>' in content:
-        return 'legacy'
-    return 'unknown'
-
-def extract_model_info(content):
-    info = {}
-    for tag, key in [('ModelName', 'model'), ('BroadcastCountrySetting', 'country'), 
-                      ('PlatformVersion', 'platform')]:
-        m = re.search(rf'<{tag}[^>]*>([^<]+)</{tag}>', content)
-        if m: info[key] = m.group(1)
-    return info
-
-def decode_b64_name(b64):
-    try:
-        return base64.b64decode(b64).decode('utf-8').rstrip('\x00').strip() or "Unknown"
-    except:
-        return "Unknown"
-
-def extract_modern_channels(content):
-    lb_match = re.search(r'<legacybroadcast>(.*?)</legacybroadcast>', content, re.DOTALL)
-    if not lb_match:
-        return [], []
-    lb_data = json.loads(lb_match.group(1))
-    all_chs = lb_data.get('channelList', [])
-    
-    result = []
-    for ch in all_chs:
-        if ch.get('deleted') or ch.get('disabled'):
-            continue
-        name = ch.get('channelName', '') or decode_b64_name(ch.get('chNameBase64', ''))
-        
-        # تحويل القناة مع الاحتفاظ بكل الحقول المهمة
-        result.append({
-            'majorNumber':    ch.get('majorNumber', 0),
-            'minorNumber':    ch.get('minorNumber', 0),
-            'physicalNumber': ch.get('physicalNumber', 0),
-            'channelName':    name,
-            'sourceIndex':    ch.get('sourceIndex', 'SATELLITE DIGITAL'),
-            'frequency':      ch.get('frequency', 0),
-            'symbolRate':     ch.get('symbolRate', 27500) or 27500,
-            'skipped':        ch.get('skipped', False),
-            'locked':         ch.get('locked', False),
-            'satelliteId':    str(ch.get('satelliteId', '3530')),
-            'programNum':     ch.get('programNum', 0),
-            'TSID':           ch.get('TSID', 0),
-            'ONID':           ch.get('ONID', 0),
-            'SVCID':          ch.get('SVCID', 0),
-            'scrambled':      ch.get('scrambled', False),
-            'hdStatus':       ch.get('hdStatus', 0),
-            'transSystem':    ch.get('transSystem', 'DVBS'),
-            'serviceType':    ch.get('serviceType', 1),
-            'tpId':           ch.get('tpId', ''),
-            'networkId':      ch.get('networkId', 0),
-            'videoStreamType':ch.get('videoStreamType', 27),
-            'specialData':    ch.get('specialData', 0),
-            'mapType':        ch.get('mapType', 'CUSTOMIZED'),
-            'setIdHandle':    ch.get('setIdHandle', 0),
-            'Invisible':      ch.get('Invisible', False),
-            'factoryDefault': ch.get('factoryDefault', False),
-            'pcrPid':         ch.get('pcrPid', 8191),
-            'videoPid':       ch.get('videoPid', 8191),
-            'audioPid':       ch.get('audioPid', 8191),
-            'dvbss2':         ch.get('dvbss2', 0),
-            'coderate':       ch.get('coderate', 0),
-            'chNameBase64':   ch.get('chNameBase64', ''),
-        })
-    
-    setting_list = lb_data.get('settingIdList', [])
-    return result, setting_list
-
-def extract_legacy_channels(content):
-    channels = []
-    try:
-        root = ET.fromstring(content)
-        ch_sec = root.find('.//CHANNEL')
-        if ch_sec is None:
-            return [], []
-        for item in ch_sec.findall('ITEM'):
-            def g(tag, default=''):
-                el = item.find(tag)
-                return el.text if el is not None and el.text else default
-            channels.append({
-                'majorNumber':    int(g('major', '0')),
-                'minorNumber':    int(g('minor', '0')),
-                'physicalNumber': int(g('PhysicalNum', '0')),
-                'channelName':    g('chName', 'Unknown'),
-                'sourceIndex':    g('sourceIndex', 'SATELLITE DIGITAL'),
-                'frequency':      int(g('frequency', '0')),
-                'symbolRate':     int(g('symbolRate', '27500')),
-                'skipped':        g('isSkipped', '0') == '1',
-                'locked':         g('isLocked', '0') == '1',
-                'satelliteId':    g('satelliteId', '3530'),
-                'programNum':     int(g('programNum', '0')),
-                'TSID':           int(g('TSID', '0')),
-                'ONID':           int(g('ONID', '0')),
-                'SVCID':          int(g('SVCID', '0')),
-                'scrambled':      g('scrambled', '0') == '1',
-                'hdStatus':       int(g('hdStatus', '0')),
-                'transSystem':    g('transSystem', 'DVBS'),
-                'serviceType':    int(g('serviceType', '1')),
-                'tpId':           g('tpId', ''),
-                'networkId':      int(g('networkId', '0')),
-                'videoStreamType':int(g('videoStreamType', '27')),
-                'specialData':    int(g('specialData', '0')),
-                'mapType':        'CUSTOMIZED',
-                'setIdHandle':    0,
-                'Invisible':      False,
-                'factoryDefault': False,
-                'pcrPid':         8191,
-                'videoPid':       8191,
-                'audioPid':       8191,
-                'dvbss2':         0,
-                'coderate':       0,
-                'chNameBase64':   '',
-            })
-    except Exception as e:
-        st.error(f"خطأ في قراءة الملف: {e}")
-    return channels, []
-
-def build_b64_name(name):
-    try:
-        nb = name.encode('utf-8')
-        padded = nb + b'\x00' * max(0, 40 - len(nb))
-        return base64.b64encode(padded[:40]).decode('ascii')
-    except:
-        return ''
-
-def build_modern_tll(channels, setting_list, model_name, country_code, country_en, fix_invisible):
-    """بناء ملف حديث JSON - مع إصلاح Invisible و skipped"""
-    channel_list = []
-    for i, ch in enumerate(channels):
-        b64 = ch.get('chNameBase64') or build_b64_name(ch['channelName'])
-        
-        invisible = ch.get('Invisible', False)
-        skipped   = ch.get('skipped', False)
-        maptype   = ch.get('mapType', 'CUSTOMIZED')
-        
-        # إصلاح المشكلة الأساسية
-        if fix_invisible:
-            invisible = False
-            skipped   = False
-            maptype   = 'CUSTOMIZED'
-
-        channel_list.append({
-            "disabled":          False,
-            "cellID":            0,
-            "videoStreamType":   ch.get('videoStreamType', 27),
-            "specialData":       ch.get('specialData', 0),
-            "pcrPid":            ch.get('pcrPid', 8191),
-            "sourceIndex":       ch.get('sourceIndex', 'SATELLITE DIGITAL'),
-            "regionId":          0,
-            "audioDesc":         False,
-            "signalLossDay":     0,
-            "homeTP":            False,
-            "primaryCh":         False,
-            "userSelCHNo":       True,
-            "altPhysicalNum":    0,
-            "isDVBI":            False,
-            "userSubtitleLangCode": 0,
-            "virtualChannel":    False,
-            "majorNumber":       ch['majorNumber'],
-            "physicalNumber":    ch['physicalNumber'],
-            "skipped":           skipped,
-            "minorNumber":       ch['minorNumber'],
-            "videoPid":          ch.get('videoPid', 8191),
-            "transSystem":       ch.get('transSystem', 'DVBS'),
-            "deleted":           False,
-            "validLCN":          False,
-            "isFVP":             False,
-            "conflict":          False,
-            "setIdHandle":       ch.get('setIdHandle', 0),
-            "astraMfCh":         False,
-            "optrBlocked":       False,
-            "factoryDefault":    ch.get('factoryDefault', False),
-            "Invisible":         invisible,
-            "networkId":         ch.get('networkId', 0),
-            "locked":            ch.get('locked', False),
-            "satelliteId":       ch['satelliteId'],
-            "hdStatus":          ch.get('hdStatus', 0),
-            "coderate":          ch.get('coderate', 0),
-            "serviceIdentifier": 0,
-            "dvbss2":            ch.get('dvbss2', 0),
-            "chNameByte":        False,
-            "solveNeed":         False,
-            "prev_tsId":         ch.get('TSID', 0),
-            "LCNPriority":       0,
-            "userDualmonoType":  0,
-            "audioPid":          ch.get('audioPid', 8191),
-            "chNameBase64":      b64,
-            "nitVersion":        0,
-            "ipChannel":         False,
-            "userCustomize":     False,
-            "frequency":         ch.get('frequency', 0),
-            "channelName":       ch['channelName'],
-            "discarded":         False,
-            "orgPhysicalNum":    0,
-            "disableUpdate":     False,
-            "prev_onId":         ch.get('ONID', 0),
-            "adultChannel":      0,
-            "mapType":           maptype,
-            "audioSetbyUser":    False,
-            "fineTuned":         False,
-            "conflictNumber":    0,
-            "programNum":        ch.get('programNum', 0),
-            "subtitleSetbyUser": False,
-            "userEditChNumber":  True,
-            "bandwidth":         "BW_8M",
-            "rfIpChannel":       False,
-            "userAudio":         8191,
-            "SVCID":             ch.get('SVCID', 0),
-            "TSID":              ch.get('TSID', 0),
-            "isMultipleLCN":     False,
-            "numUnSel":          False,
-            "scrambled":         ch.get('scrambled', False),
-            "stillPicture":      False,
-            "tpId":              ch.get('tpId', ''),
-            "usedChName":        False,
-            "altChannel":        False,
-            "serviceType":       ch.get('serviceType', 1),
-            "ac3AudioType":      False,
-            "isOtherBroadcast":  False,
-            "ONID":              ch.get('ONID', 0),
-            "userSubtitle":      8191,
-            "profileV2":         0,
-        })
-
-    lb_data = {
-        "modelInfo":    {"country": country_en},
-        "bouquetList":  [],
-        "settingIdList": setting_list,
-        "channelList":  channel_list,
-    }
-    iepg_data = {"favoriteChList": [], "modelInfo": {"country": country_code}}
-
-    lines = ['<?xml version="1.0"?>', '<TLLDATA>', '\t<ModelInfo>',
-             f'\t\t<ModelName type="0">{model_name}</ModelName>',
-             '\t\t<DTVInfo type="0">DTV_DVB</DTVInfo>',
-             f'\t\t<BroadcastCountrySetting type="0">{country_code}</BroadcastCountrySetting>',
-             '\t\t<country type="0">JA</country>',
-             '\t\t<CloneVersion type="1">',
-             '\t\t\t<MajorVersion>200</MajorVersion>',
-             '\t\t\t<MinorVersion>000</MinorVersion>',
-             '\t\t\t<SatelliteDBVersion>500</SatelliteDBVersion>',
-             '\t\t\t<PlatformVersion>webOSTV 25</PlatformVersion>',
-             '\t\t</CloneVersion>', '\t</ModelInfo>', '\t<CHANNEL>',
-             f'\t\t<iepg>{json.dumps(iepg_data, ensure_ascii=False)}</iepg>',
-             f'\t\t<legacybroadcast>{json.dumps(lb_data, ensure_ascii=False, separators=(",",":"))}</legacybroadcast>',
-             '\t</CHANNEL>', '</TLLDATA>']
-    return '\n'.join(lines)
-
-def build_legacy_tll(channels, model_name, country_code):
-    """بناء ملف قديم XML"""
-    lines = ['<?xml version="1.0"?>', '<TLLDATA>', '\t<ModelInfo>',
-             f'\t\t<ModelName type="0">{model_name}</ModelName>',
-             '\t\t<DTVInfo type="0">DTV_DVB</DTVInfo>',
-             f'\t\t<BroadcastCountrySetting type="0">{country_code}</BroadcastCountrySetting>',
-             '\t\t<country type="0">JA</country>', '\t</ModelInfo>', '\t<CHANNEL>']
-    
-    for ch in channels:
-        # في الصيغة القديمة: مش skipped ومش invisible
-        lines += [
-            '\t\t<ITEM>',
-            f'\t\t\t<major>{ch["majorNumber"]}</major>',
-            f'\t\t\t<minor>{ch["minorNumber"]}</minor>',
-            f'\t\t\t<PhysicalNum>{ch["physicalNumber"]}</PhysicalNum>',
-            f'\t\t\t<chName>{ch["channelName"]}</chName>',
-            f'\t\t\t<sourceIndex>{ch["sourceIndex"]}</sourceIndex>',
-            f'\t\t\t<frequency>{ch["frequency"]}</frequency>',
-            f'\t\t\t<symbolRate>{ch.get("symbolRate", 27500)}</symbolRate>',
-            f'\t\t\t<isSkipped>{"1" if ch.get("skipped") else "0"}</isSkipped>',
-            f'\t\t\t<isLocked>{"1" if ch.get("locked") else "0"}</isLocked>',
-            '\t\t\t<isBlocked>0</isBlocked>',
-            f'\t\t\t<satelliteId>{ch["satelliteId"]}</satelliteId>',
-            f'\t\t\t<programNum>{ch["programNum"]}</programNum>',
-            f'\t\t\t<TSID>{ch["TSID"]}</TSID>',
-            f'\t\t\t<ONID>{ch["ONID"]}</ONID>',
-            f'\t\t\t<SVCID>{ch.get("SVCID", 0)}</SVCID>',
-            f'\t\t\t<scrambled>{"1" if ch.get("scrambled") else "0"}</scrambled>',
-            f'\t\t\t<hdStatus>{ch.get("hdStatus", 0)}</hdStatus>',
-            f'\t\t\t<transSystem>{ch.get("transSystem", "DVBS")}</transSystem>',
-            f'\t\t\t<serviceType>{ch.get("serviceType", 1)}</serviceType>',
-            f'\t\t\t<networkId>{ch.get("networkId", 0)}</networkId>',
-            f'\t\t\t<tpId>{ch.get("tpId", "")}</tpId>',
-            '\t\t</ITEM>',
-        ]
-    
-    lines += ['\t</CHANNEL>', '</TLLDATA>']
-    return '\n'.join(lines)
-
-# ════════════════════════════════════════════
-# الواجهة
-# ════════════════════════════════════════════
-
-st.markdown("<h1>🔄 محول ملفات TLL</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;color:#00f0ff;font-size:19px;font-weight:700;'>حوّل ملف القنوات بين أي موديل أو دولة أو صيغة</p>", unsafe_allow_html=True)
-st.markdown("---")
-
-# الخطوات
-c1, c2, c3 = st.columns(3)
-with c1:
-    st.markdown('<div class="step-box"><p>📁 <b>خطوة 1</b><br>ارفع ملف TLL</p></div>', unsafe_allow_html=True)
-with c2:
-    st.markdown('<div class="step-box"><p>⚙️ <b>خطوة 2</b><br>اختار إعدادات جهازك</p></div>', unsafe_allow_html=True)
-with c3:
-    st.markdown('<div class="step-box"><p>⬇️ <b>خطوة 3</b><br>حمّل الملف المحوّل</p></div>', unsafe_allow_html=True)
-
-st.markdown("---")
-
-# ── خطوة 1: رفع الملف ──
-st.markdown("### 📁 خطوة 1 — ارفع ملف TLL")
-st.markdown('<div class="info-box"><p>ارفع ملف <b>TLL</b> أو <b>BAK</b> — الموقع هيكتشف صيغته تلقائياً (قديم أو حديث)</p></div>', unsafe_allow_html=True)
-
-uploaded = st.file_uploader("اختار الملف", type=['tll','bak','TLL','BAK'])
-
-if uploaded:
-    content = uploaded.read().decode('utf-8', errors='ignore')
-    fmt = detect_format(content)
-    minfo = extract_model_info(content)
-
-    if fmt == 'modern':
-        chs, setting_list = extract_modern_channels(content)
-    elif fmt == 'legacy':
-        chs, setting_list = extract_legacy_channels(content)
-    else:
-        chs, setting_list = [], []
-
-    # إحصائيات الملف
-    all_count   = len(chs)
-    invisible   = sum(1 for c in chs if c.get('Invisible'))
-    visible_chs = [c for c in chs if not c.get('Invisible') and c.get('mapType') != 'NONE']
-    skipped_n   = sum(1 for c in visible_chs if c.get('skipped'))
-
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        fmt_lbl = "🆕 حديث JSON" if fmt=='modern' else "📼 قديم XML" if fmt=='legacy' else "❓"
-        st.metric("صيغة الملف", fmt_lbl)
-    with col2:
-        st.metric("بلد الملف الأصلي", minfo.get('country','?'))
-    with col3:
-        st.metric("إجمالي القنوات", f"{all_count}")
-    with col4:
-        st.metric("قنوات مرئية فعلاً", f"{len(visible_chs)}")
-
-    if fmt == 'unknown':
-        st.error("❌ صيغة غير معروفة!")
-        st.stop()
-
-    # تحذير إذا في مشكلة Invisible
-    if invisible > 0:
-        st.markdown(f"""
-        <div class="warn-box">
-        <p>⚠️ <b>تنبيه:</b> الملف ده فيه <b>{invisible} قناة مخفية</b> (Invisible) من أصل {all_count}<br>
-        ده السبب اللي بيخلي Chan Sort يقول "No Channel" — فعّل خيار <b>إصلاح المخفيات</b> تحت لحل المشكلة</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with st.expander(f"👁️ شوف أول 10 قنوات مرئية ({len(visible_chs)} قناة مرئية)"):
-        for i, ch in enumerate(visible_chs[:10]):
-            skip_lbl = "⏭️ مخطي" if ch.get('skipped') else "✅ فعال"
-            st.write(f"**{i+1}.** {ch['channelName']} | رقم: {ch['majorNumber']} | {skip_lbl} | تردد: {ch['frequency']}")
-
-    st.markdown("---")
-
-    # ── خطوة 2: إعدادات جهازك ──
-    st.markdown("### ⚙️ خطوة 2 — إعدادات جهازك")
-
-    col_a, col_b = st.columns(2)
-
-    with col_a:
-        st.markdown("**🌍 بلد البث**")
-        country_choice = st.selectbox("اختار البلد", list(COUNTRIES.keys()), index=0)
-        target_country_code, target_country_en = COUNTRIES[country_choice]
-
-        st.markdown("**📺 صيغة الجهاز**")
-        fmt_options = ["🔄 نفس صيغة الملف (بدون تغيير)", "🆕 حوّل لحديث JSON (webOS 2018+)", "📼 حوّل لقديم XML (قبل 2018)"]
-        fmt_choice = st.selectbox("اختار صيغة الجهاز", fmt_options)
-
-        if fmt_choice == fmt_options[0]:
-            target_fmt = fmt
-        elif fmt_choice == fmt_options[1]:
-            target_fmt = 'modern'
-        else:
-            target_fmt = 'legacy'
-
-    with col_b:
-        st.markdown("**📺 موديل جهازك**")
-        model_choice = st.selectbox(
-            "اختار من القائمة أو اكتب يدوياً",
-            MODEL_OPTIONS,
-            index=0,
-            help="اختار حجم شاشتك ثم الموديل"
-        )
-
-        # لو اختار من القائمة
-        manual_model = ""
-        if model_choice == "✏️ اكتب موديلك يدوياً" or model_choice.startswith("━"):
-            manual_model = st.text_input(
-                "اكتب موديلك",
-                placeholder="مثال: 43LM6300PLA.AFUQLWE",
-                help="موجود على ستيكر ظهر الشاشة"
-            )
-
-        # استخراج الموديل الفعلي
-        if manual_model.strip():
-            final_model = manual_model.strip()
-        elif model_choice.startswith("━") or model_choice == "✏️ اكتب موديلك يدوياً":
-            final_model = minfo.get('model', 'LG_TV_MODEL')
-        else:
-            # استخراج الموديل من النص [model_name]
-            m = re.search(r'\[([^\]]+)\]', model_choice)
-            final_model = m.group(1) if m else minfo.get('model', 'LG_TV_MODEL')
-
-        st.markdown(f"<div class='info-box'><p>📺 الموديل المختار: <b>{final_model}</b></p></div>", unsafe_allow_html=True)
-
-    # إصلاح Invisible
-    st.markdown("**🔧 خيارات إضافية**")
-    fix_invisible = st.toggle(
-        "✅ إصلاح القنوات المخفية (Invisible/Skipped) — موصى به لو Chan Sort بيقول No Channel",
-        value=True if invisible > 0 else False
+col_up, col_rst = st.columns([5, 1])
+with col_up:
+    uploaded = st.file_uploader(
+        lbl_ar if t_lang == 'ar' else lbl_en,
+        type=["TLL", "bak"],
+        key=f"p4_up_{st.session_state.p4_uploader_key}"
     )
+with col_rst:
+    st.write(""); st.write("")
+    if st.button(rst_ar if t_lang == 'ar' else rst_en, key="p4_rst"):
+        for k in ['p4_file_bytes','p4_file_name','p4_info','p4_result_bytes','p4_changes','p4_done']:
+            st.session_state[k] = None if 'bytes' in k else ({} if k == 'p4_info' else ([] if k == 'p4_changes' else False))
+        st.session_state.p4_uploader_key += 1
+        st.rerun()
 
+# معالجة الملف
+if uploaded:
+    fbytes = uploaded.read()
+    if st.session_state.p4_file_name != uploaded.name:
+        st.session_state.p4_file_bytes  = fbytes
+        st.session_state.p4_file_name   = uploaded.name
+        st.session_state.p4_info        = parse_tll(fbytes)
+        st.session_state.p4_result_bytes = None
+        st.session_state.p4_done        = False
+        st.session_state.p4_changes     = []
+
+if not st.session_state.p4_file_bytes:
+    nf_ar = "⬆️ ارفع ملف TLL للبدء."
+    nf_en = "⬆️ Upload a TLL file to start."
+    st.info(nf_ar if t_lang == 'ar' else nf_en)
+    st.markdown("""<div style="background:#0f172a;border:2px solid #00f0ff;color:white;
+    padding:30px;text-align:center;border-radius:15px;margin-top:50px;font-family:Arial;">
+    <b>🛠️ DEVELOPER ENG: RAFIK RAMBO</b><br><br>
+    📱 +201280339779<br>✉️ rafikrambo113@gmail.com<br><br>
+    <a href="https://api.whatsapp.com/send?phone=201280339779" style="color:#25d366;">WhatsApp</a>
+    </div>""", unsafe_allow_html=True)
+    st.stop()
+
+# ──────────────────────────────────────────────────────
+# 7. معلومات الملف
+# ──────────────────────────────────────────────────────
+info = st.session_state.p4_info
+is_modern = info.get('is_modern', False)
+type_tag = f"<span class='tag tag-modern'>{'حديث' if t_lang=='ar' else 'Modern'} JSON</span>" if is_modern else f"<span class='tag tag-legacy'>{'قديم' if t_lang=='ar' else 'Legacy'} XML</span>"
+country_label = info.get('country_label', info.get('display_country', '?'))
+
+st.markdown("<div class='card'>", unsafe_allow_html=True)
+fi_ar = "📊 معلومات الملف الحالي:"
+fi_en = "📊 Current File Info:"
+st.markdown(f"**{fi_ar if t_lang=='ar' else fi_en}**")
+c1, c2, c3, c4 = st.columns(4)
+with c1:
+    st.metric("الموديل" if t_lang=='ar' else "Model", info.get('model','?'))
+with c2:
+    st.markdown(f"**{'بلد البث' if t_lang=='ar' else 'Country'}**")
+    st.markdown(f"<span class='tag tag-country'>{country_label}</span>", unsafe_allow_html=True)
+with c3:
+    st.markdown(f"**{'نوع الملف' if t_lang=='ar' else 'File Type'}**")
+    st.markdown(type_tag, unsafe_allow_html=True)
+with c4:
+    st.metric("القنوات" if t_lang=='ar' else "Channels", f"{info.get('ch_count',0):,}")
+
+# تفاصيل البلد للملف الحديث
+if is_modern:
     st.markdown("---")
+    d1, d2, d3 = st.columns(3)
+    with d1:
+        st.markdown(f"**BroadcastCountry:** `{info.get('broadcast_country','—')}`")
+    with d2:
+        st.markdown(f"**country (XML):** `{info.get('country_xml','—')}`")
+    with d3:
+        st.markdown(f"**country (JSON):** `{info.get('country_json','—')}`")
 
-    # ── خطوة 3: تحويل وتحميل ──
-    st.markdown("### ⬇️ خطوة 3 — حوّل وحمّل")
+st.markdown("</div>", unsafe_allow_html=True)
+st.write("---")
 
-    cc1, cc2, cc3 = st.columns([1, 2, 1])
-    with cc2:
-        if st.button("🔄 ابدأ التحويل الآن", use_container_width=True):
-            with st.spinner("⚙️ جاري التحويل..."):
-                if target_fmt == 'modern':
-                    out = build_modern_tll(chs, setting_list, final_model, target_country_code, target_country_en, fix_invisible)
-                else:
-                    # للقديم: لو fix_invisible فعّل، ارجع skipped=False لكل القنوات
-                    out_chs = chs
-                    if fix_invisible:
-                        out_chs = [{**c, 'skipped': False, 'Invisible': False} for c in chs]
-                    out = build_legacy_tll(out_chs, final_model, target_country_code)
+# ──────────────────────────────────────────────────────
+# 8. خيارات التحويل
+# ──────────────────────────────────────────────────────
+sec_ar = "⚙️ اختر التحويل المطلوب"
+sec_en = "⚙️ Choose Conversion"
+st.markdown(f"### <span class='badge'>2</span> {sec_ar if t_lang=='ar' else sec_en}", unsafe_allow_html=True)
 
-                st.session_state['conv_out'] = out
-                st.session_state['conv_count'] = len(chs)
-                st.session_state['conv_visible'] = len(visible_chs)
-                st.session_state['conv_fmt'] = target_fmt
+col_m, col_c = st.columns(2)
 
-    if st.session_state.get('conv_out'):
-        out_bytes = st.session_state['conv_out'].encode('utf-8')
-        total = st.session_state['conv_count']
-        vis   = st.session_state['conv_visible']
+# ── تغيير الموديل ──
+with col_m:
+    mod_ar = "🖥️ تغيير الموديل"
+    mod_en = "🖥️ Change Model"
+    st.markdown(f"#### {mod_ar if t_lang=='ar' else mod_en}")
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
 
-        st.markdown(f"""
-        <div class="success-box">
-            <p style="font-size:22px;color:#00ff64;font-weight:bold;">🎉 الملف جاهز للتحميل!</p>
-            <p>✅ {total} قناة تم تحويلها</p>
-            <p>✅ بلد البث: {country_choice}</p>
-            <p>✅ الموديل: {final_model}</p>
-            <p>✅ الصيغة: {"حديث JSON" if st.session_state["conv_fmt"]=="modern" else "قديم XML"}</p>
-            {"<p>✅ تم إصلاح القنوات المخفية</p>" if fix_invisible else ""}
-        </div>
-        """, unsafe_allow_html=True)
+    model_opts = ["— " + ("الاحتفاظ بنفس الموديل" if t_lang=='ar' else "Keep same model") + " —"] + LG_MODELS
+    sel_model = st.selectbox(
+        "اختر من القائمة:" if t_lang=='ar' else "Select from list:",
+        options=model_opts, key="p4_sel_model"
+    )
+    manual_model = st.text_input(
+        "أو اكتب يدوياً:" if t_lang=='ar' else "Or type manually:",
+        placeholder="مثال: 55UN7340PVA",
+        key="p4_man_model"
+    ).strip()
 
-        cd1, cd2, cd3 = st.columns([1, 2, 1])
-        with cd2:
-            st.download_button(
-                "⬇️ تحميل GlobalClone00001.TLL",
-                data=out_bytes,
-                file_name="GlobalClone00001.TLL",
-                mime="application/octet-stream",
-                use_container_width=True
+    final_model = manual_model if manual_model else (
+        sel_model if not sel_model.startswith("—") else ""
+    )
+    if final_model:
+        if final_model == info.get('model',''):
+            st.info("ℹ️ " + ("نفس الموديل الحالي" if t_lang=='ar' else "Same as current"))
+        else:
+            st.success(f"✅ {'سيتغير إلى' if t_lang=='ar' else 'Will change to'}: **{final_model}**")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# ── تغيير البلد ──
+with col_c:
+    ctr_ar = "🌍 تغيير بلد البث"
+    ctr_en = "🌍 Change Broadcast Country"
+    st.markdown(f"#### {ctr_ar if t_lang=='ar' else ctr_en}")
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
+
+    country_opts = ["— " + ("الاحتفاظ بنفس البلد" if t_lang=='ar' else "Keep same country") + " —"] + list(COUNTRIES.keys())
+    sel_country = st.selectbox(
+        "اختر البلد الجديد:" if t_lang=='ar' else "Select new country:",
+        options=country_opts, key="p4_sel_country"
+    )
+    final_country = sel_country if not sel_country.startswith("—") else ""
+
+    if final_country and final_country in COUNTRIES:
+        cd = COUNTRIES[final_country]
+        if is_modern:
+            st.success(
+                f"✅ **{final_country}**\n\n"
+                f"BroadcastCountry → `{cd['code3']}`  |  JSON → `{cd['full']}`"
             )
+        else:
+            old_len = len(info.get('country_xml', 'XX'))
+            nc = cd['code2'] if old_len <= 2 else cd['code3']
+            st.success(f"✅ **{final_country}** → `{nc}`")
 
-        st.markdown("---")
-        st.markdown("### 📖 طريقة تشغيل الملف على شاشتك")
-        st.markdown("""
-        <div class="info-box">
-        <p>1️⃣ <b>انسخ الملف</b> على فلاشة USB فاضية (FAT32)</p>
-        <p>2️⃣ <b>الاسم لازم يكون بالظبط:</b> <code>GlobalClone00001.TLL</code></p>
-        <p>3️⃣ <b>حط الفلاشة</b> في البورت الجنبي للشاشة</p>
-        <p>4️⃣ <b>روح:</b> Settings ← Channel ← Channel Manager ← Clone TV</p>
-        <p>5️⃣ <b>اختار:</b> "Load from USB" أو "USB → TV"</p>
-        <p>6️⃣ <b>انتظر</b> الشاشة تعمل Restart تلقائياً</p>
-        </div>
-        """, unsafe_allow_html=True)
+    # ملحوظة مهمة
+    if is_modern:
+        st.markdown(
+            f"<div style='color:#ffc107;font-size:0.82rem;margin-top:8px;'>"
+            f"{'⚠️ في الملفات الحديثة: country(XML) ستبقى JA — هذا طبيعي ويضمن قبول الملف' if t_lang=='ar' else '⚠️ Modern files: country(XML) stays JA — this is correct and ensures TV accepts the file'}"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+    st.markdown("</div>", unsafe_allow_html=True)
 
-else:
-    st.markdown("""
-    <div class="info-box">
-    <p style="text-align:center;font-size:18px;">
-    ⬆️ ارفع ملف TLL أو BAK وابدأ التحويل<br><br>
-    ✅ تحويل <b>حديث → قديم</b> (لأجهزة قبل 2018)<br>
-    ✅ تحويل <b>قديم → حديث</b> (لأجهزة webOS)<br>
-    ✅ تغيير <b>بلد البث</b><br>
-    ✅ تغيير <b>موديل الجهاز</b><br>
-    ✅ إصلاح مشكلة <b>"No Channel"</b> في Chan Sort
-    </p>
-    </div>
-    """, unsafe_allow_html=True)
+st.write("")
 
-# ── الفوتر ──
-st.markdown("---")
-st.markdown("<p style='text-align:center;font-size:20px;color:#ff007f;font-weight:bold;'>🛠️ DEVELOPER ENG: RAFIK NATHAN</p>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center;'>📱 +201280339779 &nbsp;|&nbsp; ✉️ rafikrambo113@gmail.com</p>", unsafe_allow_html=True)
-st.link_button("WhatsApp 💬", "https://api.whatsapp.com/send?phone=201280339779&text=Hello%20Developer%20Rafik%20Rambo")
+# ── زر التحويل ──
+col_btn, _, _ = st.columns([2,1,1])
+with col_btn:
+    btn_ar = "🔄 تحويل الآن"
+    btn_en = "🔄 Convert Now"
+    warn_ar = "⚠️ اختر تغيير الموديل أو البلد أولاً!"
+    warn_en = "⚠️ Please select a model or country change first!"
+
+    if st.button(btn_ar if t_lang=='ar' else btn_en, use_container_width=True):
+        if not final_model and not final_country:
+            st.warning(warn_ar if t_lang=='ar' else warn_en)
+        else:
+            res_bytes, changes = convert_tll(info, final_model, final_country)
+            st.session_state.p4_result_bytes = res_bytes
+            st.session_state.p4_changes      = changes
+            st.session_state.p4_done         = True
+            st.rerun()
+
+# ──────────────────────────────────────────────────────
+# 9. النتيجة والتحميل
+# ──────────────────────────────────────────────────────
+if st.session_state.p4_done and st.session_state.p4_result_bytes:
+    st.write("---")
+    done_ar = "✅ الخطوة 3: تحميل الملف المحوّل"
+    done_en = "✅ Step 3: Download Converted File"
+    st.markdown(f"### <span class='badge'>3</span> {done_ar if t_lang=='ar' else done_en}", unsafe_allow_html=True)
+
+    suc_ar = "🎉 تم التحويل بنجاح! الملف جاهز."
+    suc_en = "🎉 Conversion successful! File ready."
+    st.success(suc_ar if t_lang=='ar' else suc_en)
+
+    # التغييرات
+    changes = st.session_state.p4_changes
+    if changes:
+        ch_ar = "📝 التغييرات المطبّقة:"
+        ch_en = "📝 Changes Applied:"
+        st.markdown(f"**{ch_ar if t_lang=='ar' else ch_en}**")
+        for ch in changes:
+            if ch[0] == 'model':
+                label = "🖥️ الموديل" if t_lang=='ar' else "🖥️ Model"
+                st.markdown(
+                    f"<div class='change-row'>{label}: "
+                    f"<code>{ch[1]}</code> <span style='color:#ff007f;font-weight:bold;'>➜</span> "
+                    f"<code style='color:#00f0ff;'>{ch[2]}</code></div>",
+                    unsafe_allow_html=True
+                )
+            elif ch[0] == 'country':
+                label = "🌍 بلد البث" if t_lang=='ar' else "🌍 Country"
+                country_name = ch[3] if len(ch) > 3 else ch[2]
+                st.markdown(
+                    f"<div class='change-row'>{label}: "
+                    f"<code>{ch[1]}</code> <span style='color:#ff007f;font-weight:bold;'>➜</span> "
+                    f"<code style='color:#00f0ff;'>{ch[2]}</code> ({country_name})</div>",
+                    unsafe_allow_html=True
+                )
+    else:
+        nc_ar = "ℹ️ لم يتم تغيير أي قيمة (القيم الجديدة مطابقة للقديمة)."
+        nc_en = "ℹ️ No values changed (new values match existing ones)."
+        st.info(nc_ar if t_lang=='ar' else nc_en)
+
+    st.write("")
+
+    # أزرار التحميل
+    col_d1, col_d2 = st.columns([3,1])
+    with col_d1:
+        dl_ar = "📥 تحميل الملف المحوّل (GlobalClone00001.TLL)"
+        dl_en = "📥 Download Converted File (GlobalClone00001.TLL)"
+        st.download_button(
+            label=dl_ar if t_lang=='ar' else dl_en,
+            data=st.session_state.p4_result_bytes,
+            file_name="GlobalClone00001.TLL",
+            mime="application/octet-stream",
+            use_container_width=True,
+        )
+    with col_d2:
+        nr_ar = "🔄 ملف جديد"
+        nr_en = "🔄 New File"
+        if st.button(nr_ar if t_lang=='ar' else nr_en, key="p4_rst2"):
+            for k in ['p4_file_bytes','p4_file_name','p4_result_bytes','p4_changes','p4_done']:
+                st.session_state[k] = None if 'bytes' in k else ([] if k == 'p4_changes' else False)
+            st.session_state.p4_info = {}
+            st.session_state.p4_uploader_key += 1
+            st.rerun()
+
+    # ملحوظة LG
+    tip_title_ar = "💡 ملحوظة مهمة بعد تحميل الملف على الشاشة:"
+    tip_title_en = "💡 Important note after loading file on TV:"
+    tip_text_ar  = "إذا لم تظهر القنوات بشكل صحيح، اذهب إلى: إعدادات ← القنوات ← مدير القنوات ← تعديل كل القنوات ← تحديد الكل ← استعادة"
+    tip_text_en  = "If channels don't appear correctly: Settings → Channels → Channel Manager → Edit All Channels → Select All → Restore"
+    st.markdown(f"""
+<div style="background:rgba(255,193,7,0.1);border:2px solid #ffc107;border-radius:14px;
+padding:20px;margin-top:20px;">
+<b style="color:#ffc107;">{tip_title_ar if t_lang=='ar' else tip_title_en}</b><br><br>
+<span style="line-height:1.8;">{tip_text_ar if t_lang=='ar' else tip_text_en}</span>
+</div>""", unsafe_allow_html=True)
+
+# ──────────────────────────────────────────────────────
+# 10. FOOTER
+# ──────────────────────────────────────────────────────
+st.markdown("""
+<div style="background:#0f172a;border:2px solid #00f0ff;color:#ffffff;
+padding:35px;text-align:center;border-radius:20px;margin-top:65px;font-family:Arial;">
+<div style="color:#ff007f;font-size:26px;font-weight:bold;">🛠️ DEVELOPER ENG: RAFIK NATHAN</div>
+<div style="margin-top:10px;">📱 <b>MOBILE / الموبايل:</b> +201280339779</div>
+<div style="margin-top:10px;">✉️ <b>E-MAIL:</b> rafikrambo113@gmail.com</div>
+<a href="https://api.whatsapp.com/send?phone=201280339779" target="_blank"
+style="color:#25d366;padding:14px 35px;border-radius:35px;display:inline-block;
+font-weight:bold;border:2px solid #25d366;text-decoration:none;margin-top:20px;">
+WhatsApp</a>
+</div>
+""", unsafe_allow_html=True)
