@@ -1,222 +1,353 @@
 import streamlit as st
-import xml.etree.ElementTree as ET
-import io
 import json
 import re
+import base64
 
-# إعداد الصفحة وتثبيت المظهر
-st.set_page_config(page_title="LG Ultimate Channel Converter", layout="centered")
+st.set_page_config(page_title="RAMBO — محوّل TLL الذكي", layout="centered")
 
-st.title("🛠️ محول ومطابق قنوات شاشات LG الذكي الشامل")
-st.write("تنقل هذه الأداة الترتيب من ملف مرجعي وتطبقه على ملف شاشتك الأصلي مع الحفاظ على التوافق التام.")
+for k, v in {
+    'lang': 'ar', 'theme': 'dark',
+    'ref_bytes': None, 'ref_name': None,
+    'tar_bytes': None, 'tar_name': None,
+    'ref_key': 0, 'tar_key': 0,
+    'done': False, 'result': None,
+    'stats': {}, 'match_detail': [],
+}.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
-# زر إعادة التعيين (Restart)
-if st.button("🔄 إعادة تعيين ورفع ملفات جديدة"):
-    st.cache_data.clear()
+dk = st.session_state.theme == 'dark'
+ar = st.session_state.lang == 'ar'
+bg   = "radial-gradient(circle at 50% 50%,#110926 0%,#05020d 100%)" if dk else "#f4f5f7"
+tc   = "#00f0ff" if dk else "#0d0722"
+bb   = "rgba(13,7,33,0.85)" if dk else "#ffffff"
+bord = "#00f0ff" if dk else "#ff007f"
+bsh  = "rgba(0,240,255,0.35)" if dk else "rgba(255,0,127,0.15)"
+tsh  = "0 0 5px rgba(0,240,255,0.4)" if dk else "none"
+
+st.markdown(f"""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
+.main{{background:{bg}!important;color:{tc}!important;font-family:'Cairo',sans-serif;}}
+h1{{color:#ff007f!important;text-shadow:0 0 10px #ff007f!important;text-align:center;font-weight:900;}}
+h2,h3,p,label,.stMarkdown,div[data-testid="stMarkdownContainer"] p{{color:{tc}!important;text-shadow:{tsh};}}
+div[data-testid="stFileUploader"]{{background:{bb}!important;border:2px solid {bord}!important;box-shadow:0 5px 15px {bsh}!important;border-radius:14px!important;padding:18px!important;}}
+.stButton>button{{background:linear-gradient(135deg,#ff007f,#aa0055)!important;color:#fff!important;border:2px solid #ff007f!important;border-radius:12px!important;font-weight:bold;width:100%;font-size:1.05rem;padding:0.6rem;}}
+.stDownloadButton>button{{background:linear-gradient(135deg,#00b894,#00695c)!important;color:#fff!important;border:none!important;border-radius:12px!important;font-weight:bold;width:100%;}}
+.card-ref{{background:{bb};border:2px solid #00f0ff;border-radius:14px;padding:18px;margin-bottom:12px;}}
+.card-tar{{background:{bb};border:2px solid #ff007f;border-radius:14px;padding:18px;margin-bottom:12px;}}
+.stat{{border-radius:12px;padding:14px;text-align:center;border:2px solid;}}
+.sg{{border-color:#00b894;background:rgba(0,184,148,0.1);color:#00b894;}}
+.sb{{border-color:#00f0ff;background:rgba(0,240,255,0.1);color:#00f0ff;}}
+.so{{border-color:#ffa500;background:rgba(255,165,0,0.1);color:#ffa500;}}
+.sn{{border-color:#888;background:rgba(128,128,128,0.1);color:#888;}}
+.warn{{background:rgba(255,193,7,0.1);border:2px solid #ffc107;border-radius:12px;padding:14px;margin-top:10px;}}
+.tag{{display:inline-block;padding:2px 10px;border-radius:6px;font-size:0.82rem;font-weight:bold;}}
+.tm{{background:rgba(0,240,255,0.15);border:1px solid #00f0ff;color:#00f0ff;}}
+.tl{{background:rgba(255,165,0,0.15);border:1px solid orange;color:orange;}}
+</style>
+""", unsafe_allow_html=True)
+
+cl, ct, _ = st.columns([1.2, 1.5, 8])
+with cl:
+    if st.button("🌐 English" if ar else "🌐 العربية"):
+        st.session_state.lang = 'en' if ar else 'ar'; st.rerun()
+with ct:
+    if st.button("☀️ Light" if dk else "🌙 Dark"):
+        st.session_state.theme = 'light' if dk else 'dark'; st.rerun()
+
+st.title("🔄 RAMBO — محوّل TLL الذكي" if ar else "🔄 RAMBO — Smart TLL Converter")
+st.markdown(f"<h3 style='text-align:center;'>{'⚡ انقل ترتيب أي ملف مرجعي لشاشتك — يدعم قديم↔حديث بدون فقدان قنوات' if ar else '⚡ Transfer channel order to your TV — supports Legacy↔Modern'}</h3>", unsafe_allow_html=True)
+st.write("---")
+
+# ─────────────────────────────────────────────
+# EXTRACT CHANNELS
+# ─────────────────────────────────────────────
+def extract_channels(file_bytes):
+    try:
+        txt = file_bytes.decode('utf-8', errors='ignore')
+    except:
+        txt = file_bytes.decode('latin-1', errors='ignore')
+
+    info = {'txt': txt, 'raw_items': [], 'json_data': {}, 'channels': []}
+
+    m = re.search(r'<ModelName[^>]*>([^<]+)</ModelName>', txt)
+    info['model'] = m.group(1).strip() if m else ''
+    m = re.search(r'<BroadcastCountrySetting[^>]*>([^<]+)</BroadcastCountrySetting>', txt)
+    info['bc'] = m.group(1).strip() if m else ''
+    m = re.search(r'<country[^>]*>([^<]+)</country>', txt)
+    info['cx'] = m.group(1).strip() if m else ''
+    info['cj'] = ''
+
+    if 'legacybroadcast' in txt:
+        info['type'] = 'modern'
+        jm = re.search(r'<legacybroadcast>(.*?)</legacybroadcast>', txt, re.DOTALL)
+        if jm:
+            try:
+                data = json.loads(jm.group(1))
+                info['json_data'] = data
+                info['cj'] = data.get('modelInfo', {}).get('country', '')
+                for idx, ch in enumerate(data.get('channelList', []), 1):
+                    info['channels'].append({
+                        'name':  ch.get('channelName', '').strip().upper(),
+                        'freq':  str(ch.get('frequency', '')),
+                        'svcid': str(ch.get('SVCID', '')),
+                        'order': ch.get('majorNumber', idx),
+                        'raw':   ch,
+                    })
+            except: pass
+    else:
+        info['type'] = 'legacy'
+        items = re.findall(r'<ITEM>(.*?)</ITEM>', txt, re.DOTALL)
+        info['raw_items'] = items
+        for idx, item in enumerate(items, 1):
+            nm = re.search(r'<vchName>([^<]+)</vchName>', item)
+            fm = re.search(r'<frequency>([^<]+)</frequency>', item)
+            sm = re.search(r'<service_id>([^<]+)</service_id>', item)
+            pm = re.search(r'<prNum>([^<]+)</prNum>', item)
+            info['channels'].append({
+                'name':  nm.group(1).strip().upper() if nm else '',
+                'freq':  fm.group(1).strip() if fm else '',
+                'svcid': sm.group(1).strip() if sm else '',
+                'order': int(pm.group(1)) if pm else idx,
+                'raw':   item,
+            })
+
+    info['display'] = info['bc'] or info['cj'] or info['cx']
+    return info
+
+
+# ─────────────────────────────────────────────
+# SMART MATCH — 3 مستويات
+# ─────────────────────────────────────────────
+def normalize(s):
+    return re.sub(r'\s+', ' ', s.upper().strip())
+
+def smart_match(ref_chs, tar_chs):
+    # بناء indexes من المرجع
+    ref_by_name = {}   # exact name → order
+    ref_by_freq = {}   # freq → order
+
+    for ch in ref_chs:
+        n = normalize(ch['name'])
+        f = ch['freq']
+        o = ch['order']
+        if n and n not in ref_by_name:
+            ref_by_name[n] = o
+        if f and f not in ref_by_freq:
+            ref_by_freq[f] = o
+
+    results = []
+    stats   = {'exact': 0, 'partial': 0, 'freq': 0, 'none': 0}
+
+    for tar_idx, ch in enumerate(tar_chs):
+        n = normalize(ch['name'])
+        f = ch['freq']
+
+        # مستوى 1: اسم مطابق تماماً
+        if n in ref_by_name:
+            results.append((tar_idx, ref_by_name[n], '✅ اسم مطابق'))
+            stats['exact'] += 1
+            continue
+
+        # مستوى 2: اسم متشابه
+        matched = False
+        if n and len(n) > 3:
+            for ref_n, ref_o in ref_by_name.items():
+                if (n in ref_n or ref_n in n or
+                        (len(n) >= 5 and len(ref_n) >= 5 and n[:5] == ref_n[:5])):
+                    results.append((tar_idx, ref_o, '🔍 اسم متشابه'))
+                    stats['partial'] += 1
+                    matched = True
+                    break
+
+        if matched:
+            continue
+
+        # مستوى 3: تردد مطابق
+        if f and f in ref_by_freq:
+            results.append((tar_idx, ref_by_freq[f], '🔄 تردد مطابق'))
+            stats['freq'] += 1
+            continue
+
+        # بدون تغيير
+        results.append((tar_idx, ch['order'], '⬜ بدون تغيير'))
+        stats['none'] += 1
+
+    return results, stats
+
+
+# ─────────────────────────────────────────────
+# APPLY ORDER
+# ─────────────────────────────────────────────
+def apply_order(tar_info, matches):
+    txt = tar_info['txt']
+
+    if tar_info['type'] == 'legacy':
+        items = list(tar_info['raw_items'])
+        for tar_idx, new_order, _ in matches:
+            if tar_idx < len(items):
+                item = items[tar_idx]
+                item = re.sub(r'<prNum>[^<]+</prNum>',
+                              f'<prNum>{new_order}</prNum>', item)
+                item = re.sub(r'<isUserSelCHNo>[^<]+</isUserSelCHNo>',
+                              '<isUserSelCHNo>1</isUserSelCHNo>', item)
+                items[tar_idx] = item
+        combined = '\r\n'.join(f'<ITEM>{item}</ITEM>' for item in items)
+        si = txt.find('<ITEM>')
+        ei = txt.rfind('</ITEM>') + len('</ITEM>')
+        return (txt[:si] + combined + txt[ei:]).encode('utf-8')
+
+    else:  # modern
+        data   = dict(tar_info['json_data'])
+        ch_list = list(data.get('channelList', []))
+        for tar_idx, new_order, _ in matches:
+            if tar_idx < len(ch_list):
+                ch_list[tar_idx]['majorNumber']      = new_order
+                ch_list[tar_idx]['userSelCHNo']      = True
+                ch_list[tar_idx]['userCustomize']    = True
+                ch_list[tar_idx]['userEditChNumber'] = True
+        data['channelList'] = ch_list
+        new_json = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
+        new_txt  = re.sub(r'<legacybroadcast>.*?</legacybroadcast>',
+                          f'<legacybroadcast>{new_json}</legacybroadcast>',
+                          txt, flags=re.DOTALL)
+        return new_txt.encode('utf-8')
+
+
+# ─────────────────────────────────────────────
+# UI — رفع الملفين
+# ─────────────────────────────────────────────
+st.markdown(f"## {'1️⃣ ارفع الملفين' if ar else '1️⃣ Upload Both Files'}")
+
+col_r, col_t = st.columns(2)
+
+with col_r:
+    st.markdown("<div class='card-ref'>", unsafe_allow_html=True)
+    st.markdown(f"**{'📡 الملف المرجعي المرتب' if ar else '📡 Sorted Reference File'}**")
+    st.caption("الملف المرتب من النت — سنأخذ منه الترتيب فقط" if ar else "Sorted file from internet — order will be taken from it")
+    up_ref = st.file_uploader("", type=["tll","bak","TLL"],
+                              key=f"ref_{st.session_state.ref_key}",
+                              label_visibility="collapsed")
+    if up_ref:
+        b = up_ref.read()
+        if st.session_state.ref_name != up_ref.name:
+            st.session_state.ref_bytes = b
+            st.session_state.ref_name  = up_ref.name
+            st.session_state.done      = False
+            st.session_state.result    = None
+    if st.session_state.ref_bytes:
+        ri = extract_channels(st.session_state.ref_bytes)
+        t  = "<span class='tag tm'>Modern</span>" if ri['type']=='modern' else "<span class='tag tl'>Legacy</span>"
+        st.markdown(f"✅ **{ri['model']}** | {len(ri['channels']):,} ch | {t}", unsafe_allow_html=True)
+        st.caption(f"🌍 {ri.get('display','')}")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+with col_t:
+    st.markdown("<div class='card-tar'>", unsafe_allow_html=True)
+    st.markdown(f"**{'📺 ملف شاشتك الشغال' if ar else '📺 Your Working TV File'}**")
+    st.caption("الملف الشغال على شاشتك — سيُحدَّث ترتيبه" if ar else "The file that works on your TV — its order will be updated")
+    up_tar = st.file_uploader("", type=["tll","bak","TLL"],
+                              key=f"tar_{st.session_state.tar_key}",
+                              label_visibility="collapsed")
+    if up_tar:
+        b = up_tar.read()
+        if st.session_state.tar_name != up_tar.name:
+            st.session_state.tar_bytes = b
+            st.session_state.tar_name  = up_tar.name
+            st.session_state.done      = False
+            st.session_state.result    = None
+    if st.session_state.tar_bytes:
+        ti = extract_channels(st.session_state.tar_bytes)
+        t  = "<span class='tag tm'>Modern</span>" if ti['type']=='modern' else "<span class='tag tl'>Legacy</span>"
+        st.markdown(f"✅ **{ti['model']}** | {len(ti['channels']):,} ch | {t}", unsafe_allow_html=True)
+        st.caption(f"🌍 {ti.get('display','')}")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+if st.session_state.ref_bytes and st.session_state.tar_bytes:
+    ri = extract_channels(st.session_state.ref_bytes)
+    ti = extract_channels(st.session_state.tar_bytes)
+    rt = 'Modern' if ri['type']=='modern' else 'Legacy'
+    tt = 'Modern' if ti['type']=='modern' else 'Legacy'
+    st.info(f"**{rt} ➜ {tt}** | {'المطابقة: اسم مطابق → اسم متشابه → تردد مطابق' if ar else 'Matching: Exact name → Similar name → Frequency match'}")
+
+if not st.session_state.ref_bytes or not st.session_state.tar_bytes:
+    st.info("⬆️ " + ("ارفع الملفين للبدء." if ar else "Upload both files to start."))
+    st.stop()
+
+st.write("---")
+
+# ─────────────────────────────────────────────
+# UI — التحويل
+# ─────────────────────────────────────────────
+st.markdown(f"## {'2️⃣ ابدأ نقل الترتيب' if ar else '2️⃣ Start Transfer'}")
+
+if st.button("✨ " + ("بدء نقل الترتيب الذكي" if ar else "Start Smart Order Transfer"), use_container_width=True):
+    with st.spinner("⏳ " + ("جاري المطابقة..." if ar else "Matching in progress...")):
+        ri = extract_channels(st.session_state.ref_bytes)
+        ti = extract_channels(st.session_state.tar_bytes)
+        matches, stats = smart_match(ri['channels'], ti['channels'])
+        result_bytes   = apply_order(ti, matches)
+        detail = [
+            (ti['channels'][m[0]]['name'].title(), m[1], m[2])
+            for m in matches
+        ]
+        st.session_state.result       = result_bytes
+        st.session_state.stats        = stats
+        st.session_state.match_detail = detail
+        st.session_state.done         = True
     st.rerun()
 
-# دالة قراءة تفاصيل وقنوات أي ملف LG بدقة
-def get_file_details(file_bytes):
-    try:
-        text_content = file_bytes.decode('utf-8', errors='ignore')
-        model = "غير معروف"
-        country = "غير حدد"
-        
-        model_match = re.search(r'<ModelName[^>]*>([^<]+)</ModelName>', text_content)
-        if model_match:
-            model = model_match.group(1).strip()
-            
-        country_match = re.search(r'<BroadcastCountrySetting[^>]*>([^<]+)</BroadcastCountrySetting>', text_content)
-        if country_match:
-            country = country_match.group(1).strip()
-        else:
-            country_match2 = re.search(r'<country[^>]*>([^<]+)</country>', text_content)
-            if country_match2:
-                country = country_match2.group(1).strip()
+# ─────────────────────────────────────────────
+# UI — النتيجة
+# ─────────────────────────────────────────────
+if st.session_state.done and st.session_state.result:
+    st.write("---")
+    st.markdown(f"## {'3️⃣ النتيجة' if ar else '3️⃣ Result'}")
+    st.success("🎉 " + ("تم نقل الترتيب بنجاح!" if ar else "Order transferred successfully!"))
 
-        channel_count = 0
-        file_type = "قديم (XML كلاسيكي)"
-        
-        xml_items = re.findall(r'<ITEM>', text_content)
-        if xml_items:
-            channel_count = len(xml_items)
-            file_type = "قديم (XML كلاسيكي)"
-        
-        channel_tags = re.findall(r'<CHANNEL[^>]*>(.*?)</CHANNEL>', text_content, re.DOTALL)
-        if channel_tags:
-            for tag_content in channel_tags:
-                clean_txt = tag_content.strip()
-                if clean_txt:
-                    ch_matches = re.findall(r'"SVCID"\s*:', clean_txt)
-                    if ch_matches:
-                        channel_count = len(ch_matches)
-                        file_type = "حديث (JSON مدمج)"
-                    else:
-                        try:
-                            json_start = clean_txt.find('{')
-                            json_end = clean_txt.rfind('}')
-                            if json_start != -1 and json_end != -1:
-                                js_data = json.loads(clean_txt[json_start:json_end+1])
-                                ch_list = js_data.get("legacybroadcast", {}).get("channelList", []) or js_data.get("channelList", [])
-                                if ch_list:
-                                    channel_count = len(ch_list)
-                                    file_type = "حديث (JSON مدمج)"
-                        except:
-                            pass
-                            
-        if channel_count == 0 and "channelList" in text_content:
-            file_type = "حديث (JSON مدمج)"
-            channel_count = max(1, text_content.count('"frequency"') - 5)
+    stats = st.session_state.stats
+    c1, c2, c3, c4 = st.columns(4)
+    with c1: st.markdown(f"<div class='stat sg'><b style='font-size:1.5rem;'>{stats.get('exact',0)}</b><br>{'اسم مطابق ✅' if ar else 'Exact ✅'}</div>", unsafe_allow_html=True)
+    with c2: st.markdown(f"<div class='stat sb'><b style='font-size:1.5rem;'>{stats.get('partial',0)}</b><br>{'متشابه 🔍' if ar else 'Similar 🔍'}</div>", unsafe_allow_html=True)
+    with c3: st.markdown(f"<div class='stat so'><b style='font-size:1.5rem;'>{stats.get('freq',0)}</b><br>{'تردد 🔄' if ar else 'Freq 🔄'}</div>", unsafe_allow_html=True)
+    with c4: st.markdown(f"<div class='stat sn'><b style='font-size:1.5rem;'>{stats.get('none',0)}</b><br>{'ثابت ⬜' if ar else 'Kept ⬜'}</div>", unsafe_allow_html=True)
 
-        root = ET.fromstring(file_bytes)
-        return {"model": model, "country": country, "channels": channel_count, "type": file_type, "root": root}
-    except Exception as e:
-        return None
+    st.write("")
 
-# مساحة رفع الملفات
-st.subheader("1️⃣ ارفع الملفات المطلوبة")
-col1, col2 = st.columns(2)
+    detail = st.session_state.match_detail
+    if detail:
+        with st.expander(f"📋 {'معاينة المطابقة' if ar else 'Match Preview'} ({len(detail)})", expanded=False):
+            scroll = st.container(height=300)
+            with scroll:
+                h1, h2, h3 = st.columns([4, 2, 3])
+                h1.markdown(f"**{'القناة' if ar else 'Channel'}**")
+                h2.markdown(f"**{'الترتيب الجديد' if ar else 'New Order'}**")
+                h3.markdown(f"**{'نوع المطابقة' if ar else 'Match Type'}**")
+                for name, order, mtype in detail[:300]:
+                    c1, c2, c3 = st.columns([4, 2, 3])
+                    c1.write(name); c2.write(f"#{order}"); c3.write(mtype)
 
-with col1:
-    reference_file = st.file_uploader("ارفع الملف المترتب الجاهز (المرجع)", type=["tll", "bak"], key="ref")
-with col2:
-    target_file = st.file_uploader("ارفع ملف شاشتك الأصلي (الهدف)", type=["tll", "bak"], key="tar")
+    st.write("")
+    cd1, cd2 = st.columns([3, 1])
+    with cd1:
+        st.download_button(
+            "📥 " + ("تحميل الملف المحوّل (GlobalClone00001.TLL)" if ar else "Download Converted File"),
+            data=st.session_state.result,
+            file_name="GlobalClone00001.TLL",
+            mime="application/octet-stream",
+            use_container_width=True,
+        )
+    with cd2:
+        if st.button("🔄 " + ("من جديد" if ar else "Reset"), key="rst"):
+            for k in ['ref_bytes','ref_name','tar_bytes','tar_name','result','done','stats','match_detail']:
+                st.session_state[k] = (None if k in ['ref_bytes','ref_name','tar_bytes','tar_name','result']
+                                       else (False if k=='done' else ({} if k=='stats' else [])))
+            st.session_state.ref_key += 1
+            st.session_state.tar_key += 1
+            st.rerun()
 
-if reference_file:
-    ref_bytes = reference_file.read()
-    ref_details = get_file_details(ref_bytes)
-    if ref_details:
-        st.markdown(f"""
-        <div style="background-color:#0d1418; padding:18px; border-radius:10px; border:2px solid #00a884; color:#e9edef; margin-bottom:15px;">
-        <strong style="color:#00a884; font-size:18px; display:block; margin-bottom:10px;">📋 تفاصيل الملف المترتب (المرجع):</strong>
-        • <b>نوع نظام الملف:</b> <span style="color:#ffb300; font-weight:bold;">{ref_details['type']}</span><br>
-        • <b>موديل الشاشة:</b> {ref_details['model']}<br>
-        • <b>بلد البث الفعلي:</b> {ref_details['country']}<br>
-        • <b>إجمالي عدد القنوات:</b> <span style="color:#00a884; font-size:20px; font-weight:bold;">{ref_details['channels']}</span> قناة
-        </div>
-        """, unsafe_allow_html=True)
-
-if target_file:
-    tar_bytes = target_file.read()
-    tar_details = get_file_details(tar_bytes)
-    if tar_details:
-        st.markdown(f"""
-        <div style="background-color:#16161a; padding:18px; border-radius:10px; border:2px solid #ff4b4b; color:#ffffff; margin-bottom:15px;">
-        <strong style="color:#ff4b4b; font-size:18px; display:block; margin-bottom:10px;">🎯 تفاصيل ملف شاشتك الأصلي (الهدف):</strong>
-        • <b>نوع نظام الملف:</b> <span style="color:#ffb300; font-weight:bold;">{tar_details['type']}</span><br>
-        • <b>موديل الشاشة:</b> {tar_details['model']}<br>
-        • <b>بلد البث الفعلي:</b> {tar_details['country']}<br>
-        • <b>إجمالي عدد القنوات:</b> <span style="color:#ff4b4b; font-size:20px; font-weight:bold;">{tar_details['channels']}</span> قناة
-        </div>
-        """, unsafe_allow_html=True)
-
-# معالجة نقل الترتيب الذكي
-if reference_file and target_file and 'ref_details' in locals() and 'tar_details' in locals():
-    if ref_details and tar_details:
-        st.subheader("2️⃣ معالجة نقل الترتيب الذكي")
-        
-        if st.button("بدء نقل الترتيب وتوليد الملف المتوافق ✨"):
-            try:
-                ref_root = ref_details['root']
-                tar_tree = ET.parse(io.BytesIO(tar_bytes))
-                tar_root = tar_tree.getroot()
-                
-                # قاموس يعتمد على الـ Service ID كـ مِفتاح ربط مطلق غير قابل للفشل
-                svcid_to_prNum = {}
-                
-                # 1. جمع البيانات من المرجع الكلاسيكي (إن وجد كمرجع)
-                for item in ref_root.findall(".//ITEM"):
-                    srv_id = item.findtext("service_id")
-                    pr_num = item.findtext("prNum")
-                    if srv_id and pr_num:
-                        svcid_to_prNum[int(srv_id)] = int(pr_num)
-                
-                # 2. جمع البيانات من المرجع الحديث (مثل ملفك الـ 55 بوصة الحالي)
-                for channel_tag in ref_root.findall(".//CHANNEL"):
-                    if channel_tag.text:
-                        try:
-                            clean_txt = channel_tag.text.strip()
-                            json_start = clean_txt.find('{')
-                            json_end = clean_txt.rfind('}')
-                            if json_start != -1 and json_end != -1:
-                                js_data = json.loads(clean_txt[json_start:json_end+1])
-                                ch_list = js_data.get("legacybroadcast", {}).get("channelList", []) or js_data.get("channelList", [])
-                                for ch in ch_list:
-                                    srv_id = ch.get("SVCID")
-                                    pr_num = ch.get("programNumber")
-                                    if srv_id is not None and pr_num is not None:
-                                        svcid_to_prNum[int(srv_id)] = int(pr_num)
-                        except:
-                            pass
-
-                updated_count = 0
-                fallback_count = 0
-                
-                # 3. تحديث ملف شاشتك الـ 32 الكلاسيكي المستهدف (Target) بناء على الـ Service ID
-                for item in tar_root.findall(".//ITEM"):
-                    srv_id_tag = item.findtext("service_id")
-                    pr_num_tag = item.find("prNum")
-                    
-                    if srv_id_tag is not None and pr_num_tag is not None:
-                        s_id = int(srv_id_tag)
-                        
-                        # المطابقة الفتاكة بالـ Service ID المباشر
-                        if s_id in svcid_to_prNum:
-                            pr_num_tag.text = str(svcid_to_prNum[s_id])
-                            
-                            # تفعيل خيار قناة مخصصة من قبل المستخدم لتثبيتها بالشاشة
-                            is_user_sel = item.find("isUserSelCHNo")
-                            if is_user_sel is not None:
-                                is_user_sel.text = "1"
-                            updated_count += 1
-                        else:
-                            fallback_count += 1
-
-                # 4. احتياطياً لو كان المستهدف نظام حديث
-                for tar_channel_tag in tar_root.findall(".//CHANNEL"):
-                    if tar_channel_tag.text:
-                        try:
-                            clean_txt = tar_channel_tag.text.strip()
-                            json_start = clean_txt.find('{')
-                            json_end = clean_txt.rfind('}')
-                            if json_start != -1 and json_end != -1:
-                                prefix = clean_txt[:json_start]
-                                suffix = clean_txt[json_end+1:]
-                                tar_js_data = json.loads(clean_txt[json_start:json_end+1])
-                                
-                                ch_list = tar_js_data.get("legacybroadcast", {}).get("channelList", []) or tar_js_data.get("channelList", [])
-                                if ch_list:
-                                    for ch in ch_list:
-                                        srv_id = ch.get("SVCID")
-                                        if srv_id is not None:
-                                            s_id = int(srv_id)
-                                            if s_id in svcid_to_prNum:
-                                                ch["programNumber"] = int(svcid_to_prNum[s_id])
-                                                ch["isUserSelCHNo"] = True
-                                                if "mapAttr" in ch:
-                                                    ch["mapAttr"] = 0
-                                                updated_count += 1
-                                            else:
-                                                fallback_count += 1
-                                tar_channel_tag.text = prefix + json.dumps(tar_js_data, ensure_ascii=False) + suffix
-                        except:
-                            pass
-                
-                # تصدير الملف النهائي الجاهز
-                out_buffer = io.BytesIO()
-                tar_tree.write(out_buffer, encoding="UTF-8", xml_declaration=True)
-                new_file_bytes = out_buffer.getvalue()
-                
-                st.success("🎯 تم بنجاح فك العقدة ومطابقة القنوات بالمعرف الرقمي المطلق!")
-                st.write(f"✅ قنوات تم نقل ترتيبها الجديد لشاشتك: **{updated_count}** قناة")
-                st.write(f"🔄 قنوات متبقية في مكانها الآمن (Fallback): **{fallback_count}** قناة")
-                
-                st.download_button(
-                    label="📥 تحميل ملف القنوات المترتب الجاهز لشاشتك الـ 32 فوراً",
-                    data=new_file_bytes,
-                    file_name="GlobalClone00001.TLL",
-                    mime="application/octet-stream"
-                )
-                
-            except Exception as e:
-                st.error(f"حدث خطأ أثناء المعالجة التقنية: {e}")
+    st.markdown(f"""<div class='warn'>
+💡 <b>{'ملحوظة:' if ar else 'Note:'}</b>
+{'إذا لم تظهر القنوات مرتبة: إعدادات ← القنوات ← مدير القنوات ← تعديل كل القنوات ← تحديد الكل ← استعادة' if ar else 'If channels not sorted: Settings → Channels → Channel Manager → Edit All Channels → Select All → Restore'}
+</div>""", unsafe_allow_html=True)
