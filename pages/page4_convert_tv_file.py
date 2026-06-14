@@ -18,10 +18,8 @@ if st.button("🔄 إعادة تعيين ورفع ملفات جديدة"):
 # دالة ذكية ومطورة جداً لقراءة تفاصيل وقنوات أي ملف LG بدقة ومنع ظهور 0
 def get_file_details(file_bytes):
     try:
-        # تحويل البياتات إلى نص لسهولة الفحص السريع بالـ Regex لو فشل الـ XML
         text_content = file_bytes.decode('utf-8', errors='ignore')
         
-        # محاولة قراءة الموديل والبلد
         model = "غير معروف"
         country = "غير محدد"
         
@@ -37,7 +35,6 @@ def get_file_details(file_bytes):
             if country_match2:
                 country = country_match2.group(1).strip()
 
-        # تحديد نوع الملف وعد القنوات بدقة
         channel_count = 0
         file_type = "قديم (XML كلاسيكي)"
         
@@ -51,19 +48,14 @@ def get_file_details(file_bytes):
         channel_tags = re.findall(r'<CHANNEL[^>]*>(.*?)</CHANNEL>', text_content, re.DOTALL)
         if channel_tags:
             for tag_content in channel_tags:
-                # تنظيف النص ومحاولة استخراج الـ JSON
                 clean_txt = tag_content.strip()
                 if clean_txt:
-                    # محاولة البحث عن مصفوفة القنوات داخل كود الجيسون بالـ Regex لضمان القراءة حتى لو الـ JSON ضخم
                     ch_matches = re.findall(r'"SVCID"\s*:', clean_txt)
                     if ch_matches:
                         channel_count = len(ch_matches)
                         file_type = "حديث (JSON مدمج)"
                     else:
-                        # محاولة الطريقة التقليدية بالـ json.loads لو الـ Regex مطلعش حاجة
                         try:
-                            # لو النص جواه وسوم تانية زي iepg أو legacybroadcast
-                            # هناخد بس الجزء اللي يبدأ بـ { وينتهي بـ }
                             json_start = clean_txt.find('{')
                             json_end = clean_txt.rfind('}')
                             if json_start != -1 and json_end != -1:
@@ -79,16 +71,12 @@ def get_file_details(file_bytes):
                         except:
                             pass
                             
-        # لو لسه العداد صفر وبتحتوي على كلمة channelList يبجى هو نظام حديث بالتأكيد
         if channel_count == 0 and "channelList" in text_content:
             file_type = "حديث (JSON مدمج)"
-            # عد تقريبي دقيق بناء على المفاتيح المتكررة للقنوات
             channel_count = text_content.count('"frequency"')
             if channel_count > 0:
-                # بنقص القنوات الوهمية أو الترددات الاحتياطية في الجيسون إن وجدت
                 channel_count = max(1, channel_count - 5) 
 
-        # تجهيز جذر الـ XML للمعالجة اللاحقة
         root = ET.fromstring(file_bytes)
         return {"model": model, "country": country, "channels": channel_count, "type": file_type, "root": root}
     except Exception as e:
@@ -143,23 +131,36 @@ if reference_file and target_file and 'ref_details' in locals() and 'tar_details
                 tar_tree = ET.parse(io.BytesIO(tar_bytes))
                 tar_root = tar_tree.getroot()
                 
-                # بناء قاموس للترتيب المرجعي
+                # بناء قاموس مرن للمطابقة (نأخذ التردد مقسوماً أو مقرباً لضمان التطابق التام)
                 ref_channels_order = {}
                 
-                # استخراج من XML الكلاسيكي
+                def clean_freq(f_val):
+                    # تقريب الترددات المتوافقة (مثلاً 11747 و 11746 يصبحان نفس التردد التماثلي)
+                    try:
+                        val = int(f_val)
+                        if val > 50000: # لو التردد مكتوب بصيغة الـ Khz الكبيرة
+                            val = val // 1000
+                        return val
+                    except:
+                        return 0
+
+                # استخراج من XML الكلاسيكي (الملف المرجع)
                 for item in ref_root.findall(".//ITEM"):
                     freq = item.findtext("frequency")
                     srv_id = item.findtext("service_id")
                     pr_num = item.findtext("prNum")
                     if freq and srv_id and pr_num:
-                        key = f"{int(freq)}_{int(srv_id)}"
-                        ref_channels_order[key] = int(pr_num)
+                        f_clean = clean_freq(freq)
+                        s_id = int(srv_id)
+                        ref_channels_order[(f_clean, s_id)] = int(pr_num)
+                        # عمل تطابق احتياطي بفرق بسيط في التردد (+1 أو -1) لمنع الـ 0
+                        ref_channels_order[(f_clean + 1, s_id)] = int(pr_num)
+                        ref_channels_order[(f_clean - 1, s_id)] = int(pr_num)
                 
-                # استخراج من JSON الحديث
+                # استخراج من JSON الحديث (الملف المرجع)
                 for channel_tag in ref_root.findall(".//CHANNEL"):
                     if channel_tag.text:
                         try:
-                            # تنظيف وتحديد مكان بداية ونهاية الجيسون
                             clean_txt = channel_tag.text.strip()
                             json_start = clean_txt.find('{')
                             json_end = clean_txt.rfind('}')
@@ -176,23 +177,29 @@ if reference_file and target_file and 'ref_details' in locals() and 'tar_details
                                     srv_id = ch.get("SVCID")
                                     pr_num = ch.get("programNumber")
                                     if freq and srv_id and pr_num:
-                                        key = f"{int(freq)}_{int(srv_id)}"
-                                        ref_channels_order[key] = int(pr_num)
+                                        f_clean = clean_freq(freq)
+                                        s_id = int(srv_id)
+                                        ref_channels_order[(f_clean, s_id)] = int(pr_num)
+                                        ref_channels_order[(f_clean + 1, s_id)] = int(pr_num)
+                                        ref_channels_order[(f_clean - 1, s_id)] = int(pr_num)
                         except:
                             pass
                 
                 updated_count = 0
                 fallback_count = 0
                 
-                # 1. تحديث القنوات لو ملف الشاشة الأصلي كلاسيكي (XML ITEM)
+                # 1. تحديث القنوات لو ملف الشاشة الأصلي كلاسيكي (XML ITEM) مثل شاشتك الـ 32
                 for item in tar_root.findall(".//ITEM"):
                     freq = item.findtext("frequency")
                     srv_id = item.findtext("service_id")
                     if freq and srv_id:
-                        key = f"{int(freq)}_{int(srv_id)}"
+                        f_clean = clean_freq(freq)
+                        s_id = int(srv_id)
                         pr_num_tag = item.find("prNum")
-                        if key in ref_channels_order:
-                            pr_num_tag.text = str(ref_channels_order[key])
+                        
+                        # فحص التطابق الذكي
+                        if (f_clean, s_id) in ref_channels_order:
+                            pr_num_tag.text = str(ref_channels_order[(f_clean, s_id)])
                             updated_count += 1
                         else:
                             fallback_count += 1
@@ -221,9 +228,10 @@ if reference_file and target_file and 'ref_details' in locals() and 'tar_details
                                         freq = ch.get("frequency")
                                         srv_id = ch.get("SVCID")
                                         if freq and srv_id:
-                                            key = f"{int(freq)}_{int(srv_id)}"
-                                            if key in ref_channels_order:
-                                                ch["programNumber"] = int(ref_channels_order[key])
+                                            f_clean = clean_freq(freq)
+                                            s_id = int(srv_id)
+                                            if (f_clean, s_id) in ref_channels_order:
+                                                ch["programNumber"] = int(ref_channels_order[(f_clean, s_id)])
                                                 ch["isUserSelCHNo"] = True
                                                 if "mapAttr" in ch:
                                                     ch["mapAttr"] = 0
@@ -231,7 +239,6 @@ if reference_file and target_file and 'ref_details' in locals() and 'tar_details
                                             else:
                                                 fallback_count += 1
                                                 
-                                # إعادة دمج النص مع الحفاظ على أي أغلفة خارج الجيسون
                                 tar_channel_tag.text = prefix + json.dumps(tar_js_data, ensure_ascii=False) + suffix
                         except:
                             pass
@@ -242,8 +249,8 @@ if reference_file and target_file and 'ref_details' in locals() and 'tar_details
                 new_file_bytes = out_buffer.getvalue()
                 
                 st.success("🎯 تم نقل الترتيب وتطابق القنوات بنجاح!")
-                st.write(f"✅ قنوات تم تحديث ترتيبها: **{updated_count}**")
-                st.write(f"🔄 قنوات متبقية آمنة في مكانها الأصلي (Fallback): **{fallback_count}**")
+                st.write(f"✅ قنوات تم تحديث ترتيبها بنجاح واجتازت اختلاف النظامين: **{updated_count}** قناة")
+                st.write(f"🔄 قنوات متبقية في مكانها الأصلي بأمان (Fallback): **{fallback_count}** قناة")
                 
                 st.download_button(
                     label="📥 تحميل ملف القنوات الجاهز لشاشتك فوراً",
@@ -256,9 +263,9 @@ if reference_file and target_file and 'ref_details' in locals() and 'tar_details
                 st.subheader("📋 ما هو الملف الناتج المُنزل الآن؟")
                 st.markdown(f"""
                 <div style="background-color:#111116; padding:18px; border-radius:10px; color:#ffffff; border:1px solid #333344; box-shadow: 3px 3px 10px rgba(0,0,0,0.5);">
-                1. <b>الهوية والتوافق:</b> يحمل بصمة وموديل شاشتك الأصلي تماماً وهو <span style="color:#00a884; font-weight:bold;">({tar_details['model']})</span> ونوع نظامه <span style="color:#ffb300;">({tar_details['type']})</span>.<br><br>
-                2. <b>بلد البث الثابت:</b> يلتزم 100% بإعدادات بلد بث شاشتك الأصلي وهو <span style="color:#34b7f1; font-weight:bold;">({tar_details['country']})</span> لتقبله الشاشة فوراً بدون أي رسائل رفض.<br><br>
-                3. <b>الترتيب المطور:</b> تم تطبيق خريطة قنوات الملف المرجع المترتب عليه بالكامل، وحماية باقي القنوات غير المشتركة عبر نظام البديل الاحتياطي الذكي <b>(Fallback)</b> لكي لا تفقد أي محطة بث.
+                1. <b>الهوية والتوافق:</b> يحمل بصمة وموديل شاشتك الأصلي تماماً وهو <span style="color:#ff4b4b; font-weight:bold;">({tar_details['model']})</span> ونوع نظامه القديم لتقبله شاشتك الـ 32 فوراً.<br><br>
+                2. <b>بلد البث الثابت:</b> يلتزم 100% بإعدادات بلد بث شاشتك الأصلي وهو <span style="color:#34b7f1; font-weight:bold;">({tar_details['country']})</span>.<br><br>
+                3. <b>تخطي حاجز الأجيال:</b> تم دمج خلايا البحث الترددية الذكية لتتمكن شاشة من الجيل القديم (XML) من قراءة ومحاكاة ترتيب شاشة من الجيل الجديد (JSON).
                 </div>
                 """, unsafe_allow_html=True)
                 
