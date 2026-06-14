@@ -10,31 +10,17 @@ st.set_page_config(page_title="LG Ultimate Channel Converter", layout="centered"
 st.title("🛠️ محول ومطابق قنوات شاشات LG الذكي الشامل")
 st.write("تنقل هذه الأداة الترتيب من ملف مرجعي وتطبقه على ملف شاشتك الأصلي مع الحفاظ على التوافق التام.")
 
-# زر إعادة التعيين (Restart) لإعادة تحميل الصفحة من أول وجديد
+# زر إعادة التعيين (Restart)
 if st.button("🔄 إعادة تعيين ورفع ملفات جديدة"):
     st.cache_data.clear()
     st.rerun()
 
-# دالة ذكية لتنظيف أسماء القنوات لضمان أعلى نسبة تطابق
-def clean_channel_name(name_str):
-    if not name_str:
-        return ""
-    # فك التشفير الصيني/الغريب الناتج عن الـ UTF-16 في الشاشات القديمة إذا وجد
-    try:
-        # محاولة تنظيف النصوص والرموز والمساحات الزائدة وتحويلها لحروف صغيرة
-        name = name_str.strip().lower()
-        # إزالة المسافات وعلامات مثل HD أو SD لتسهيل المطابقة (مثال: MBC HD تصبح mbc)
-        name = re.sub(r'\s+|hd|sd|\-|_|\.', '', name)
-        return name
-    except:
-        return name_str.strip().lower()
-
-# دالة قراءة تفاصيل الملف
+# دالة قراءة تفاصيل وقنوات أي ملف LG بدقة
 def get_file_details(file_bytes):
     try:
         text_content = file_bytes.decode('utf-8', errors='ignore')
         model = "غير معروف"
-        country = "غير محدد"
+        country = "غير حدد"
         
         model_match = re.search(r'<ModelName[^>]*>([^<]+)</ModelName>', text_content)
         if model_match:
@@ -124,7 +110,7 @@ if target_file:
         </div>
         """, unsafe_allow_html=True)
 
-# معالجة نقل الترتيب
+# معالجة نقل الترتيب الذكي
 if reference_file and target_file and 'ref_details' in locals() and 'tar_details' in locals():
     if ref_details and tar_details:
         st.subheader("2️⃣ معالجة نقل الترتيب الذكي")
@@ -135,19 +121,17 @@ if reference_file and target_file and 'ref_details' in locals() and 'tar_details
                 tar_tree = ET.parse(io.BytesIO(tar_bytes))
                 tar_root = tar_tree.getroot()
                 
-                # قاموس يعتمد على اسم القناة كـ مفتاح ربط أساسي فريد
-                name_to_prNum = {}
+                # قاموس يعتمد على الـ Service ID كـ مِفتاح ربط مطلق غير قابل للفشل
+                svcid_to_prNum = {}
                 
-                # 1. سحب الترتيب من المرجع (XML كلاسيكي) لو كان قديم
+                # 1. جمع البيانات من المرجع الكلاسيكي (إن وجد كمرجع)
                 for item in ref_root.findall(".//ITEM"):
-                    vchName = item.findtext("vchName")
+                    srv_id = item.findtext("service_id")
                     pr_num = item.findtext("prNum")
-                    if vchName and pr_num:
-                        clean_name = clean_channel_name(vchName)
-                        if clean_name:
-                            name_to_prNum[clean_name] = int(pr_num)
+                    if srv_id and pr_num:
+                        svcid_to_prNum[int(srv_id)] = int(pr_num)
                 
-                # 2. سحب الترتيب من المرجع (JSON حديث) - زي ملفك الـ 55 الحالي
+                # 2. جمع البيانات من المرجع الحديث (مثل ملفك الـ 55 بوصة الحالي)
                 for channel_tag in ref_root.findall(".//CHANNEL"):
                     if channel_tag.text:
                         try:
@@ -158,35 +142,37 @@ if reference_file and target_file and 'ref_details' in locals() and 'tar_details
                                 js_data = json.loads(clean_txt[json_start:json_end+1])
                                 ch_list = js_data.get("legacybroadcast", {}).get("channelList", []) or js_data.get("channelList", [])
                                 for ch in ch_list:
-                                    chName = ch.get("chName")
+                                    srv_id = ch.get("SVCID")
                                     pr_num = ch.get("programNumber")
-                                    if chName and pr_num:
-                                        clean_name = clean_channel_name(chName)
-                                        if clean_name:
-                                            name_to_prNum[clean_name] = int(pr_num)
+                                    if srv_id is not None and pr_num is not None:
+                                        svcid_to_prNum[int(srv_id)] = int(pr_num)
                         except:
                             pass
 
                 updated_count = 0
                 fallback_count = 0
                 
-                # 3. تحديث ملف شاشتك الأصلي (الهدف) - الـ 32 بوصة الكلاسيكي
+                # 3. تحديث ملف شاشتك الـ 32 الكلاسيكي المستهدف (Target) بناء على الـ Service ID
                 for item in tar_root.findall(".//ITEM"):
-                    vchName = item.findtext("vchName")
+                    srv_id_tag = item.findtext("service_id")
                     pr_num_tag = item.find("prNum")
                     
-                    if vchName and pr_num_tag is not None:
-                        clean_name = clean_channel_name(vchName)
+                    if srv_id_tag is not None and pr_num_tag is not None:
+                        s_id = int(srv_id_tag)
                         
-                        # مطابقة مباشرة بالاسم النظيف
-                        if clean_name in name_to_prNum:
-                            pr_num_tag.text = str(name_to_prNum[clean_name])
-                            item.find("isUserSelCHNo").text = "1" if item.find("isUserSelCHNo") is not None else "1"
+                        # المطابقة الفتاكة بالـ Service ID المباشر
+                        if s_id in svcid_to_prNum:
+                            pr_num_tag.text = str(svcid_to_prNum[s_id])
+                            
+                            # تفعيل خيار قناة مخصصة من قبل المستخدم لتثبيتها بالشاشة
+                            is_user_sel = item.find("isUserSelCHNo")
+                            if is_user_sel is not None:
+                                is_user_sel.text = "1"
                             updated_count += 1
                         else:
                             fallback_count += 1
 
-                # 4. احتياطياً لو كان الملف المستهدف حديث
+                # 4. احتياطياً لو كان المستهدف نظام حديث
                 for tar_channel_tag in tar_root.findall(".//CHANNEL"):
                     if tar_channel_tag.text:
                         try:
@@ -201,11 +187,11 @@ if reference_file and target_file and 'ref_details' in locals() and 'tar_details
                                 ch_list = tar_js_data.get("legacybroadcast", {}).get("channelList", []) or tar_js_data.get("channelList", [])
                                 if ch_list:
                                     for ch in ch_list:
-                                        chName = ch.get("chName")
-                                        if chName:
-                                            clean_name = clean_channel_name(chName)
-                                            if clean_name in name_to_prNum:
-                                                ch["programNumber"] = int(name_to_prNum[clean_name])
+                                        srv_id = ch.get("SVCID")
+                                        if srv_id is not None:
+                                            s_id = int(srv_id)
+                                            if s_id in svcid_to_prNum:
+                                                ch["programNumber"] = int(svcid_to_prNum[s_id])
                                                 ch["isUserSelCHNo"] = True
                                                 if "mapAttr" in ch:
                                                     ch["mapAttr"] = 0
@@ -216,21 +202,21 @@ if reference_file and target_file and 'ref_details' in locals() and 'tar_details
                         except:
                             pass
                 
-                # توليد الملف النهائي في الذاكرة
+                # تصدير الملف النهائي الجاهز
                 out_buffer = io.BytesIO()
                 tar_tree.write(out_buffer, encoding="UTF-8", xml_declaration=True)
                 new_file_bytes = out_buffer.getvalue()
                 
-                st.success("🎯 تم سحق مشكلة التوافق ونقل الترتيب بالأسماء الذكية!")
-                st.write(f"✅ قنوات تم مطابقتها ونقل ترتيبها الجديد: **{updated_count}** قناة")
-                st.write(f"🔄 قنوات حافظت على مكانها القديم (Fallback): **{fallback_count}** قناة")
+                st.success("🎯 تم بنجاح فك العقدة ومطابقة القنوات بالمعرف الرقمي المطلق!")
+                st.write(f"✅ قنوات تم نقل ترتيبها الجديد لشاشتك: **{updated_count}** قناة")
+                st.write(f"🔄 قنوات متبقية في مكانها الآمن (Fallback): **{fallback_count}** قناة")
                 
                 st.download_button(
-                    label="📥 تحميل ملف القنوات الجاهز فوراً لشاشتك الـ 32",
+                    label="📥 تحميل ملف القنوات المترتب الجاهز لشاشتك الـ 32 فوراً",
                     data=new_file_bytes,
                     file_name="GlobalClone00001.TLL",
                     mime="application/octet-stream"
                 )
                 
             except Exception as e:
-                st.error(f"حدث خطأ أثناء المعالجة: {e}")
+                st.error(f"حدث خطأ أثناء المعالجة التقنية: {e}")
