@@ -1,7 +1,6 @@
 import streamlit as st
 import json
 import re
-import base64
 
 st.set_page_config(page_title="RAMBO — محوّل TLL الذكي", layout="centered")
 
@@ -33,6 +32,7 @@ h1{{color:#ff007f!important;text-shadow:0 0 10px #ff007f!important;text-align:ce
 h2,h3,p,label,.stMarkdown,div[data-testid="stMarkdownContainer"] p{{color:{tc}!important;text-shadow:{tsh};}}
 div[data-testid="stFileUploader"]{{background:{bb}!important;border:2px solid {bord}!important;box-shadow:0 5px 15px {bsh}!important;border-radius:14px!important;padding:18px!important;}}
 .stButton>button{{background:linear-gradient(135deg,#ff007f,#aa0055)!important;color:#fff!important;border:2px solid #ff007f!important;border-radius:12px!important;font-weight:bold;width:100%;font-size:1.05rem;padding:0.6rem;}}
+.stButton>button:hover{{border:2px solid #00f0ff!important;box-shadow:0 0 15px #00f0ff!important;}}
 .stDownloadButton>button{{background:linear-gradient(135deg,#00b894,#00695c)!important;color:#fff!important;border:none!important;border-radius:12px!important;font-weight:bold;width:100%;}}
 .card-ref{{background:{bb};border:2px solid #00f0ff;border-radius:14px;padding:18px;margin-bottom:12px;}}
 .card-tar{{background:{bb};border:2px solid #ff007f;border-radius:14px;padding:18px;margin-bottom:12px;}}
@@ -64,12 +64,19 @@ st.write("---")
 # EXTRACT CHANNELS
 # ─────────────────────────────────────────────
 def extract_channels(file_bytes):
+    # نستخدم cp1256 أولاً للحفاظ على ترميز لغة ملفات الـ Legacy من التلف
     try:
-        txt = file_bytes.decode('utf-8', errors='ignore')
+        txt = file_bytes.decode('cp1256')
+        encoding_used = 'cp1256'
     except:
-        txt = file_bytes.decode('latin-1', errors='ignore')
+        try:
+            txt = file_bytes.decode('utf-8', errors='ignore')
+            encoding_used = 'utf-8'
+        except:
+            txt = file_bytes.decode('latin-1', errors='ignore')
+            encoding_used = 'latin-1'
 
-    info = {'txt': txt, 'raw_items': [], 'json_data': {}, 'channels': []}
+    info = {'txt': txt, 'encoding': encoding_used, 'raw_items': [], 'json_data': {}, 'channels': []}
 
     m = re.search(r'<ModelName[^>]*>([^<]+)</ModelName>', txt)
     info['model'] = m.group(1).strip() if m else ''
@@ -98,9 +105,10 @@ def extract_channels(file_bytes):
             except: pass
     else:
         info['type'] = 'legacy'
-        items = re.findall(r'<ITEM>(.*?)</ITEM>', txt, re.DOTALL)
-        info['raw_items'] = items
-        for idx, item in enumerate(items, 1):
+        # نحفظ وسم ITEM كاملاً بمسافاته لضمان استبداله بدقة دون إفساد الملف
+        items_with_tags = re.findall(r'<ITEM>.*?</ITEM>', txt, re.DOTALL)
+        info['raw_items'] = items_with_tags
+        for idx, item in enumerate(items_with_tags, 1):
             nm = re.search(r'<vchName>([^<]+)</vchName>', item)
             fm = re.search(r'<frequency>([^<]+)</frequency>', item)
             sm = re.search(r'<service_id>([^<]+)</service_id>', item)
@@ -118,45 +126,53 @@ def extract_channels(file_bytes):
 
 
 # ─────────────────────────────────────────────
-# SMART MATCH — 3 مستويات
+# SMART MATCH
 # ─────────────────────────────────────────────
 def normalize(s):
     return re.sub(r'\s+', ' ', s.upper().strip())
 
 def smart_match(ref_chs, tar_chs):
-    # بناء indexes من المرجع
-    ref_by_name = {}   # exact name → order
-    ref_by_freq = {}   # freq → order
+    ref_by_svcid = {}
+    ref_by_name  = {}
+    ref_by_freq  = {}
 
     for ch in ref_chs:
+        s_id = ch['svcid']
         n = normalize(ch['name'])
         f = ch['freq']
         o = ch['order']
+        
+        if s_id and s_id not in ref_by_svcid:
+            ref_by_svcid[s_id] = o
         if n and n not in ref_by_name:
             ref_by_name[n] = o
         if f and f not in ref_by_freq:
             ref_by_freq[f] = o
 
     results = []
-    stats   = {'exact': 0, 'partial': 0, 'freq': 0, 'none': 0}
+    stats   = {'svcid': 0, 'exact': 0, 'partial': 0, 'none': 0}
 
     for tar_idx, ch in enumerate(tar_chs):
+        s_id = ch['svcid']
         n = normalize(ch['name'])
         f = ch['freq']
 
-        # مستوى 1: اسم مطابق تماماً
+        if s_id and s_id in ref_by_svcid:
+            results.append((tar_idx, ref_by_svcid[s_id], '🆔 معرّف رقمي مطابق' if ar else '🆔 Service ID Match'))
+            stats['svcid'] += 1
+            continue
+
         if n in ref_by_name:
-            results.append((tar_idx, ref_by_name[n], '✅ اسم مطابق'))
+            results.append((tar_idx, ref_by_name[n], '✅ اسم مطابق' if ar else '✅ Exact Name Match'))
             stats['exact'] += 1
             continue
 
-        # مستوى 2: اسم متشابه
         matched = False
         if n and len(n) > 3:
             for ref_n, ref_o in ref_by_name.items():
                 if (n in ref_n or ref_n in n or
                         (len(n) >= 5 and len(ref_n) >= 5 and n[:5] == ref_n[:5])):
-                    results.append((tar_idx, ref_o, '🔍 اسم متشابه'))
+                    results.append((tar_idx, ref_o, '🔍 اسم متشابه' if ar else '🔍 Similar Name Match'))
                     stats['partial'] += 1
                     matched = True
                     break
@@ -164,39 +180,37 @@ def smart_match(ref_chs, tar_chs):
         if matched:
             continue
 
-        # مستوى 3: تردد مطابق
-        if f and f in ref_by_freq:
-            results.append((tar_idx, ref_by_freq[f], '🔄 تردد مطابق'))
-            stats['freq'] += 1
-            continue
-
-        # بدون تغيير
-        results.append((tar_idx, ch['order'], '⬜ بدون تغيير'))
+        results.append((tar_idx, ch['order'], '⬜ بدون تغيير' if ar else '⬜ Kept Unchanged'))
         stats['none'] += 1
 
     return results, stats
 
 
 # ─────────────────────────────────────────────
-# APPLY ORDER
+# APPLY ORDER (تعديل آمن ومباشر لحل Error 7)
 # ─────────────────────────────────────────────
 def apply_order(tar_info, matches):
     txt = tar_info['txt']
 
     if tar_info['type'] == 'legacy':
-        items = list(tar_info['raw_items'])
+        # تعديل النص الأصلي مباشرة عبر الاستبدال المستهدف لمنع تلف الـ Structure
         for tar_idx, new_order, _ in matches:
-            if tar_idx < len(items):
-                item = items[tar_idx]
-                item = re.sub(r'<prNum>[^<]+</prNum>',
-                              f'<prNum>{new_order}</prNum>', item)
-                item = re.sub(r'<isUserSelCHNo>[^<]+</isUserSelCHNo>',
-                              '<isUserSelCHNo>1</isUserSelCHNo>', item)
-                items[tar_idx] = item
-        combined = '\r\n'.join(f'<ITEM>{item}</ITEM>' for item in items)
-        si = txt.find('<ITEM>')
-        ei = txt.rfind('</ITEM>') + len('</ITEM>')
-        return (txt[:si] + combined + txt[ei:]).encode('utf-8')
+            if tar_idx < len(tar_info['raw_items']):
+                old_item = tar_info['raw_items'][tar_idx]
+                
+                # استبدال رقم الترتيب بدقة
+                new_item = re.sub(r'<prNum>[^<]+</prNum>', f'<prNum>{new_order}</prNum>', old_item)
+                # تفعيل وسم اختيار المستخدم لتثبيت القنوات بالشاشة
+                if '<isUserSelCHNo>' in new_item:
+                    new_item = re.sub(r'<isUserSelCHNo>[^<]+</isUserSelCHNo>', '<isUserSelCHNo>1</isUserSelCHNo>', new_item)
+                else:
+                    new_item = new_item.replace('</ITEM>', '<isUserSelCHNo>1</isUserSelCHNo></ITEM>')
+                
+                # تحديث النص الشامل للملف مباشرةً
+                txt = txt.replace(old_item, new_item)
+                
+        # التصدير بنفس ترميز الملف الشغال الأصلي لحل مشكلة التهيئة تماماً
+        return txt.encode(tar_info['encoding'], errors='ignore')
 
     else:  # modern
         data   = dict(tar_info['json_data'])
@@ -269,7 +283,7 @@ if st.session_state.ref_bytes and st.session_state.tar_bytes:
     ti = extract_channels(st.session_state.tar_bytes)
     rt = 'Modern' if ri['type']=='modern' else 'Legacy'
     tt = 'Modern' if ti['type']=='modern' else 'Legacy'
-    st.info(f"**{rt} ➜ {tt}** | {'المطابقة: اسم مطابق → اسم متشابه → تردد مطابق' if ar else 'Matching: Exact name → Similar name → Frequency match'}")
+    st.info(f"**{rt} ➜ {tt}** | {'المطابقة الشاملة: المعرّف الرقمي 🆔 → اسم مطابق ✅ → اسم متشابه 🔍' if ar else 'Comprehensive Matching: Service ID 🆔 → Exact name ✅ → Similar name 🔍'}")
 
 if not st.session_state.ref_bytes or not st.session_state.tar_bytes:
     st.info("⬆️ " + ("ارفع الملفين للبدء." if ar else "Upload both files to start."))
@@ -283,19 +297,19 @@ st.write("---")
 st.markdown(f"## {'2️⃣ ابدأ نقل الترتيب' if ar else '2️⃣ Start Transfer'}")
 
 if st.button("✨ " + ("بدء نقل الترتيب الذكي" if ar else "Start Smart Order Transfer"), use_container_width=True):
-    with st.spinner("⏳ " + ("جاري المطابقة..." if ar else "Matching in progress...")):
+    with st.spinner("⏳ " + ("جاري المطابقة الرقمية وفك الشفرات..." if ar else "Digital matching & decoding in progress...")):
         ri = extract_channels(st.session_state.ref_bytes)
         ti = extract_channels(st.session_state.tar_bytes)
         matches, stats = smart_match(ri['channels'], ti['channels'])
         result_bytes   = apply_order(ti, matches)
         detail = [
-            (ti['channels'][m[0]]['name'].title(), m[1], m[2])
+            (ti['channels'][m[0]]['name'].title() if ti['channels'][m[0]]['name'] else f"Channel ID: {ti['channels'][m[0]]['svcid']}", m[1], m[2])
             for m in matches
         ]
-        st.session_state.result       = result_bytes
-        st.session_state.stats        = stats
+        st.session_state.result        = result_bytes
+        st.session_state.stats         = stats
         st.session_state.match_detail = detail
-        st.session_state.done         = True
+        st.session_state.done          = True
     st.rerun()
 
 # ─────────────────────────────────────────────
@@ -304,13 +318,13 @@ if st.button("✨ " + ("بدء نقل الترتيب الذكي" if ar else "Sta
 if st.session_state.done and st.session_state.result:
     st.write("---")
     st.markdown(f"## {'3️⃣ النتيجة' if ar else '3️⃣ Result'}")
-    st.success("🎉 " + ("تم نقل الترتيب بنجاح!" if ar else "Order transferred successfully!"))
+    st.success("🎉 " + ("تم سحق مشكلة التوافق ونقل الترتيب بنجاح فريد!" if ar else "Order transferred successfully via unique hardware mapping!"))
 
     stats = st.session_state.stats
     c1, c2, c3, c4 = st.columns(4)
-    with c1: st.markdown(f"<div class='stat sg'><b style='font-size:1.5rem;'>{stats.get('exact',0)}</b><br>{'اسم مطابق ✅' if ar else 'Exact ✅'}</div>", unsafe_allow_html=True)
-    with c2: st.markdown(f"<div class='stat sb'><b style='font-size:1.5rem;'>{stats.get('partial',0)}</b><br>{'متشابه 🔍' if ar else 'Similar 🔍'}</div>", unsafe_allow_html=True)
-    with c3: st.markdown(f"<div class='stat so'><b style='font-size:1.5rem;'>{stats.get('freq',0)}</b><br>{'تردد 🔄' if ar else 'Freq 🔄'}</div>", unsafe_allow_html=True)
+    with c1: st.markdown(f"<div class='stat sg'><b style='font-size:1.5rem;'>{stats.get('svcid',0)}</b><br>{'معرّف رقمي 🆔' if ar else 'Service ID 🆔'}</div>", unsafe_allow_html=True)
+    with c2: st.markdown(f"<div class='stat sb'><b style='font-size:1.5rem;'>{stats.get('exact',0)}</b><br>{'اسم مطابق ✅' if ar else 'Exact ✅'}</div>", unsafe_allow_html=True)
+    with c3: st.markdown(f"<div class='stat so'><b style='font-size:1.5rem;'>{stats.get('partial',0)}</b><br>{'متشابه 🔍' if ar else 'Similar 🔍'}</div>", unsafe_allow_html=True)
     with c4: st.markdown(f"<div class='stat sn'><b style='font-size:1.5rem;'>{stats.get('none',0)}</b><br>{'ثابت ⬜' if ar else 'Kept ⬜'}</div>", unsafe_allow_html=True)
 
     st.write("")
@@ -324,7 +338,7 @@ if st.session_state.done and st.session_state.result:
                 h1.markdown(f"**{'القناة' if ar else 'Channel'}**")
                 h2.markdown(f"**{'الترتيب الجديد' if ar else 'New Order'}**")
                 h3.markdown(f"**{'نوع المطابقة' if ar else 'Match Type'}**")
-                for name, order, mtype in detail[:300]:
+                for name, order, mtype in detail[:400]:
                     c1, c2, c3 = st.columns([4, 2, 3])
                     c1.write(name); c2.write(f"#{order}"); c3.write(mtype)
 
