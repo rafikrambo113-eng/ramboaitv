@@ -1,3 +1,4 @@
+
 import streamlit as st
 import re, json, base64
 
@@ -11,13 +12,12 @@ for k, v in {
     'result_bytes':None,'done':False,
     'preview':[],'skipped':[],
     'net_key':0,'my_key':0,
-    'new_model':'','new_country':'',
 }.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
 # ─────────────────────────────────────────────
-# البلدان
+# البلدان والموديلات
 # ─────────────────────────────────────────────
 COUNTRIES = {
     "🇪🇬 مصر":       {"c3":"EGY","full":"Egypt"},
@@ -52,7 +52,7 @@ LG_MODELS = sorted([
     "65SM9010PLA","55SM9010PLA","43UK6300PLB","49UK6300PLB","55UK6300PLB","65UK6300PLB",
     "32LK6100PLB","43LK6100PLB","49LK6100PLB","55LK6100PLB",
     "32LM550BPVA","43LM5500PLA","49LM5500PLA","55LM5500PLA",
-    "32LH604U-TB","43LH604V","49LH604V","55LH604V",
+    "32LH604U-TB","43LH604V","49LH604V","55LH604V","43LJ510V-TD",
     "32LH570U","43LH570V","49LH570V","55LH570V","32LH530V",
     "65UH950V","55UH950V","49UH850V","43UH850V",
 ])
@@ -63,7 +63,7 @@ LG_MODELS = sorted([
 def parse_tll(b):
     try: txt = b.decode('utf-8','ignore')
     except: txt = b.decode('latin-1','ignore')
-    info = {'txt': txt, 'is_modern': 'legacybroadcast' in txt}
+    info = {'txt':txt, 'is_modern':'legacybroadcast' in txt}
     m = re.search(r'<ModelName[^>]*>([^<]+)</ModelName>', txt)
     info['model'] = m.group(1).strip() if m else ''
     m = re.search(r'<BroadcastCountrySetting[^>]*>([^<]+)</BroadcastCountrySetting>', txt)
@@ -76,65 +76,77 @@ def parse_tll(b):
         if jm:
             try:
                 d = json.loads(jm.group(1))
-                info['cj'] = d.get('modelInfo',{}).get('country','')
+                info['cj']       = d.get('modelInfo',{}).get('country','')
                 info['channels'] = d.get('channelList',[])
                 info['ch_count'] = len(info['channels'])
-                info['json_data'] = d
+                info['jdata']    = d
             except:
-                info['channels'] = []
-                info['ch_count'] = len(re.findall(r'"channelName"', txt))
-                info['json_data'] = {}
+                info['channels'] = []; info['ch_count'] = 0; info['jdata'] = {}
         else:
-            info['channels'] = []; info['ch_count'] = 0; info['json_data'] = {}
+            info['channels'] = []; info['ch_count'] = 0; info['jdata'] = {}
     else:
-        info['channels'] = re.findall(r'<ITEM>(.*?)</ITEM>', txt, re.DOTALL)
-        info['ch_count'] = len(info['channels'])
-        info['json_data'] = {}
+        info['channels']  = re.findall(r'<ITEM>(.*?)</ITEM>', txt, re.DOTALL)
+        info['ch_count']  = len(info['channels'])
+        info['jdata']     = {}
     info['display'] = info['bc'] or info['cj'] or info['cx']
     return info
 
+# ─────────────────────────────────────────────
+# FALLBACK: أقرب تردد
+# ─────────────────────────────────────────────
+def find_closest_freq(target_freq, available_freqs):
+    """يرجع أقرب تردد متاح"""
+    try:
+        tf = int(target_freq)
+        closest = min(available_freqs, key=lambda f: abs(int(f)-tf))
+        return closest
+    except:
+        return list(available_freqs)[0] if available_freqs else None
 
-def get_ch_name_freq(ch, is_modern):
-    if is_modern:
-        return ch.get('channelName','?'), str(ch.get('frequency',''))
-    else:
-        nm = re.search(r'<vchName>([^<]+)</vchName>', ch)
-        fm = re.search(r'<frequency>([^<]+)</frequency>', ch)
-        return (nm.group(1) if nm else '?'), (fm.group(1).strip() if fm else '')
-
+def build_item_from_template(idx, name, freq, template_item):
+    """يبني ITEM جديد من template بس بتردد واسم مختلفين"""
+    item = template_item
+    # غير التردد
+    item = re.sub(r'<frequency>[^<]+</frequency>', f'<frequency>{freq}</frequency>', item)
+    # غير الرقم
+    item = re.sub(r'<prNum>[^<]+</prNum>', f'<prNum>{idx}</prNum>', item)
+    # غير الاسم
+    nh = name.encode('utf-8').hex()
+    nl = len(name)
+    item = re.sub(r'<hexVchName>[^<]+</hexVchName>', f'<hexVchName>{nh}</hexVchName>', item)
+    item = re.sub(r'<notConvertedLengthOfVchName>[^<]+</notConvertedLengthOfVchName>',
+                  f'<notConvertedLengthOfVchName>{nl}</notConvertedLengthOfVchName>', item)
+    item = re.sub(r'<vchName>[^<]+</vchName>', f'<vchName>{name}</vchName>', item)
+    item = re.sub(r'<lengthOfVchName>[^<]+</lengthOfVchName>',
+                  f'<lengthOfVchName>{nl}</lengthOfVchName>', item)
+    return item
 
 # ─────────────────────────────────────────────
 # CORE CONVERT
 # ─────────────────────────────────────────────
 def do_convert(net_info, my_info, new_model, new_country):
-    """
-    net_info  = الملف المرتب من النت (المصدر)
-    my_info   = الملف الشغال على شاشتك (الهيكل)
-    """
     net_modern = net_info['is_modern']
     my_modern  = my_info['is_modern']
     txt_my     = my_info['txt']
+    net_chs    = net_info['channels']
 
-    # القنوات من ملف النت بالترتيب
-    net_chs = net_info['channels']  # list of dict أو list of str
-
-    # الموديل النهائي
-    target_model   = new_model.strip() if new_model.strip() else net_info['model']
-    # البلد النهائي
-    target_c3   = my_info['bc'] or 'JA'
-    target_full = my_info['cj'] or 'Japan'
+    # الموديل والبلد النهائيين
+    target_model = new_model.strip() if new_model.strip() else net_info['model']
+    target_c3    = my_info['bc'] or my_info['cx'] or 'JA'
+    target_full  = my_info['cj'] or 'Japan'
+    target_cx    = my_info['cx'] or 'JA'
     if new_country and new_country in COUNTRIES:
         target_c3   = COUNTRIES[new_country]['c3']
         target_full = COUNTRIES[new_country]['full']
 
-    preview  = []
-    skipped  = []
+    preview = []
+    skipped = []
 
     # ══════════════════════════════════════════
-    # حالة 1: ملف النت Modern، شاشتي Legacy
+    # حالة: ملف النت Legacy، ملفي Legacy
     # ══════════════════════════════════════════
-    if net_modern and not my_modern:
-        # templates من شاشتي
+    if not net_modern and not my_modern:
+        # بناء map تردد → ITEM من ملفي
         freq_to_item = {}
         for item in my_info['channels']:
             fm = re.search(r'<frequency>([^<]+)</frequency>', item)
@@ -143,72 +155,137 @@ def do_convert(net_info, my_info, new_model, new_country):
                 if f not in freq_to_item:
                     freq_to_item[f] = item
 
+        available_freqs = list(freq_to_item.keys())
         new_items = []
-        for idx, ch in enumerate(net_chs, 1):
-            name, freq = get_ch_name_freq(ch, True)
+
+        for idx, item_net in enumerate(net_chs, 1):
+            nm = re.search(r'<vchName>([^<]+)</vchName>', item_net)
+            fm = re.search(r'<frequency>([^<]+)</frequency>', item_net)
+            name = nm.group(1) if nm else 'Unknown'
+            freq = fm.group(1).strip() if fm else ''
+
             if freq in freq_to_item:
-                item = freq_to_item[freq]
-                nh = name.encode('utf-8').hex()
-                nl = len(name)
-                item = re.sub(r'<prNum>[^<]+</prNum>', f'<prNum>{idx}</prNum>', item)
-                item = re.sub(r'<hexVchName>[^<]+</hexVchName>', f'<hexVchName>{nh}</hexVchName>', item)
-                item = re.sub(r'<notConvertedLengthOfVchName>[^<]+</notConvertedLengthOfVchName>', f'<notConvertedLengthOfVchName>{nl}</notConvertedLengthOfVchName>', item)
-                item = re.sub(r'<vchName>[^<]+</vchName>', f'<vchName>{name}</vchName>', item)
-                item = re.sub(r'<lengthOfVchName>[^<]+</lengthOfVchName>', f'<lengthOfVchName>{nl}</lengthOfVchName>', item)
-                new_items.append('<ITEM>' + item + '</ITEM>')
-                preview.append((idx, name, freq, '✅'))
+                # تردد مطابق — استخدم الـ template مباشرة
+                new_item = build_item_from_template(idx, name, freq, freq_to_item[freq])
+                new_items.append('<ITEM>' + new_item + '</ITEM>')
+                preview.append((idx, name, freq, '✅ مطابق'))
+            elif available_freqs:
+                # Fallback: أقرب تردد
+                closest = find_closest_freq(freq, available_freqs)
+                new_item = build_item_from_template(idx, name, freq, freq_to_item[closest])
+                new_items.append('<ITEM>' + new_item + '</ITEM>')
+                preview.append((idx, name, freq, f'🔄 fallback ({closest})'))
             else:
                 skipped.append((name, freq))
 
+        # دمج في ملفي
         combined = '\r\n'.join(new_items)
         si = txt_my.find('<ITEM>')
         ei = txt_my.rfind('</ITEM>') + len('</ITEM>')
         new_txt = txt_my[:si] + combined + txt_my[ei:]
 
-        # موديل
+        # الموديل
         new_txt = re.sub(r'(<ModelName[^>]*>)([^<]+)(</ModelName>)',
                          lambda m: m.group(1)+target_model+m.group(3), new_txt)
         # BroadcastCountry
-        new_txt = re.sub(r'(<BroadcastCountrySetting[^>]*>)([^<]+)(</BroadcastCountrySetting>)',
-                         lambda m: m.group(1)+target_c3+m.group(3), new_txt)
-        if not re.search(r'<BroadcastCountrySetting', new_txt):
-            new_txt = new_txt.replace('</ModelInfo>', f'<BroadcastCountrySetting type="0">{target_c3}</BroadcastCountrySetting>\n</ModelInfo>')
+        if re.search(r'<BroadcastCountrySetting', new_txt):
+            new_txt = re.sub(r'(<BroadcastCountrySetting[^>]*>)([^<]+)(</BroadcastCountrySetting>)',
+                             lambda m: m.group(1)+target_c3+m.group(3), new_txt)
+        else:
+            new_txt = new_txt.replace('</ModelInfo>',
+                f'<BroadcastCountrySetting type="0">{target_c3}</BroadcastCountrySetting>\n</ModelInfo>')
         # country XML
         new_txt = re.sub(r'(<country[^>]*>)([^<]+)(</country>)',
-                         lambda m: m.group(1)+my_info['cx']+m.group(3), new_txt)
+                         lambda m: m.group(1)+target_cx+m.group(3), new_txt)
 
-        return new_txt.encode('utf-8'), preview, skipped, 'modern→legacy'
+        return new_txt.encode('utf-8'), preview, skipped, 'Legacy→Legacy'
 
     # ══════════════════════════════════════════
-    # حالة 2: ملف النت Legacy، شاشتي Modern
+    # حالة: ملف النت Modern، ملفي Legacy
+    # ══════════════════════════════════════════
+    elif net_modern and not my_modern:
+        freq_to_item = {}
+        for item in my_info['channels']:
+            fm = re.search(r'<frequency>([^<]+)</frequency>', item)
+            if fm:
+                f = fm.group(1).strip()
+                if f not in freq_to_item:
+                    freq_to_item[f] = item
+
+        available_freqs = list(freq_to_item.keys())
+        new_items = []
+
+        for idx, ch in enumerate(net_chs, 1):
+            name = ch.get('channelName','Unknown')
+            freq = str(ch.get('frequency',''))
+
+            if freq in freq_to_item:
+                new_item = build_item_from_template(idx, name, freq, freq_to_item[freq])
+                new_items.append('<ITEM>' + new_item + '</ITEM>')
+                preview.append((idx, name, freq, '✅ مطابق'))
+            elif available_freqs:
+                closest = find_closest_freq(freq, available_freqs)
+                new_item = build_item_from_template(idx, name, freq, freq_to_item[closest])
+                new_items.append('<ITEM>' + new_item + '</ITEM>')
+                preview.append((idx, name, freq, f'🔄 fallback ({closest})'))
+            else:
+                skipped.append((name, freq))
+
+        combined = '\r\n'.join(new_items)
+        si = txt_my.find('<ITEM>'); ei = txt_my.rfind('</ITEM>') + len('</ITEM>')
+        new_txt = txt_my[:si] + combined + txt_my[ei:]
+        new_txt = re.sub(r'(<ModelName[^>]*>)([^<]+)(</ModelName>)',
+                         lambda m: m.group(1)+target_model+m.group(3), new_txt)
+        if re.search(r'<BroadcastCountrySetting', new_txt):
+            new_txt = re.sub(r'(<BroadcastCountrySetting[^>]*>)([^<]+)(</BroadcastCountrySetting>)',
+                             lambda m: m.group(1)+target_c3+m.group(3), new_txt)
+        else:
+            new_txt = new_txt.replace('</ModelInfo>',
+                f'<BroadcastCountrySetting type="0">{target_c3}</BroadcastCountrySetting>\n</ModelInfo>')
+        new_txt = re.sub(r'(<country[^>]*>)([^<]+)(</country>)',
+                         lambda m: m.group(1)+target_cx+m.group(3), new_txt)
+
+        return new_txt.encode('utf-8'), preview, skipped, 'Modern→Legacy'
+
+    # ══════════════════════════════════════════
+    # حالة: ملف النت Legacy، ملفي Modern
     # ══════════════════════════════════════════
     elif not net_modern and my_modern:
-        data_my = dict(my_info['json_data'])
-        ref_chs = data_my.get('channelList', [])
+        data_my  = dict(my_info['jdata'])
+        ref_chs  = data_my.get('channelList', [])
         freq_to_ch = {}
         for ch in ref_chs:
             f = str(ch.get('frequency',''))
-            if f not in freq_to_ch:
-                freq_to_ch[f] = ch
+            if f not in freq_to_ch: freq_to_ch[f] = ch
+        available_freqs = list(freq_to_ch.keys())
         base_ch = ref_chs[0] if ref_chs else {}
 
         new_channels = []
         for idx, item in enumerate(net_chs, 1):
-            name, freq = get_ch_name_freq(item, False)
+            nm = re.search(r'<vchName>([^<]+)</vchName>', item)
+            fm = re.search(r'<frequency>([^<]+)</frequency>', item)
+            name = nm.group(1) if nm else 'Unknown'
+            freq = fm.group(1).strip() if fm else ''
+
             if freq in freq_to_ch:
                 template = dict(freq_to_ch[freq])
-                src = '✅'
+                src = '✅ مطابق'
+            elif available_freqs:
+                closest = find_closest_freq(freq, available_freqs)
+                template = dict(freq_to_ch[closest])
+                try: template['frequency'] = int(freq)
+                except: pass
+                src = f'🔄 fallback ({closest})'
             else:
                 template = dict(base_ch)
                 try: template['frequency'] = int(freq)
                 except: pass
-                src = '🔄'
+                src = '🔄 fallback (base)'
+
             template.update({
-                'channelName': name, 'majorNumber': idx,
-                'programNum': idx, 'SVCID': idx,
-                'userSelCHNo': True, 'userCustomize': True,
-                'userEditChNumber': True, 'skipped': False,
-                'deleted': False, 'Invisible': False,
+                'channelName':name,'majorNumber':idx,'programNum':idx,
+                'SVCID':idx,'userSelCHNo':True,'userCustomize':True,
+                'userEditChNumber':True,'skipped':False,'deleted':False,'Invisible':False,
             })
             try:
                 template['chNameBase64'] = base64.b64encode(
@@ -227,25 +304,63 @@ def do_convert(net_info, my_info, new_model, new_country):
                          txt_my, flags=re.DOTALL)
         new_txt = re.sub(r'(<ModelName[^>]*>)([^<]+)(</ModelName>)',
                          lambda m: m.group(1)+target_model+m.group(3), new_txt)
-        new_txt = re.sub(r'(<BroadcastCountrySetting[^>]*>)([^<]+)(</BroadcastCountrySetting>)',
-                         lambda m: m.group(1)+target_c3+m.group(3), new_txt)
-        if not re.search(r'<BroadcastCountrySetting', new_txt):
-            new_txt = new_txt.replace('</ModelInfo>', f'<BroadcastCountrySetting type="0">{target_c3}</BroadcastCountrySetting>\n</ModelInfo>')
+        if re.search(r'<BroadcastCountrySetting', new_txt):
+            new_txt = re.sub(r'(<BroadcastCountrySetting[^>]*>)([^<]+)(</BroadcastCountrySetting>)',
+                             lambda m: m.group(1)+target_c3+m.group(3), new_txt)
+        else:
+            new_txt = new_txt.replace('</ModelInfo>',
+                f'<BroadcastCountrySetting type="0">{target_c3}</BroadcastCountrySetting>\n</ModelInfo>')
 
-        return new_txt.encode('utf-8'), preview, skipped, 'legacy→modern'
+        return new_txt.encode('utf-8'), preview, skipped, 'Legacy→Modern'
 
     # ══════════════════════════════════════════
-    # حالة 3: نفس النوع — نقل القنوات مباشرة
+    # حالة: كلاهما Modern
     # ══════════════════════════════════════════
-    elif net_modern and my_modern:
-        data_my = dict(my_info['json_data'])
-        data_my['channelList'] = net_info['json_data'].get('channelList', [])
+    else:
+        data_my = dict(my_info['jdata'])
+        ref_chs = data_my.get('channelList', [])
+        freq_to_ch = {}
+        for ch in ref_chs:
+            f = str(ch.get('frequency',''))
+            if f not in freq_to_ch: freq_to_ch[f] = ch
+        available_freqs = list(freq_to_ch.keys())
+        base_ch = ref_chs[0] if ref_chs else {}
+
+        new_channels = []
+        for idx, ch_net in enumerate(net_chs, 1):
+            name = ch_net.get('channelName','Unknown')
+            freq = str(ch_net.get('frequency',''))
+
+            if freq in freq_to_ch:
+                template = dict(freq_to_ch[freq])
+                src = '✅ مطابق'
+            elif available_freqs:
+                closest = find_closest_freq(freq, available_freqs)
+                template = dict(freq_to_ch[closest])
+                try: template['frequency'] = int(freq)
+                except: pass
+                src = f'🔄 fallback ({closest})'
+            else:
+                template = dict(base_ch)
+                try: template['frequency'] = int(freq)
+                except: pass
+                src = '🔄 fallback (base)'
+
+            template.update({
+                'channelName':name,'majorNumber':idx,'programNum':idx,
+                'SVCID':idx,'userSelCHNo':True,'userCustomize':True,
+                'userEditChNumber':True,'skipped':False,'deleted':False,'Invisible':False,
+            })
+            try:
+                template['chNameBase64'] = base64.b64encode(
+                    name.ljust(40,'\x00').encode('utf-8')).decode()
+            except: pass
+            new_channels.append(template)
+            preview.append((idx, name, freq, src))
+
+        data_my['channelList'] = new_channels
         if 'modelInfo' not in data_my: data_my['modelInfo'] = {}
         data_my['modelInfo']['country'] = target_full
-
-        for idx, ch in enumerate(data_my['channelList'], 1):
-            ch['majorNumber'] = idx
-            preview.append((idx, ch.get('channelName','?'), str(ch.get('frequency','')), '✅'))
 
         new_json = json.dumps(data_my, ensure_ascii=False, separators=(',',':'))
         new_txt = re.sub(r'<legacybroadcast>.*?</legacybroadcast>',
@@ -253,46 +368,14 @@ def do_convert(net_info, my_info, new_model, new_country):
                          txt_my, flags=re.DOTALL)
         new_txt = re.sub(r'(<ModelName[^>]*>)([^<]+)(</ModelName>)',
                          lambda m: m.group(1)+target_model+m.group(3), new_txt)
-        new_txt = re.sub(r'(<BroadcastCountrySetting[^>]*>)([^<]+)(</BroadcastCountrySetting>)',
-                         lambda m: m.group(1)+target_c3+m.group(3), new_txt)
-        return new_txt.encode('utf-8'), preview, skipped, 'modern→modern'
+        if re.search(r'<BroadcastCountrySetting', new_txt):
+            new_txt = re.sub(r'(<BroadcastCountrySetting[^>]*>)([^<]+)(</BroadcastCountrySetting>)',
+                             lambda m: m.group(1)+target_c3+m.group(3), new_txt)
+        else:
+            new_txt = new_txt.replace('</ModelInfo>',
+                f'<BroadcastCountrySetting type="0">{target_c3}</BroadcastCountrySetting>\n</ModelInfo>')
 
-    else:  # legacy→legacy
-        freq_to_item = {}
-        for item in my_info['channels']:
-            fm = re.search(r'<frequency>([^<]+)</frequency>', item)
-            if fm:
-                f = fm.group(1).strip()
-                if f not in freq_to_item: freq_to_item[f] = item
-
-        new_items = []
-        for idx, item in enumerate(net_chs, 1):
-            name, freq = get_ch_name_freq(item, False)
-            if freq in freq_to_item:
-                tpl = freq_to_item[freq]
-                nh = name.encode('utf-8').hex(); nl = len(name)
-                tpl = re.sub(r'<prNum>[^<]+</prNum>', f'<prNum>{idx}</prNum>', tpl)
-                tpl = re.sub(r'<hexVchName>[^<]+</hexVchName>', f'<hexVchName>{nh}</hexVchName>', tpl)
-                tpl = re.sub(r'<notConvertedLengthOfVchName>[^<]+</notConvertedLengthOfVchName>', f'<notConvertedLengthOfVchName>{nl}</notConvertedLengthOfVchName>', tpl)
-                tpl = re.sub(r'<vchName>[^<]+</vchName>', f'<vchName>{name}</vchName>', tpl)
-                tpl = re.sub(r'<lengthOfVchName>[^<]+</lengthOfVchName>', f'<lengthOfVchName>{nl}</lengthOfVchName>', tpl)
-                new_items.append('<ITEM>' + tpl + '</ITEM>')
-                preview.append((idx, name, freq, '✅'))
-            else:
-                skipped.append((name, freq))
-
-        combined = '\r\n'.join(new_items)
-        si = txt_my.find('<ITEM>'); ei = txt_my.rfind('</ITEM>') + len('</ITEM>')
-        new_txt = txt_my[:si] + combined + txt_my[ei:]
-        new_txt = re.sub(r'(<ModelName[^>]*>)([^<]+)(</ModelName>)',
-                         lambda m: m.group(1)+target_model+m.group(3), new_txt)
-        new_txt = re.sub(r'(<BroadcastCountrySetting[^>]*>)([^<]+)(</BroadcastCountrySetting>)',
-                         lambda m: m.group(1)+target_c3+m.group(3), new_txt)
-        old_len = len(my_info['cx'])
-        nc = target_c3[:2] if old_len<=2 and len(target_c3)>2 else target_c3
-        new_txt = re.sub(r'(<country[^>]*>)([^<]+)(</country>)',
-                         lambda m: m.group(1)+nc+m.group(3), new_txt)
-        return new_txt.encode('utf-8'), preview, skipped, 'legacy→legacy'
+        return new_txt.encode('utf-8'), preview, skipped, 'Modern→Modern'
 
 # ─────────────────────────────────────────────
 # CSS & PAGE
@@ -329,13 +412,11 @@ div[data-testid="stFileUploader"]{{background:{bb}!important;border:2px solid {b
 .stDownloadButton>button{{background:linear-gradient(135deg,#00b894,#00695c)!important;color:#fff!important;border:none!important;border-radius:12px!important;font-weight:bold;width:100%;}}
 .card{{background:{bb};border:2px solid {bord};box-shadow:0 5px 15px {bsh};border-radius:14px;padding:20px;margin-bottom:14px;}}
 .badge{{display:inline-block;background:linear-gradient(135deg,#ff007f,#aa0055);color:white;border-radius:50%;width:32px;height:32px;text-align:center;line-height:32px;font-weight:bold;margin:0 8px;}}
-.file-card{{border-radius:14px;padding:18px;border:2px solid;margin-bottom:12px;}}
-.file-net{{border-color:#00f0ff;background:rgba(0,240,255,0.05);}}
-.file-my{{border-color:#ff007f;background:rgba(255,0,127,0.05);}}
-.arrow-box{{text-align:center;font-size:2rem;padding:10px;color:#ff007f;font-weight:bold;}}
+.file-net{{border:2px solid #00f0ff;background:rgba(0,240,255,0.05);border-radius:14px;padding:18px;margin-bottom:12px;}}
+.file-my{{border:2px solid #ff007f;background:rgba(255,0,127,0.05);border-radius:14px;padding:18px;margin-bottom:12px;}}
 .stat{{border-radius:12px;padding:14px;text-align:center;border:2px solid;}}
-.s-g{{border-color:#00b894;background:rgba(0,184,148,0.1);color:#00b894;}}
-.s-r{{border-color:#ff6b6b;background:rgba(255,107,107,0.1);color:#ff6b6b;}}
+.sg{{border-color:#00b894;background:rgba(0,184,148,0.1);color:#00b894;}}
+.sb{{border-color:#00f0ff;background:rgba(0,240,255,0.1);color:#00f0ff;}}
 .tag{{display:inline-block;padding:2px 10px;border-radius:6px;font-size:0.82rem;font-weight:bold;}}
 .tm{{background:rgba(0,240,255,0.15);border:1px solid #00f0ff;color:#00f0ff;}}
 .tl{{background:rgba(255,165,0,0.15);border:1px solid orange;color:orange;}}
@@ -347,7 +428,7 @@ div[data-testid="stFileUploader"]{{background:{bb}!important;border:2px solid {b
 # TITLE
 # ─────────────────────────────────────────────
 st.title("🔄 RAMBO — محوّل ملفات TLL" if ar else "🔄 RAMBO — TLL File Converter")
-st.markdown(f"<h3 style='text-align:center;'>{'⚡ ارفع ملف النت المرتب + ملفك الشغال ← يولّد ملف لشاشتك بنفس الترتيب' if ar else '⚡ Upload sorted net file + your working file → get a sorted file for your TV'}</h3>", unsafe_allow_html=True)
+st.markdown(f"<h3 style='text-align:center;'>{'⚡ ارفع ملف النت المرتب + ملفك الشغال ← يولّد ملف لشاشتك بنفس الترتيب' if ar else '⚡ Upload sorted net file + your working file → sorted file for your TV'}</h3>", unsafe_allow_html=True)
 st.write("---")
 
 # ─────────────────────────────────────────────
@@ -358,67 +439,56 @@ st.markdown(f"### <span class='badge'>1</span> {'ارفع الملفين' if ar 
 col_n, col_arr, col_m = st.columns([5,1,5])
 
 with col_n:
-    st.markdown(f"<div class='file-card file-net'>", unsafe_allow_html=True)
-    st.markdown(f"**{'📡 ملف النت (المرتب)' if ar else '📡 Net File (Sorted)'}**")
-    st.caption("الملف اللي لقيته على النت مرتب بس مش لموديلك" if ar else "The sorted file you found online but not your model")
+    st.markdown("<div class='file-net'>", unsafe_allow_html=True)
+    st.markdown(f"**{'📡 ملف النت المرتب' if ar else '📡 Sorted Net File'}**")
+    st.caption("مرتب بس مش لموديلك — هنأخذ منه الترتيب والقنوات" if ar else "Sorted but not your model — we take channels & order from it")
     up_net = st.file_uploader("", type=["TLL","bak"], key=f"net_{st.session_state.net_key}", label_visibility="collapsed")
     if up_net:
         b = up_net.read()
         if st.session_state.net_name != up_net.name:
-            st.session_state.net_bytes = b
-            st.session_state.net_name  = up_net.name
-            st.session_state.net_info  = parse_tll(b)
-            st.session_state.done = False
-            st.session_state.result_bytes = None
+            st.session_state.net_bytes = b; st.session_state.net_name = up_net.name
+            st.session_state.net_info = parse_tll(b)
+            st.session_state.done = False; st.session_state.result_bytes = None
     ni = st.session_state.net_info
     if ni:
-        t = "<span class='tag tm'>Modern JSON</span>" if ni['is_modern'] else "<span class='tag tl'>Legacy XML</span>"
-        st.markdown(f"✅ **{ni['model']}** | {ni['ch_count']:,} {'قناة' if ar else 'ch'} | {t}", unsafe_allow_html=True)
+        t = "<span class='tag tm'>Modern</span>" if ni['is_modern'] else "<span class='tag tl'>Legacy</span>"
+        st.markdown(f"✅ **{ni['model']}** | {ni['ch_count']:,} ch | {t}", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 with col_arr:
-    st.markdown("<div class='arrow-box' style='margin-top:80px;'>➜</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align:center;font-size:2.5rem;color:#ff007f;margin-top:70px;'>➜</div>", unsafe_allow_html=True)
 
 with col_m:
-    st.markdown(f"<div class='file-card file-my'>", unsafe_allow_html=True)
+    st.markdown("<div class='file-my'>", unsafe_allow_html=True)
     st.markdown(f"**{'📺 ملفك الشغال على شاشتك' if ar else '📺 Your Working TV File'}**")
-    st.caption("الملف الشغال على شاشتك — هيتاخد منه الهيكل التقني والبلد" if ar else "The file that works on your TV — technical structure and country will be taken from it")
+    st.caption("شغال على شاشتك — هنأخذ منه الهيكل التقني والبلد" if ar else "Works on your TV — we take technical structure & country from it")
     up_my = st.file_uploader("", type=["TLL","bak"], key=f"my_{st.session_state.my_key}", label_visibility="collapsed")
     if up_my:
         b = up_my.read()
         if st.session_state.my_name != up_my.name:
-            st.session_state.my_bytes = b
-            st.session_state.my_name  = up_my.name
-            st.session_state.my_info  = parse_tll(b)
-            st.session_state.done = False
-            st.session_state.result_bytes = None
+            st.session_state.my_bytes = b; st.session_state.my_name = up_my.name
+            st.session_state.my_info = parse_tll(b)
+            st.session_state.done = False; st.session_state.result_bytes = None
     mi = st.session_state.my_info
     if mi:
-        t = "<span class='tag tm'>Modern JSON</span>" if mi['is_modern'] else "<span class='tag tl'>Legacy XML</span>"
-        st.markdown(f"✅ **{mi['model']}** | {mi['ch_count']:,} {'قناة' if ar else 'ch'} | {t}", unsafe_allow_html=True)
-        st.markdown(f"🌍 **{mi.get('display','')}**", unsafe_allow_html=True)
+        t = "<span class='tag tm'>Modern</span>" if mi['is_modern'] else "<span class='tag tl'>Legacy</span>"
+        st.markdown(f"✅ **{mi['model']}** | {mi['ch_count']:,} ch | {t}", unsafe_allow_html=True)
+        st.markdown(f"🌍 `{mi.get('display','')}`")
     st.markdown("</div>", unsafe_allow_html=True)
 
-# اكتشاف نوع التحويل
 ni = st.session_state.net_info
 mi = st.session_state.my_info
-if ni and mi:
-    nm = ni['is_modern']; mm = mi['is_modern']
-    if nm and not mm:
-        conv_type = "🔁 Modern JSON ➜ Legacy XML"
-    elif not nm and mm:
-        conv_type = "🔁 Legacy XML ➜ Modern JSON"
-    elif nm and mm:
-        conv_type = "🔁 Modern JSON ➜ Modern JSON"
-    else:
-        conv_type = "🔁 Legacy XML ➜ Legacy XML"
-    st.info(f"**{'نوع التحويل المكتشف:' if ar else 'Detected conversion:'}** {conv_type}")
 
-st.write("---")
+if ni and mi:
+    nm, mm = ni['is_modern'], mi['is_modern']
+    ctype = f"{'Modern' if nm else 'Legacy'} ➜ {'Modern' if mm else 'Legacy'}"
+    st.info(f"**{'نوع التحويل:' if ar else 'Conversion type:'}** {ctype} {'(مع Fallback للترددات المختلفة ✅)' if ar else '(with Fallback for different frequencies ✅)'}")
 
 if not ni or not mi:
     st.info("⬆️ " + ("ارفع الملفين للبدء." if ar else "Upload both files to start."))
     st.stop()
+
+st.write("---")
 
 # ─────────────────────────────────────────────
 # STEP 2: الموديل والبلد
@@ -429,26 +499,26 @@ col_mod, col_ctr = st.columns(2)
 
 with col_mod:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
-    st.markdown(f"**🖥️ {'الموديل النهائي' if ar else 'Final Model'}**")
-    st.caption(f"{'الموديل الحالي من ملف النت:' if ar else 'Current model from net file:'} `{ni['model']}`")
+    st.markdown(f"**🖥️ {'الموديل النهائي للملف' if ar else 'Final Model'}**")
+    st.caption(f"{'من ملف النت:' if ar else 'From net file:'} `{ni['model']}` | {'من ملفك:' if ar else 'From your file:'} `{mi['model']}`")
     keep_m = "— " + ("استخدم موديل ملف النت" if ar else "Use net file model") + " —"
     sel_m = st.selectbox("", [keep_m]+LG_MODELS, key="selm", label_visibility="collapsed")
-    man_m = st.text_input("", placeholder="أو اكتب موديلك يدوياً / Or type your model", key="manm", label_visibility="collapsed").strip()
+    man_m = st.text_input("", placeholder="أو اكتب موديلك يدوياً / Or type manually", key="manm", label_visibility="collapsed").strip()
     final_model = man_m if man_m else ("" if sel_m==keep_m else sel_m)
-    st.markdown(f"{'✅ الموديل النهائي:' if ar else '✅ Final model:'} **{final_model or ni['model']}**")
+    st.markdown(f"**{'✅ الموديل النهائي:' if ar else '✅ Final model:'} `{final_model or ni['model']}`**")
     st.markdown("</div>", unsafe_allow_html=True)
 
 with col_ctr:
     st.markdown("<div class='card'>", unsafe_allow_html=True)
     st.markdown(f"**🌍 {'بلد البث' if ar else 'Broadcast Country'}**")
-    st.caption(f"{'البلد الحالي في ملفك الشغال:' if ar else 'Current country in your working file:'} `{mi.get('display','')}`")
+    st.caption(f"{'البلد الحالي في ملفك:' if ar else 'Current in your file:'} `{mi.get('display','')}`")
     keep_c = "— " + ("استخدم بلد ملفك الشغال" if ar else "Use working file country") + " —"
     sel_c = st.selectbox("", [keep_c]+list(COUNTRIES.keys()), key="selc", label_visibility="collapsed")
     final_country = "" if sel_c==keep_c else sel_c
     if final_country:
         st.success(f"✅ **{final_country}** → `{COUNTRIES[final_country]['c3']}`")
     else:
-        st.markdown(f"✅ {'سيستخدم بلد ملفك الشغال:' if ar else 'Will use your file country:'} **`{mi.get('display','')}`**")
+        st.info(f"{'✅ سيستخدم:' if ar else '✅ Will use:'} `{mi.get('display','')}`")
     st.markdown(f"<div class='warn'>⚠️ {'اختر نفس البلد المضبوط على شاشتك لتجنب Cloning Error 8' if ar else 'Select same country as your TV to avoid Cloning Error 8'}</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -458,8 +528,7 @@ with cb:
     if st.button("🔄 " + ("تحويل الآن" if ar else "Convert Now"), use_container_width=True):
         with st.spinner("⏳ " + ("جاري التحويل..." if ar else "Converting...")):
             res, preview, skipped, ctype = do_convert(
-                st.session_state.net_info,
-                st.session_state.my_info,
+                st.session_state.net_info, st.session_state.my_info,
                 final_model, final_country
             )
         st.session_state.result_bytes = res
@@ -474,35 +543,30 @@ with cb:
 if st.session_state.done and st.session_state.result_bytes:
     st.write("---")
     st.markdown(f"### <span class='badge'>3</span> {'النتيجة' if ar else 'Result'}", unsafe_allow_html=True)
-    st.success("🎉 " + ("تم التحويل بنجاح!" if ar else "Done successfully!"))
+    st.success("🎉 " + ("تم التحويل بنجاح!" if ar else "Conversion successful!"))
 
     preview = st.session_state.preview
     skipped = st.session_state.skipped
+    matched  = len([p for p in preview if '✅' in p[3]])
+    fallback = len([p for p in preview if '🔄' in p[3]])
 
-    # إحصائيات
-    c1, c2 = st.columns(2)
-    with c1: st.markdown(f"<div class='stat s-g'><b style='font-size:1.8rem;'>{len(preview)}</b><br>{'قناة تم تحويلها' if ar else 'Channels Converted'}</div>", unsafe_allow_html=True)
-    with c2: st.markdown(f"<div class='stat s-r'><b style='font-size:1.8rem;'>{len(skipped)}</b><br>{'قناة تجاهلت (تردد مختلف)' if ar else 'Skipped (different freq)'}</div>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    with c1: st.markdown(f"<div class='stat sg'><b style='font-size:1.6rem;'>{len(preview)}</b><br>{'إجمالي القنوات' if ar else 'Total Channels'}</div>", unsafe_allow_html=True)
+    with c2: st.markdown(f"<div class='stat sg'><b style='font-size:1.6rem;'>{matched}</b><br>{'تردد مطابق ✅' if ar else 'Exact Match ✅'}</div>", unsafe_allow_html=True)
+    with c3: st.markdown(f"<div class='stat sb'><b style='font-size:1.6rem;'>{fallback}</b><br>{'Fallback 🔄' if ar else 'Fallback 🔄'}</div>", unsafe_allow_html=True)
 
     st.write("")
 
-    # معاينة القنوات
     if preview:
-        with st.expander(f"📋 {'معاينة أول 50 قناة' if ar else 'Preview first 50 channels'}", expanded=False):
-            ch1, ch2, ch3 = st.columns([1,5,3])
-            ch1.markdown(f"**#**"); ch2.markdown(f"**{'القناة' if ar else 'Channel'}**"); ch3.markdown(f"**{'التردد' if ar else 'Freq'}**")
-            scroll = st.container(height=250)
+        with st.expander(f"📋 {'معاينة القنوات' if ar else 'Channel Preview'} ({len(preview)})", expanded=False):
+            scroll = st.container(height=300)
             with scroll:
-                for p in preview[:50]:
-                    c1,c2,c3 = st.columns([1,5,3])
-                    c1.write(p[0]); c2.write(p[1]); c3.write(f"`{p[2]}`")
-
-    # القنوات المتجاهلة
-    if skipped:
-        with st.expander(f"⚠️ {'القنوات المتجاهلة ({len(skipped)})' if ar else f'Skipped Channels ({len(skipped)})'}", expanded=False):
-            st.caption("هذه القنوات ترددها مش موجود في ملفك الشغال" if ar else "These channels have frequencies not in your working file")
-            for s in skipped[:50]:
-                st.markdown(f"- **{s[0]}** | `{s[1]}`")
+                h1,h2,h3,h4 = st.columns([1,4,2,3])
+                h1.markdown("**#**"); h2.markdown(f"**{'القناة' if ar else 'Channel'}**")
+                h3.markdown(f"**{'التردد' if ar else 'Freq'}**"); h4.markdown(f"**{'المصدر' if ar else 'Source'}**")
+                for p in preview[:300]:
+                    c1,c2,c3,c4 = st.columns([1,4,2,3])
+                    c1.write(p[0]); c2.write(p[1]); c3.write(f"`{p[2]}`"); c4.write(p[3])
 
     st.write("")
     cd1, cd2 = st.columns([3,1])
@@ -522,18 +586,6 @@ if st.session_state.done and st.session_state.result_bytes:
             st.session_state.net_key+=1; st.session_state.my_key+=1; st.rerun()
 
     st.markdown(f"""<div class='warn'>
-💡 <b>{'ملحوظة:' if ar else 'Note:'}</b><br>
+💡 <b>{'ملحوظة:' if ar else 'Note:'}</b>
 {'إذا لم تظهر القنوات: إعدادات ← القنوات ← مدير القنوات ← تعديل كل القنوات ← تحديد الكل ← استعادة' if ar else 'If channels missing: Settings → Channels → Channel Manager → Edit All Channels → Select All → Restore'}
-</div>""", unsafe_allow_html=True)
-
-# ─────────────────────────────────────────────
-# FOOTER
-# ─────────────────────────────────────────────
-st.markdown("""<div style="background:#0f172a;border:2px solid #00f0ff;color:#fff;
-padding:35px;text-align:center;border-radius:20px;margin-top:65px;font-family:Arial;">
-<div style="color:#ff007f;font-size:26px;font-weight:bold;">🛠️ DEVELOPER ENG: RAFIK NATHAN</div>
-<div style="margin-top:10px;">📱 +201280339779 | ✉️ rafikrambo113@gmail.com</div>
-<a href="https://api.whatsapp.com/send?phone=201280339779" target="_blank"
-style="color:#25d366;padding:14px 35px;border-radius:35px;display:inline-block;
-font-weight:bold;border:2px solid #25d366;text-decoration:none;margin-top:20px;">WhatsApp</a>
 </div>""", unsafe_allow_html=True)
