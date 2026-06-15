@@ -64,7 +64,6 @@ st.write("---")
 # EXTRACT CHANNELS
 # ─────────────────────────────────────────────
 def extract_channels(file_bytes):
-    # نستخدم cp1256 أولاً للحفاظ على ترميز لغة ملفات الـ Legacy من التلف
     try:
         txt = file_bytes.decode('cp1256')
         encoding_used = 'cp1256'
@@ -105,7 +104,7 @@ def extract_channels(file_bytes):
             except: pass
     else:
         info['type'] = 'legacy'
-        # نحفظ وسم ITEM كاملاً بمسافاته لضمان استبداله بدقة دون إفساد الملف
+        # استخراج أجزاء القنوات مع الاحتفاظ بمواقعها الدقيقة
         items_with_tags = re.findall(r'<ITEM>.*?</ITEM>', txt, re.DOTALL)
         info['raw_items'] = items_with_tags
         for idx, item in enumerate(items_with_tags, 1):
@@ -187,30 +186,46 @@ def smart_match(ref_chs, tar_chs):
 
 
 # ─────────────────────────────────────────────
-# APPLY ORDER (تعديل آمن ومباشر لحل Error 7)
+# APPLY ORDER (تعديل هيكلي آمن خالي من عيوب التكرار)
 # ─────────────────────────────────────────────
 def apply_order(tar_info, matches):
     txt = tar_info['txt']
 
     if tar_info['type'] == 'legacy':
-        # تعديل النص الأصلي مباشرة عبر الاستبدال المستهدف لمنع تلف الـ Structure
+        # عمل نسخة من القنوات الأصلية لتعديلها أندكس بأندكس بشكل منعزل ومضمون
+        updated_items = list(tar_info['raw_items'])
+        
         for tar_idx, new_order, _ in matches:
-            if tar_idx < len(tar_info['raw_items']):
-                old_item = tar_info['raw_items'][tar_idx]
+            if tar_idx < len(updated_items):
+                old_item = updated_items[tar_idx]
                 
-                # استبدال رقم الترتيب بدقة
+                # تحديث الترتيب
                 new_item = re.sub(r'<prNum>[^<]+</prNum>', f'<prNum>{new_order}</prNum>', old_item)
-                # تفعيل وسم اختيار المستخدم لتثبيت القنوات بالشاشة
+                
+                # تفعيل وسم تثبيت القناة للمستخدم
                 if '<isUserSelCHNo>' in new_item:
                     new_item = re.sub(r'<isUserSelCHNo>[^<]+</isUserSelCHNo>', '<isUserSelCHNo>1</isUserSelCHNo>', new_item)
                 else:
                     new_item = new_item.replace('</ITEM>', '<isUserSelCHNo>1</isUserSelCHNo></ITEM>')
                 
-                # تحديث النص الشامل للملف مباشرةً
-                txt = txt.replace(old_item, new_item)
-                
-        # التصدير بنفس ترميز الملف الشغال الأصلي لحل مشكلة التهيئة تماماً
-        return txt.encode(tar_info['encoding'], errors='ignore')
+                updated_items[tar_idx] = new_item
+        
+        # بدلاً من عمل .replace() للملف بالكامل وإفساد المتشابهات، نقوم بقص منطقة الـ ITEMs بالكامل وحقن الجديد
+        # نجد أول موقع لـ <ITEM> وآخر موقع لـ </ITEM> في الملف الأصلي لحماية الهيدر والفوتر
+        first_item_idx = txt.find('<ITEM>')
+        last_item_idx = txt.rfind('</ITEM>')
+        
+        if first_item_idx != -1 and last_item_idx != -1:
+            header = txt[:first_item_idx]
+            footer = txt[last_item_idx + len('</ITEM>'):]
+            # دمج القنوات المعدلة مع الحفاظ على الفواصل الأصلية للملف المستخرج (\r\n)
+            middle = "".join(updated_items)
+            final_txt = header + middle + footer
+        else:
+            # حل احتياطي إذا فشل القص الشامل (نادر الحدوث)
+            final_txt = txt
+            
+        return final_txt.encode(tar_info['encoding'], errors='ignore')
 
     else:  # modern
         data   = dict(tar_info['json_data'])
