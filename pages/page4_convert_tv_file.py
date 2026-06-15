@@ -104,7 +104,6 @@ def extract_channels(file_bytes):
             except: pass
     else:
         info['type'] = 'legacy'
-        # استخراج أجزاء القنوات مع الاحتفاظ بمواقعها الدقيقة
         items_with_tags = re.findall(r'<ITEM>.*?</ITEM>', txt, re.DOTALL)
         info['raw_items'] = items_with_tags
         for idx, item in enumerate(items_with_tags, 1):
@@ -179,63 +178,89 @@ def smart_match(ref_chs, tar_chs):
         if matched:
             continue
 
-        results.append((tar_idx, ch['order'], '⬜ بدون تغيير' if ar else '⬜ Kept Unchanged'))
+        # إذا لم يجد مطابقة في المرجع، نضع رقم كبير جداً (مثل 9999) لرميها في آخر قائمة القنوات
+        results.append((tar_idx, 9999 + ch['order'], '⬜ بدون تغيير' if ar else '⬜ Kept Unchanged'))
         stats['none'] += 1
 
     return results, stats
 
 
 # ─────────────────────────────────────────────
-# APPLY ORDER (تعديل هيكلي آمن خالي من عيوب التكرار)
+# APPLY ORDER (إصلاح القفزات وجعل الترتيب متسلسلاً)
 # ─────────────────────────────────────────────
 def apply_order(tar_info, matches):
     txt = tar_info['txt']
 
     if tar_info['type'] == 'legacy':
-        # عمل نسخة من القنوات الأصلية لتعديلها أندكس بأندكس بشكل منعزل ومضمون
-        updated_items = list(tar_info['raw_items'])
+        # 1. تجميع القنوات مع أرقام ترتيبها المستهدفة من المرجع
+        channel_pool = []
+        for tar_idx, target_order, mtype in matches:
+            if tar_idx < len(tar_info['raw_items']):
+                channel_pool.append({
+                    'original_idx': tar_idx,
+                    'target_order': target_order,
+                    'raw_xml': tar_info['raw_items'][tar_idx]
+                })
         
-        for tar_idx, new_order, _ in matches:
-            if tar_idx < len(updated_items):
-                old_item = updated_items[tar_idx]
-                
-                # تحديث الترتيب
-                new_item = re.sub(r'<prNum>[^<]+</prNum>', f'<prNum>{new_order}</prNum>', old_item)
-                
-                # تفعيل وسم تثبيت القناة للمستخدم
-                if '<isUserSelCHNo>' in new_item:
-                    new_item = re.sub(r'<isUserSelCHNo>[^<]+</isUserSelCHNo>', '<isUserSelCHNo>1</isUserSelCHNo>', new_item)
-                else:
-                    new_item = new_item.replace('</ITEM>', '<isUserSelCHNo>1</isUserSelCHNo></ITEM>')
-                
-                updated_items[tar_idx] = new_item
+        # 2. فرز القنوات فرزاً حقيقياً وصارماً بناءً على ترتيب المرجع المفترض
+        channel_pool.sort(key=lambda x: x['target_order'])
         
-        # بدلاً من عمل .replace() للملف بالكامل وإفساد المتشابهات، نقوم بقص منطقة الـ ITEMs بالكامل وحقن الجديد
-        # نجد أول موقع لـ <ITEM> وآخر موقع لـ </ITEM> في الملف الأصلي لحماية الهيدر والفوتر
+        # 3. إعادة كتابة وسوم الترتيب (prNum) ومسح وسوم الإخفاء لتبدأ من 1 وتتسلسل ورا بعضها (1, 2, 3...)
+        updated_items = []
+        for sequential_id, ch in enumerate(channel_pool, 1):
+            item_xml = ch['raw_xml']
+            
+            # حقن رقم الترتيب المتسلسل الصارم
+            item_xml = re.sub(r'<prNum>[^<]+</prNum>', f'<prNum>{sequential_id}</prNum>', item_xml)
+            
+            # تفعيل خيار المستخدم وتأكيد الرؤية لمنع قفز الشاشة فوق القنوات
+            if '<isUserSelCHNo>' in item_xml:
+                item_xml = re.sub(r'<isUserSelCHNo>[^<]+</isUserSelCHNo>', '<isUserSelCHNo>1</isUserSelCHNo>', item_xml)
+            else:
+                item_xml = item_xml.replace('</ITEM>', '<isUserSelCHNo>1</isUserSelCHNo></ITEM>')
+                
+            if '<uiInvisibleCH>' in item_xml:
+                item_xml = re.sub(r'<uiInvisibleCH>[^<]+</uiInvisibleCH>', '<uiInvisibleCH>0</uiInvisibleCH>', item_xml)
+            else:
+                item_xml = item_xml.replace('</ITEM>', '<uiInvisibleCH>0</uiInvisibleCH></ITEM>')
+                
+            updated_items.append(item_xml)
+        
+        # 4. حقن البنية المرتبة الجديدة في نفس النطاق الأصلي للملف
         first_item_idx = txt.find('<ITEM>')
         last_item_idx = txt.rfind('</ITEM>')
         
         if first_item_idx != -1 and last_item_idx != -1:
             header = txt[:first_item_idx]
             footer = txt[last_item_idx + len('</ITEM>'):]
-            # دمج القنوات المعدلة مع الحفاظ على الفواصل الأصلية للملف المستخرج (\r\n)
             middle = "".join(updated_items)
             final_txt = header + middle + footer
         else:
-            # حل احتياطي إذا فشل القص الشامل (نادر الحدوث)
             final_txt = txt
             
         return final_txt.encode(tar_info['encoding'], errors='ignore')
 
     else:  # modern
-        data   = dict(tar_info['json_data'])
+        data = dict(tar_info['json_data'])
         ch_list = list(data.get('channelList', []))
-        for tar_idx, new_order, _ in matches:
+        
+        # ربط كل قناة بطلب ترتيبها الجديد
+        for tar_idx, target_order, _ in matches:
             if tar_idx < len(ch_list):
-                ch_list[tar_idx]['majorNumber']      = new_order
-                ch_list[tar_idx]['userSelCHNo']      = True
-                ch_list[tar_idx]['userCustomize']    = True
-                ch_list[tar_idx]['userEditChNumber'] = True
+                ch_list[tar_idx]['_tmp_order'] = target_order
+                
+        # فرز القنوات بناءً على طلب الترتيب المرجعي
+        ch_list.sort(key=lambda x: x.get('_tmp_order', 99999))
+        
+        # تطبيق الترتيب المتسلسل المسلسل (1, 2, 3...)
+        for sequential_id, ch in enumerate(ch_list, 1):
+            ch['majorNumber']      = sequential_id
+            ch['userSelCHNo']      = True
+            ch['userCustomize']    = True
+            ch['userEditChNumber'] = True
+            if '_tmp_order' in ch: 
+                del ch['_tmp_order']
+                
         data['channelList'] = ch_list
         new_json = json.dumps(data, ensure_ascii=False, separators=(',', ':'))
         new_txt  = re.sub(r'<legacybroadcast>.*?</legacybroadcast>',
@@ -317,10 +342,14 @@ if st.button("✨ " + ("بدء نقل الترتيب الذكي" if ar else "Sta
         ti = extract_channels(st.session_state.tar_bytes)
         matches, stats = smart_match(ri['channels'], ti['channels'])
         result_bytes   = apply_order(ti, matches)
-        detail = [
-            (ti['channels'][m[0]]['name'].title() if ti['channels'][m[0]]['name'] else f"Channel ID: {ti['channels'][m[0]]['svcid']}", m[1], m[2])
-            for m in matches
-        ]
+        
+        # إعادة بناء المعاينة لتعكس الترتيب المتسلسل الفعلي
+        detail = []
+        for sequential_id, ch_idx in enumerate(sorted(range(len(matches)), key=lambda k: matches[k][1]), 1):
+            tar_idx, _, mtype = matches[ch_idx]
+            ch_name = ti['channels'][tar_idx]['name'].title() if ti['channels'][tar_idx]['name'] else f"ID: {ti['channels'][tar_idx]['svcid']}"
+            detail.append((ch_name, sequential_id, mtype))
+
         st.session_state.result        = result_bytes
         st.session_state.stats         = stats
         st.session_state.match_detail = detail
