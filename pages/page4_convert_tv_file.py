@@ -178,21 +178,20 @@ def smart_match(ref_chs, tar_chs):
         if matched:
             continue
 
-        # إذا لم يجد مطابقة في المرجع، نضع رقم كبير جداً (مثل 9999) لرميها في آخر قائمة القنوات
-        results.append((tar_idx, 9999 + ch['order'], '⬜ بدون تغيير' if ar else '⬜ Kept Unchanged'))
+        # القنوات التي لم تطابق ترمى في آخر القائمة بترتيب كبير جداً
+        results.append((tar_idx, 99999 + ch['order'], '⬜ بدون تغيير' if ar else '⬜ Kept Unchanged'))
         stats['none'] += 1
 
     return results, stats
 
 
 # ─────────────────────────────────────────────
-# APPLY ORDER (إصلاح القفزات وجعل الترتيب متسلسلاً)
+# APPLY ORDER (جعل الترتيب متسلسل إجباري 1، 2، 3...)
 # ─────────────────────────────────────────────
 def apply_order(tar_info, matches):
     txt = tar_info['txt']
 
     if tar_info['type'] == 'legacy':
-        # 1. تجميع القنوات مع أرقام ترتيبها المستهدفة من المرجع
         channel_pool = []
         for tar_idx, target_order, mtype in matches:
             if tar_idx < len(tar_info['raw_items']):
@@ -202,18 +201,17 @@ def apply_order(tar_info, matches):
                     'raw_xml': tar_info['raw_items'][tar_idx]
                 })
         
-        # 2. فرز القنوات فرزاً حقيقياً وصارماً بناءً على ترتيب المرجع المفترض
+        # فرز القنوات بناءً على الترتيب المرجعي أولاً
         channel_pool.sort(key=lambda x: x['target_order'])
         
-        # 3. إعادة كتابة وسوم الترتيب (prNum) ومسح وسوم الإخفاء لتبدأ من 1 وتتسلسل ورا بعضها (1, 2, 3...)
+        # إعطاء أرقام مسلسلة حقيقية متتالية حتمياً (1, 2, 3, 4...)
         updated_items = []
         for sequential_id, ch in enumerate(channel_pool, 1):
             item_xml = ch['raw_xml']
             
-            # حقن رقم الترتيب المتسلسل الصارم
+            # حقن الترتيب المتسلسل الصارم لمنع القفزات
             item_xml = re.sub(r'<prNum>[^<]+</prNum>', f'<prNum>{sequential_id}</prNum>', item_xml)
             
-            # تفعيل خيار المستخدم وتأكيد الرؤية لمنع قفز الشاشة فوق القنوات
             if '<isUserSelCHNo>' in item_xml:
                 item_xml = re.sub(r'<isUserSelCHNo>[^<]+</isUserSelCHNo>', '<isUserSelCHNo>1</isUserSelCHNo>', item_xml)
             else:
@@ -226,7 +224,6 @@ def apply_order(tar_info, matches):
                 
             updated_items.append(item_xml)
         
-        # 4. حقن البنية المرتبة الجديدة في نفس النطاق الأصلي للملف
         first_item_idx = txt.find('<ITEM>')
         last_item_idx = txt.rfind('</ITEM>')
         
@@ -244,15 +241,12 @@ def apply_order(tar_info, matches):
         data = dict(tar_info['json_data'])
         ch_list = list(data.get('channelList', []))
         
-        # ربط كل قناة بطلب ترتيبها الجديد
         for tar_idx, target_order, _ in matches:
             if tar_idx < len(ch_list):
                 ch_list[tar_idx]['_tmp_order'] = target_order
                 
-        # فرز القنوات بناءً على طلب الترتيب المرجعي
-        ch_list.sort(key=lambda x: x.get('_tmp_order', 99999))
+        ch_list.sort(key=lambda x: x.get('_tmp_order', 999999))
         
-        # تطبيق الترتيب المتسلسل المسلسل (1, 2, 3...)
         for sequential_id, ch in enumerate(ch_list, 1):
             ch['majorNumber']      = sequential_id
             ch['userSelCHNo']      = True
@@ -343,7 +337,7 @@ if st.button("✨ " + ("بدء نقل الترتيب الذكي" if ar else "Sta
         matches, stats = smart_match(ri['channels'], ti['channels'])
         result_bytes   = apply_order(ti, matches)
         
-        # إعادة بناء المعاينة لتعكس الترتيب المتسلسل الفعلي
+        # ترتيب المعاينة لتبدو مسلسلة حقيقياً في جدول الموقع
         detail = []
         for sequential_id, ch_idx in enumerate(sorted(range(len(matches)), key=lambda k: matches[k][1]), 1):
             tar_idx, _, mtype = matches[ch_idx]
