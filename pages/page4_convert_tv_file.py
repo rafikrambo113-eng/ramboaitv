@@ -125,20 +125,16 @@ def normalize(s):
 def smart_match(ref_chs, tar_chs):
     ref_by_svcid = {}
     ref_by_name  = {}
-    ref_by_freq  = {}
 
     for ch in ref_chs:
         s_id = ch['svcid']
         n = normalize(ch['name'])
-        f = ch['freq']
         o = ch['order']
         
         if s_id and s_id not in ref_by_svcid:
             ref_by_svcid[s_id] = o
         if n and n not in ref_by_name:
             ref_by_name[n] = o
-        if f and f not in ref_by_freq:
-            ref_by_freq[f] = o
 
     results = []
     stats   = {'svcid': 0, 'exact': 0, 'partial': 0, 'none': 0}
@@ -146,7 +142,6 @@ def smart_match(ref_chs, tar_chs):
     for tar_idx, ch in enumerate(tar_chs):
         s_id = ch['svcid']
         n = normalize(ch['name'])
-        f = ch['freq']
 
         if s_id and s_id in ref_by_svcid:
             results.append((tar_idx, ref_by_svcid[s_id], '🆔 معرّف رقمي مطابق' if ar else '🆔 Service ID Match'))
@@ -221,7 +216,7 @@ def apply_order(tar_info, matches):
             
         return final_txt.encode(tar_info['encoding'], errors='ignore')
 
-    else:  # Modern webOS
+    else:  # وب او اس ۲۵ (شاشتك الحالية)
         data = dict(tar_info['json_data'])
         ch_list = list(data.get('channelList', []))
         
@@ -229,17 +224,27 @@ def apply_order(tar_info, matches):
             if tar_idx < len(ch_list):
                 ch_list[tar_idx]['_tmp_order'] = target_order
                 
-        # فرز القنوات الترتيبي الحقيقي
+        # فرز حتمي بناء على رغبتك
         ch_list.sort(key=lambda x: x.get('_tmp_order', 999999))
         
-        # إعادة بناء الخصائص الرقمية لـ webOS بالكامل بشكل متتالي حتمي من 1
+        # تصفير شامل لجميع فهارس التلفزيون الداخلية لمنع تخطي الأرقام
         for sequential_id, ch in enumerate(ch_list, 1):
             ch['majorNumber'] = sequential_id
+            ch['displayChannelNumber'] = str(sequential_id)
+            
             if 'minorNumber' in ch:
                 ch['minorNumber'] = 0
             if 'chIndex' in ch:
-                ch['chIndex'] = sequential_id - 1  # تصفير قفزات التيونر الداخلي
-                
+                ch['chIndex'] = sequential_id - 1
+            
+            # تحديث معرّف القناة الداخلي لتجبر الشاشة على إعادة بناء التيونر
+            if 'channelId' in ch and ch['channelId']:
+                parts = ch['channelId'].split('_')
+                if len(parts) >= 2:
+                    ch['channelId'] = f"{parts[0]}_{sequential_id}"
+                else:
+                    ch['channelId'] = f"0_{sequential_id}"
+
             ch['userSelCHNo']      = True
             ch['userCustomize']    = True
             ch['userEditChNumber'] = True
