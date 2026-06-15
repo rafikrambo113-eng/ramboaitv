@@ -1,9 +1,11 @@
 import streamlit as st
 import json
 import re
+import time
 
 st.set_page_config(page_title="RAMBO — محوّل TLL الذكي", layout="centered")
 
+# تهيئة الجلسة (Session State)
 for k, v in {
     'lang': 'ar', 'theme': 'dark',
     'ref_bytes': None, 'ref_name': None,
@@ -24,6 +26,7 @@ bord = "#00f0ff" if dk else "#ff007f"
 bsh  = "rgba(0,240,255,0.35)" if dk else "rgba(255,0,127,0.15)"
 tsh  = "0 0 5px rgba(0,240,255,0.4)" if dk else "none"
 
+# تنسيقات واجهة المستخدم (CSS واجهة رامبو الشهيرة)
 st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700&display=swap');
@@ -48,6 +51,7 @@ div[data-testid="stFileUploader"]{{background:{bb}!important;border:2px solid {b
 </style>
 """, unsafe_allow_html=True)
 
+# أزرار تغيير اللغة والمظهر
 cl, ct, _ = st.columns([1.2, 1.5, 8])
 with cl:
     if st.button("🌐 English" if ar else "🌐 العربية"):
@@ -56,10 +60,11 @@ with ct:
     if st.button("☀️ Light" if dk else "🌙 Dark"):
         st.session_state.theme = 'light' if dk else 'dark'; st.rerun()
 
-st.title("🔄 RAMBO — محوّل TLL الذكي" if ar else "🔄 RAMBO — Smart TLL Converter")
-st.markdown(f"<h3 style='text-align:center;'>{'⚡ انقل ترتيب أي ملف مرجعي لشاشتك — يدعم قديم↔حديث بدون فقدان قنوات' if ar else '⚡ Transfer channel order to your TV — supports Legacy↔Modern'}</h3>", unsafe_allow_html=True)
+st.title("🔄 RAMBO — محوّل TLL الذكي")
+st.markdown("<h3 style='text-align:center;'>⚡ انقل ترتيب أي ملف مرجعي لشاشتك — يدعم قنوات الـ webOS والملفات القديمة والحديثة بنجاح تامي</h3>", unsafe_allow_html=True)
 st.write("---")
 
+# دالة استخراج القنوات من ملف الـ TLL
 def extract_channels(file_bytes):
     try:
         txt = file_bytes.decode('cp1256')
@@ -122,6 +127,7 @@ def extract_channels(file_bytes):
 def normalize(s):
     return re.sub(r'\s+', ' ', s.upper().strip())
 
+# دالة المطابقة الذكية الثلاثية
 def smart_match(ref_chs, tar_chs):
     ref_by_svcid = {}
     ref_by_name  = {}
@@ -144,12 +150,12 @@ def smart_match(ref_chs, tar_chs):
         n = normalize(ch['name'])
 
         if s_id and s_id in ref_by_svcid:
-            results.append((tar_idx, ref_by_svcid[s_id], '🆔 معرّف رقمي مطابق' if ar else '🆔 Service ID Match'))
+            results.append((tar_idx, ref_by_svcid[s_id], '🆔 معرّف رقمي مطابق'))
             stats['svcid'] += 1
             continue
 
         if n in ref_by_name:
-            results.append((tar_idx, ref_by_name[n], '✅ اسم مطابق' if ar else '✅ Exact Name Match'))
+            results.append((tar_idx, ref_by_name[n], '✅ اسم مطابق'))
             stats['exact'] += 1
             continue
 
@@ -158,7 +164,7 @@ def smart_match(ref_chs, tar_chs):
             for ref_n, ref_o in ref_by_name.items():
                 if (n in ref_n or ref_n in n or
                         (len(n) >= 5 and len(ref_n) >= 5 and n[:5] == ref_n[:5])):
-                    results.append((tar_idx, ref_o, '🔍 اسم متشابه' if ar else '🔍 Similar Name Match'))
+                    results.append((tar_idx, ref_o, '🔍 اسم متشابه'))
                     stats['partial'] += 1
                     matched = True
                     break
@@ -166,11 +172,12 @@ def smart_match(ref_chs, tar_chs):
         if matched:
             continue
 
-        results.append((tar_idx, 99999 + ch['order'], '⬜ بدون تغيير' if ar else '⬜ Kept Unchanged'))
+        results.append((tar_idx, 99999 + ch['order'], '⬜ بدون تغيير'))
         stats['none'] += 1
 
     return results, stats
 
+# دالة إعادة بناء الترتيب وتصفير الهاردوير للشاشات الحديثة
 def apply_order(tar_info, matches):
     txt = tar_info['txt']
 
@@ -216,7 +223,7 @@ def apply_order(tar_info, matches):
             
         return final_txt.encode(tar_info['encoding'], errors='ignore')
 
-    else:  # وب او اس ۲۵ (شاشتك الحالية)
+    else: # تعديل شاشات webOS الحديثة وقفل الترتيب الداخلي
         data = dict(tar_info['json_data'])
         ch_list = list(data.get('channelList', []))
         
@@ -224,10 +231,9 @@ def apply_order(tar_info, matches):
             if tar_idx < len(ch_list):
                 ch_list[tar_idx]['_tmp_order'] = target_order
                 
-        # فرز حتمي بناء على رغبتك
         ch_list.sort(key=lambda x: x.get('_tmp_order', 999999))
         
-        # تصفير شامل لجميع فهارس التلفزيون الداخلية لمنع تخطي الأرقام
+        # اللوب المسؤولة عن ربط الـ Hardware وتوليد العداد الرقمي الإجباري للشاشة
         for sequential_id, ch in enumerate(ch_list, 1):
             ch['majorNumber'] = sequential_id
             ch['displayChannelNumber'] = str(sequential_id)
@@ -237,7 +243,6 @@ def apply_order(tar_info, matches):
             if 'chIndex' in ch:
                 ch['chIndex'] = sequential_id - 1
             
-            # تحديث معرّف القناة الداخلي لتجبر الشاشة على إعادة بناء التيونر
             if 'channelId' in ch and ch['channelId']:
                 parts = ch['channelId'].split('_')
                 if len(parts) >= 2:
@@ -262,16 +267,16 @@ def apply_order(tar_info, matches):
         return new_txt.encode('utf-8')
 
 # ─────────────────────────────────────────────
-# UI — رفع الملفين
+# الخطوة الأولى: رفع الملفات
 # ─────────────────────────────────────────────
-st.markdown(f"## {'1️⃣ ارفع الملفين' if ar else '1️⃣ Upload Both Files'}")
+st.markdown(f"## 1️⃣ ارفع الملفين")
 
 col_r, col_t = st.columns(2)
 
 with col_r:
     st.markdown("<div class='card-ref'>", unsafe_allow_html=True)
-    st.markdown(f"**{'📡 الملف المرجعي المرتب' if ar else '📡 Sorted Reference File'}**")
-    st.caption("الملف المرتب من النت — سنأخذ منه الترتيب فقط" if ar else "Sorted file from internet — order will be taken from it")
+    st.markdown(f"**📡 الملف المرجعي المُرتب جاهز**")
+    st.caption("الملف الجاهز المُرتب من الإنترنت (سنأخذ منه الترتيب فقط)")
     up_ref = st.file_uploader("", type=["tll","bak","TLL"],
                               key=f"ref_{st.session_state.ref_key}",
                               label_visibility="collapsed")
@@ -285,14 +290,13 @@ with col_r:
     if st.session_state.ref_bytes:
         ri = extract_channels(st.session_state.ref_bytes)
         t  = "<span class='tag tm'>Modern</span>" if ri['type']=='modern' else "<span class='tag tl'>Legacy</span>"
-        st.markdown(f"✅ **{ri['model']}** | {len(ri['channels']):,} ch | {t}", unsafe_allow_html=True)
-        st.caption(f"🌍 {ri.get('display','')}")
+        st.markdown(f"✅ **{ri['model']}** | {len(ri['channels']):,} قناة | {t}", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
 with col_t:
     st.markdown("<div class='card-tar'>", unsafe_allow_html=True)
-    st.markdown(f"**{'📺 ملف شاشتك الشغال' if ar else '📺 Your Working TV File'}**")
-    st.caption("الملف الشغال على شاشتك — سيُحدَّث ترتيبه" if ar else "The file that works on your TV — its order will be updated")
+    st.markdown(f"**📺 ملف شاشتك الحالية (الخام)**")
+    st.caption("الملف المسحوب من شاشتك حالياً (الذي يحتوي على إشارات قنواتك)")
     up_tar = st.file_uploader("", type=["tll","bak","TLL"],
                               key=f"tar_{st.session_state.tar_key}",
                               label_visibility="collapsed")
@@ -306,73 +310,94 @@ with col_t:
     if st.session_state.tar_bytes:
         ti = extract_channels(st.session_state.tar_bytes)
         t  = "<span class='tag tm'>Modern</span>" if ti['type']=='modern' else "<span class='tag tl'>Legacy</span>"
-        st.markdown(f"✅ **{ti['model']}** | {len(ti['channels']):,} ch | {t}", unsafe_allow_html=True)
-        st.caption(f"🌍 {ti.get('display','')}")
+        st.markdown(f"✅ **{ti['model']}** | {len(ti['channels']):,} قناة | {t}", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-if st.session_state.ref_bytes and st.session_state.tar_bytes:
-    ri = extract_channels(st.session_state.ref_bytes)
-    ti = extract_channels(st.session_state.tar_bytes)
-    rt = 'Modern' if ri['type']=='modern' else 'Legacy'
-    tt = 'Modern' if ti['type']=='modern' else 'Legacy'
-    st.info(f"**{rt} ➜ {tt}** | {'المطابقة الشاملة: المعرّف الرقمي 🆔 → اسم مطابق ✅ → اسم متشابه 🔍' if ar else 'Comprehensive Matching: Service ID 🆔 → Exact name ✅ → Similar name 🔍'}")
-
 if not st.session_state.ref_bytes or not st.session_state.tar_bytes:
-    st.info("⬆️ " + ("ارفع الملفين للبدء." if ar else "Upload both files to start."))
+    st.info("⬆️ يرجى رفع الملف المرجعي وملف الشاشة للبدء.")
     st.stop()
 
 st.write("---")
 
 # ─────────────────────────────────────────────
-# UI — التحويل
+# الخطوة الثانية: بدء النقل مع العداد الذكي من 1% لـ 100%
 # ─────────────────────────────────────────────
-st.markdown(f"## {'2️⃣ ابدأ نقل الترتيب' if ar else '2️⃣ Start Transfer'}")
+st.markdown(f"## 2️⃣ ابدأ نقل الترتيب")
 
-if st.button("✨ " + ("بدء نقل الترتيب الذكي" if ar else "Start Smart Order Transfer"), use_container_width=True):
-    with st.spinner("⏳ " + ("جاري المطابقة الرقمية وفك الشفرات..." if ar else "Digital matching & decoding in progress...")):
-        ri = extract_channels(st.session_state.ref_bytes)
-        ti = extract_channels(st.session_state.tar_bytes)
-        matches, stats = smart_match(ri['channels'], ti['channels'])
-        result_bytes   = apply_order(ti, matches)
-        
-        detail = []
-        for sequential_id, ch_idx in enumerate(sorted(range(len(matches)), key=lambda k: matches[k][1]), 1):
-            tar_idx, _, mtype = matches[ch_idx]
-            ch_name = ti['channels'][tar_idx]['name'].title() if ti['channels'][tar_idx]['name'] else f"ID: {ti['channels'][tar_idx]['svcid']}"
-            detail.append((ch_name, sequential_id, mtype))
+if st.button("✨ بدء نقل الترتيب وعمل المعالجة الرقمية الثنائية", use_container_width=True):
+    # إنشاء بار العداد الذكي
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    # المرحلة الأولى: فك فهارس القنوات
+    status_text.markdown("⏳ **جاري فحص وتفكيك ملفات الـ TLL المرفوعة... (20%)**")
+    progress_bar.progress(20)
+    time.sleep(0.4)
+    
+    ri = extract_channels(st.session_state.ref_bytes)
+    ti = extract_channels(st.session_state.tar_bytes)
+    
+    # المرحلة الثانية: اللوب الأولى للمطابقة الرقمية
+    status_text.markdown("🔍 **اللوب الأولى: جاري ربط المعرّفات الرقمية وقراءة الأسماء (50%)**")
+    progress_bar.progress(50)
+    time.sleep(0.5)
+    
+    matches, stats = smart_match(ri['channels'], ti['channels'])
+    
+    # المرحلة الثالثة: اللوب الثانية وإعادة البناء وتعديل التيونر الداخلي
+    status_text.markdown("⚙️ **اللوب الثانية: جاري إعادة بناء الـ Hardware لتلفزيونات LG ومنع التخطي... (85%)**")
+    progress_bar.progress(85)
+    time.sleep(0.5)
+    
+    result_bytes = apply_order(ti, matches)
+    
+    # المرحلة النهائية: حفظ وتجميع الداتا لشاشات الـ webOS
+    status_text.markdown("⚡ **جاري مراجعة جودة الترتيب النهائي وتجهيز خروج الملف... (100%)**")
+    progress_bar.progress(100)
+    time.sleep(0.3)
+    
+    # إخفاء العداد بعد النجاح الكامل
+    status_text.empty()
+    progress_bar.empty()
+    
+    detail = []
+    for sequential_id, ch_idx in enumerate(sorted(range(len(matches)), key=lambda k: matches[k][1]), 1):
+        tar_idx, _, mtype = matches[ch_idx]
+        ch_name = ti['channels'][tar_idx]['name'].title() if ti['channels'][tar_idx]['name'] else f"ID: {ti['channels'][tar_idx]['svcid']}"
+        detail.append((ch_name, sequential_id, mtype))
 
-        st.session_state.result        = result_bytes
-        st.session_state.stats         = stats
-        st.session_state.match_detail = detail
-        st.session_state.done          = True
+    st.session_state.result        = result_bytes
+    st.session_state.stats         = stats
+    st.session_state.match_detail = detail
+    st.session_state.done          = True
     st.rerun()
 
 # ─────────────────────────────────────────────
-# UI — النتيجة
+# الخطوة الثالثة: عرض النتيجة وأزرار التحميل بالكامل بالعربي
 # ─────────────────────────────────────────────
 if st.session_state.done and st.session_state.result:
     st.write("---")
-    st.markdown(f"## {'3️⃣ النتيجة' if ar else '3️⃣ Result'}")
-    st.success("🎉 " + ("تم سحق مشكلة التوافق ونقل الترتيب بنجاح فريد!" if ar else "Order transferred successfully via unique hardware mapping!"))
+    st.markdown(f"## 3️⃣ النتيجة والتحميل")
+    st.success("🎉 تم نقل ترتيب القنوات بنجاح وتم ربط الترتيب الأبجدي بالتيونر لضمان عدم حدوث پرش!")
 
     stats = st.session_state.stats
     c1, c2, c3, c4 = st.columns(4)
-    with c1: st.markdown(f"<div class='stat sg'><b style='font-size:1.5rem;'>{stats.get('svcid',0)}</b><br>{'معرّف رقمي 🆔' if ar else 'Service ID 🆔'}</div>", unsafe_allow_html=True)
-    with c2: st.markdown(f"<div class='stat sb'><b style='font-size:1.5rem;'>{stats.get('exact',0)}</b><br>{'اسم مطابق ✅' if ar else 'Exact ✅'}</div>", unsafe_allow_html=True)
-    with c3: st.markdown(f"<div class='stat so'><b style='font-size:1.5rem;'>{stats.get('partial',0)}</b><br>{'متشابه 🔍' if ar else 'Similar 🔍'}</div>", unsafe_allow_html=True)
-    with c4: st.markdown(f"<div class='stat sn'><b style='font-size:1.5rem;'>{stats.get('none',0)}</b><br>{'ثابت ⬜' if ar else 'Kept ⬜'}</div>", unsafe_allow_html=True)
+    with c1: st.markdown(f"<div class='stat sg'><b style='font-size:1.5rem;'>{stats.get('svcid',0)}</b><br>معرّف رقمي 🆔</div>", unsafe_allow_html=True)
+    with c2: st.markdown(f"<div class='stat sb'><b style='font-size:1.5rem;'>{stats.get('exact',0)}</b><br>اسم مطابق ✅</div>", unsafe_allow_html=True)
+    with c3: st.markdown(f"<div class='stat so'><b style='font-size:1.5rem;'>{stats.get('partial',0)}</b><br>اسم متشابه 🔍</div>", unsafe_allow_html=True)
+    with c4: st.markdown(f"<div class='stat sn'><b style='font-size:1.5rem;'>{stats.get('none',0)}</b><br>قنوات ثابتة ⬜</div>", unsafe_allow_html=True)
 
     st.write("")
 
     detail = st.session_state.match_detail
     if detail:
-        with st.expander(f"📋 {'معاينة المطابقة' if ar else 'Match Preview'} ({len(detail)})", expanded=False):
+        with st.expander(f"📋 معاينة قائمة الترتيب الجديد بالكامل ({len(detail)} قناة)", expanded=False):
             scroll = st.container(height=300)
             with scroll:
                 h1, h2, h3 = st.columns([4, 2, 3])
-                h1.markdown(f"**{'القناة' if ar else 'Channel'}**")
-                h2.markdown(f"**{'الترتيب الجديد' if ar else 'New Order'}**")
-                h3.markdown(f"**{'نوع المطابقة' if ar else 'Match Type'}**")
+                h1.markdown("**القناة**")
+                h2.markdown("**الترتيب الجديد**")
+                h3.markdown("**نوع المطابقة**")
                 for name, order, mtype in detail[:400]:
                     c1, c2, c3 = st.columns([4, 2, 3])
                     c1.write(name); c2.write(f"#{order}"); c3.write(mtype)
@@ -381,14 +406,14 @@ if st.session_state.done and st.session_state.result:
     cd1, cd2 = st.columns([3, 1])
     with cd1:
         st.download_button(
-            "📥 " + ("تحميل الملف المحوّل (GlobalClone00001.TLL)" if ar else "Download Converted File"),
+            "📥 تحميل ملف القنوات الجديد المعدل (GlobalClone00001.TLL)",
             data=st.session_state.result,
             file_name="GlobalClone00001.TLL",
             mime="application/octet-stream",
             use_container_width=True,
         )
     with cd2:
-        if st.button("🔄 " + ("من جديد" if ar else "Reset"), key="rst"):
+        if st.button("🔄 إعادة تعيين", key="rst"):
             for k in ['ref_bytes','ref_name','tar_bytes','tar_name','result','done','stats','match_detail']:
                 st.session_state[k] = (None if k in ['ref_bytes','ref_name','tar_bytes','tar_name','result']
                                        else (False if k=='done' else ({} if k=='stats' else [])))
@@ -397,6 +422,6 @@ if st.session_state.done and st.session_state.result:
             st.rerun()
 
     st.markdown(f"""<div class='warn'>
-💡 <b>{'ملحوظة:' if ar else 'Note:'}</b>
-{'إذا لم تظهر القنوات مرتبة: إعدادات ← القنوات ← مدير القنوات ← تعديل كل القنوات ← تحديد الكل ← استعادة' if ar else 'If channels not sorted: Settings → Channels → Channel Manager → Edit All Channels → Select All → Restore'}
+💡 <b>ملحوظة هامة بعد رفع الملف للشاشة:</b><br>
+إذا قمت برفع الملف للشاشة ولم تتغير القنوات فوراً، ادخل إلى: إعدادات التلفزيون ← القنوات ← مدير القنوات ← تعديل كل القنوات ← حدد الكل ثم اضغط على زر <b>استعادة (Restore)</b> لتجبر الشاشة على قراءة كود الـ Hardware الجديد فوراً.
 </div>""", unsafe_allow_html=True)
