@@ -60,9 +60,6 @@ st.title("🔄 RAMBO — محوّل TLL الذكي" if ar else "🔄 RAMBO — S
 st.markdown(f"<h3 style='text-align:center;'>{'⚡ انقل ترتيب أي ملف مرجعي لشاشتك — يدعم قديم↔حديث بدون فقدان قنوات' if ar else '⚡ Transfer channel order to your TV — supports Legacy↔Modern'}</h3>", unsafe_allow_html=True)
 st.write("---")
 
-# ─────────────────────────────────────────────
-# EXTRACT CHANNELS
-# ─────────────────────────────────────────────
 def extract_channels(file_bytes):
     try:
         txt = file_bytes.decode('cp1256')
@@ -122,10 +119,6 @@ def extract_channels(file_bytes):
     info['display'] = info['bc'] or info['cj'] or info['cx']
     return info
 
-
-# ─────────────────────────────────────────────
-# SMART MATCH
-# ─────────────────────────────────────────────
 def normalize(s):
     return re.sub(r'\s+', ' ', s.upper().strip())
 
@@ -178,16 +171,11 @@ def smart_match(ref_chs, tar_chs):
         if matched:
             continue
 
-        # القنوات التي لم تطابق ترمى في آخر القائمة بترتيب كبير جداً
         results.append((tar_idx, 99999 + ch['order'], '⬜ بدون تغيير' if ar else '⬜ Kept Unchanged'))
         stats['none'] += 1
 
     return results, stats
 
-
-# ─────────────────────────────────────────────
-# APPLY ORDER (جعل الترتيب متسلسل إجباري 1، 2، 3...)
-# ─────────────────────────────────────────────
 def apply_order(tar_info, matches):
     txt = tar_info['txt']
 
@@ -201,15 +189,11 @@ def apply_order(tar_info, matches):
                     'raw_xml': tar_info['raw_items'][tar_idx]
                 })
         
-        # فرز القنوات بناءً على الترتيب المرجعي أولاً
         channel_pool.sort(key=lambda x: x['target_order'])
         
-        # إعطاء أرقام مسلسلة حقيقية متتالية حتمياً (1, 2, 3, 4...)
         updated_items = []
         for sequential_id, ch in enumerate(channel_pool, 1):
             item_xml = ch['raw_xml']
-            
-            # حقن الترتيب المتسلسل الصارم لمنع القفزات
             item_xml = re.sub(r'<prNum>[^<]+</prNum>', f'<prNum>{sequential_id}</prNum>', item_xml)
             
             if '<isUserSelCHNo>' in item_xml:
@@ -237,7 +221,7 @@ def apply_order(tar_info, matches):
             
         return final_txt.encode(tar_info['encoding'], errors='ignore')
 
-    else:  # modern
+    else:  # Modern webOS
         data = dict(tar_info['json_data'])
         ch_list = list(data.get('channelList', []))
         
@@ -245,13 +229,23 @@ def apply_order(tar_info, matches):
             if tar_idx < len(ch_list):
                 ch_list[tar_idx]['_tmp_order'] = target_order
                 
+        # فرز القنوات الترتيبي الحقيقي
         ch_list.sort(key=lambda x: x.get('_tmp_order', 999999))
         
+        # إعادة بناء الخصائص الرقمية لـ webOS بالكامل بشكل متتالي حتمي من 1
         for sequential_id, ch in enumerate(ch_list, 1):
-            ch['majorNumber']      = sequential_id
+            ch['majorNumber'] = sequential_id
+            if 'minorNumber' in ch:
+                ch['minorNumber'] = 0
+            if 'chIndex' in ch:
+                ch['chIndex'] = sequential_id - 1  # تصفير قفزات التيونر الداخلي
+                
             ch['userSelCHNo']      = True
             ch['userCustomize']    = True
             ch['userEditChNumber'] = True
+            ch['visible']          = True
+            ch['skipped']          = False
+            
             if '_tmp_order' in ch: 
                 del ch['_tmp_order']
                 
@@ -261,7 +255,6 @@ def apply_order(tar_info, matches):
                           f'<legacybroadcast>{new_json}</legacybroadcast>',
                           txt, flags=re.DOTALL)
         return new_txt.encode('utf-8')
-
 
 # ─────────────────────────────────────────────
 # UI — رفع الملفين
@@ -337,7 +330,6 @@ if st.button("✨ " + ("بدء نقل الترتيب الذكي" if ar else "Sta
         matches, stats = smart_match(ri['channels'], ti['channels'])
         result_bytes   = apply_order(ti, matches)
         
-        # ترتيب المعاينة لتبدو مسلسلة حقيقياً في جدول الموقع
         detail = []
         for sequential_id, ch_idx in enumerate(sorted(range(len(matches)), key=lambda k: matches[k][1]), 1):
             tar_idx, _, mtype = matches[ch_idx]
