@@ -3,7 +3,7 @@ import json
 import re
 import time
 
-st.set_page_config(page_title="RAMBO — محوّل LG الشامل", layout="centered")
+st.set_page_config(page_title="RAMBO — محول ملف القنوات", layout="centered")
 
 # تهيئة الجلسة
 for k, v in {
