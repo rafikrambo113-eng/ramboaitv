@@ -3,7 +3,7 @@ import json
 import re
 import time
 
-st.set_page_config(page_title="RAMBO — محوّل LG المضمون", layout="centered")
+st.set_page_config(page_title="RAMBO — محوّل LG الشامل", layout="centered")
 
 # تهيئة الجلسة
 for k, v in {
@@ -37,12 +37,19 @@ div[data-testid="stFileUploader"]{{background:{bb}!important;border:2px solid {b
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🔄 RAMBO — محوّل LG المضمون")
-st.markdown("<h3 style='text-align:center;'>⚡ إعادة ترتيب قنوات شاشتك الأصلية بناءً على ترتيب ملف النت لضمان تشغيل الإشارة</h3>", unsafe_allow_html=True)
+st.title("🔄 RAMBO — محوّل LG الشامل")
+st.markdown("<h3 style='text-align:center;'>⚡ تحديث الترتيب والترددات معاً من الملف المرجعي وحقنها بأمان جوه شاشتك</h3>", unsafe_allow_html=True)
 st.write("---")
 
-def norm(s):
-    return re.sub(r'\s+', ' ', str(s).upper().strip())
+def super_clean_name(s):
+    if not s: return ""
+    s = str(s).upper().strip()
+    s = re.sub(r'\b(HD|SD|TV|AC3|DIGITAL|AUDIO|NEW)\b', '', s)
+    s = re.sub(r'[أإآٱ]', 'ا', s)
+    s = re.sub(r'[ة]', 'ه', s)
+    s = re.sub(r'[ى]', 'ي', s)
+    s = re.sub(r'[^A-Z0-9ا-ي]', '', s) 
+    return s
 
 def extract_channels(file_bytes):
     try: txt = file_bytes.decode('utf-8', errors='ignore'); enc='utf-8'
@@ -59,6 +66,8 @@ def extract_channels(file_bytes):
                 for idx,ch in enumerate(data.get('channelList',[]),1):
                     info['channels'].append({
                         'name': ch.get('channelName','').strip().upper(),
+                        'freq': str(ch.get('frequency','')),
+                        'svcid': str(ch.get('SVCID','')),
                         'order': ch.get('majorNumber',idx),
                         'raw': ch,
                     })
@@ -69,44 +78,60 @@ def extract_channels(file_bytes):
         info['raw_items'] = items
         for idx,item in enumerate(items,1):
             nm = re.search(r'<vchName>([^<]+)</vchName>', item)
+            fm = re.search(r'<frequency>([^<]+)</frequency>', item)
             pm = re.search(r'<prNum>([^<]+)</prNum>', item)
+            sm = re.search(r'<service_id>([^<]+)</service_id>', item)
             info['channels'].append({
                 'name': nm.group(1).strip().upper() if nm else '',
+                'freq': fm.group(1).strip() if fm else '',
                 'order': int(pm.group(1)) if pm else idx,
+                'svcid': sm.group(1).strip() if sm else '1',
                 'raw': item,
             })
     return info
 
 # ─────────────────────────────────────────────
-# 🔥 الخطة المضمونة: إعادة ترتيب قنوات الشاشة الحقيقية
+# 🔥 تحديث الترتيب + الترددات من ملف النت صب جوه قالب جهازك
 # ─────────────────────────────────────────────
-def apply_safe_order(ref_chs, tar_info):
+def apply_comprehensive_order(ref_chs, tar_info):
     txt = tar_info['txt']
     
-    # 1. عمل خريطة لملف النت (اسم القناة ➜ الترتيب المستهدف)
+    # 1. عمل خريطة كاملة من ملف النت تشمل (الترتيب، التردد، الـ Service ID)
     ref_map = {}
     for ch in ref_chs:
-        n = norm(ch['name'])
-        if n and n not in ref_map:
-            ref_map[n] = ch['order']
+        clean_n = super_clean_name(ch['name'])
+        if clean_n and clean_n not in ref_map:
+            ref_map[clean_n] = {
+                'order': ch['order'],
+                'freq': ch['freq'],
+                'svcid': ch['svcid']
+            }
             
-    # 2. تعديل قنوات شاشتك الأصلية وحفظ الـ Hardware بالملي
+    # 2. معالجة وتحديث قنوات الشاشة الأصلية
     if tar_info['type'] == 'modern':
         data = dict(tar_info['json_data'])
         ch_list = list(data.get('channelList', []))
         
-        # إعطاء كل قناة رقم الترتيب الجديد من ملف النت بناء على اسمها
+        stats = {'updated_all': 0, 'to_end': 0}
+        
         for ch in ch_list:
-            n = norm(ch.get('channelName', ''))
-            if n in ref_map:
-                ch['_target_sort'] = ref_map[n]
+            clean_tar_n = super_clean_name(ch.get('channelName', ''))
+            if clean_tar_n in ref_map:
+                # تحديث حقيقي للترتيب والتردد والـ Service ID من ملف النت المرجعي
+                ch['_target_sort'] = ref_map[clean_tar_n]['order']
+                if ref_map[clean_tar_n]['freq'].isdigit():
+                    ch['frequency'] = int(ref_map[clean_tar_n]['freq'])
+                if ref_map[clean_tar_n]['svcid'].isdigit():
+                    ch['SVCID'] = int(ref_map[clean_tar_n]['svcid'])
+                stats['updated_all'] += 1
             else:
-                ch['_target_sort'] = 90000 + ch.get('majorNumber', 1) # القنوات الباقية تروح في الآخر
+                ch['_target_sort'] = 90000 + ch.get('majorNumber', 1)
+                stats['to_end'] += 1
                 
-        # عمل السورت (Sort) بناء على الترتيب المستهدف
+        # ترتيب الملف بناءً على الترتيب الجديد
         ch_list.sort(key=lambda x: x['_target_sort'])
         
-        # إعادة كتابة الأرقام المتسلسلة وضبط أقفال الهاردوير لـ LG
+        # إعادة ربط أرقام السورت المتسلسلة لـ LG لمنع الشاشة السوداء
         for seq_num, ch in enumerate(ch_list, 1):
             ch['majorNumber'] = seq_num
             ch['displayChannelNumber'] = str(seq_num)
@@ -129,15 +154,30 @@ def apply_safe_order(ref_chs, tar_info):
         new_txt  = re.sub(r'<legacybroadcast>.*?</legacybroadcast>',
                           f'<legacybroadcast>{new_json}</legacybroadcast>',
                           txt, flags=re.DOTALL)
-        return new_txt.encode('utf-8')
+        return new_txt.encode('utf-8'), stats
         
     else:
         # الشاشات القديمة Legacy
         paired = []
+        stats = {'updated_all': 0, 'to_end': 0}
         for idx, ch in enumerate(tar_info['channels']):
-            n = norm(ch['name'])
-            target_sort = ref_map[n] if n in ref_map else (90000 + ch['order'])
-            paired.append((target_sort, tar_info['raw_items'][idx]))
+            clean_tar_n = super_clean_name(ch['name'])
+            item_xml = tar_info['raw_items'][idx]
+            
+            if clean_tar_n in ref_map:
+                target_sort = ref_map[clean_tar_n]['order']
+                new_freq = ref_map[clean_tar_n]['freq']
+                new_svcid = ref_map[clean_tar_n]['svcid']
+                
+                # حقن التردد الجديد والـ Service ID جوه الـ XML
+                item_xml = re.sub(r'<frequency>[^<]*</frequency>', f'<frequency>{new_freq}</frequency>', item_xml)
+                item_xml = re.sub(r'<service_id>[^<]*</service_id>', f'<service_id>{new_svcid}</service_id>', item_xml)
+                stats['updated_all'] += 1
+            else:
+                target_sort = 90000 + ch['order']
+                stats['to_end'] += 1
+                
+            paired.append((target_sort, item_xml))
             
         paired.sort(key=lambda x: x[0])
         
@@ -154,7 +194,7 @@ def apply_safe_order(ref_chs, tar_info):
         first_idx = txt.find('<ITEM>')
         last_idx  = txt.rfind('</ITEM>') + len('</ITEM>')
         new_txt   = txt[:first_idx] + combined + txt[last_idx:] if first_idx != -1 else txt
-        return new_txt.encode(tar_info['enc'], errors='ignore')
+        return new_txt.encode(tar_info['enc'], errors='ignore'), stats
 
 # ─────────────────────────────────────────────
 # UI
@@ -164,7 +204,7 @@ st.markdown("### 1️⃣ ارفع الملفين")
 col_r, col_t = st.columns(2)
 with col_r:
     st.markdown("<div class='card-ref'>", unsafe_allow_html=True)
-    st.markdown("**📡 ملف النت المُرتب (المرجع)**")
+    st.markdown("**📡 ملف النت المُرتب والمحدث (المرجع)**")
     up_ref = st.file_uploader("", type=["tll","bak","TLL"], key=f"ref_{st.session_state.ref_key}", label_visibility="collapsed")
     if up_ref:
         b = up_ref.read()
@@ -175,7 +215,7 @@ with col_r:
 
 with col_t:
     st.markdown("<div class='card-tar'>", unsafe_allow_html=True)
-    st.markdown("**📺 ملف شاشتك الأصلي الشغال**")
+    st.markdown("**📺 ملف شاشتك الأصلي**")
     up_tar = st.file_uploader("", type=["tll","bak","TLL"], key=f"tar_{st.session_state.tar_key}", label_visibility="collapsed")
     if up_tar:
         b = up_tar.read()
@@ -188,30 +228,39 @@ if not st.session_state.ref_bytes or not st.session_state.tar_bytes:
     st.stop()
 
 st.write("---")
-st.markdown("### 2️⃣ ترتيب ملفك الأصلي")
+st.markdown("### 2️⃣ المعالجة الشاملة")
 
-if st.button("🚀 ابدأ نقل الترتيب الآمن لقنواتك الحالية", use_container_width=True):
+if st.button("🚀 ابدأ تحديث الترتيب والترددات معاً", use_container_width=True):
     pb = st.progress(0); st_txt = st.empty()
     
-    st_txt.markdown("⏳ **جاري تحليل ملف الشاشة الحقيقي... (40%)**"); pb.progress(40); time.sleep(0.2)
+    st_txt.markdown("⏳ **جاري تحليل الملفات ومطابقة الأسماء الذكية... (40%)**"); pb.progress(40); time.sleep(0.2)
     ri = extract_channels(st.session_state.ref_bytes)
     ti = extract_channels(st.session_state.tar_bytes)
     
-    st_txt.markdown("⚙️ **جاري تطبيق الترتيب وتأمين التيونر... (80%)**"); pb.progress(80); time.sleep(0.3)
-    result_bytes = apply_safe_order(ri['channels'], ti)
+    st_txt.markdown("⚙️ **جاري تحديث الترددات ونقل الترتيب وقفل الـ Hardware... (80%)**"); pb.progress(80); time.sleep(0.3)
+    result_bytes, stats = apply_comprehensive_order(ri['channels'], ti)
     
-    st_txt.markdown("✅ **تم التحويل بنجاح آمن! (100%)**"); pb.progress(100); time.sleep(0.2)
+    st_txt.markdown("✅ **تم التحويل بنجاح! (100%)**"); pb.progress(100); time.sleep(0.2)
     st_txt.empty(); pb.empty()
     
     st.session_state.result = result_bytes
+    st.session_state.stats = stats
     st.session_state.done   = True
     st.rerun()
 
 if st.session_state.done and st.session_state.result:
-    st.success("🎉 مبروك! تم إعادة ترتيب ملف قنواتك الحقيقي بنجاح وبنفس ترتيب ملف النت، مع الحفاظ الكامل على إشارات وتيونر جهازك!")
+    st.success("🎉 مبروك يا فنان! تم تحديث قنواتك بالترتيب والترددات الجديدة المستخرجة بنجاح تـام!")
+    
+    st.markdown(f"""
+    <div class='info-box'>
+    📊 <b>ملخص التحديث المدمج:</b><br>
+    • قنوات تم تحديث مكانها وترددها بالكامل: <b style='color:#00b894;'>{st.session_state.stats.get('updated_all')}</b> قناة.<br>
+    • قنوات متبقية (تم الحفاظ عليها و ترحيلها للآخر بأمان): <b>{st.session_state.stats.get('to_end')}</b> قناة.
+    </div>
+    """, unsafe_allow_html=True)
     
     st.download_button(
-        "📥 تحميل ملف القنوات النهائي المحدث (GlobalClone00001.TLL)",
+        "📥 تحميل ملف القنوات النهائي (GlobalClone00001.TLL)",
         data=st.session_state.result,
         file_name="GlobalClone00001.TLL",
         mime="application/octet-stream",
