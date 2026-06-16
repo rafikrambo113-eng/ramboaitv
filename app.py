@@ -162,14 +162,14 @@ st.info("**الموقع الأول من نوعه** \"بأيدٍ مصرية ود�
 st.markdown("---")
 
 # ─────────────────────────────────────────────
-# ليه تختار RamboAITV؟
+# ليه تختار RamboAITV؟ (4 أعمدة)
 # ─────────────────────────────────────────────
 st.header("🌟 ليه تختار Rambo AI TV؟")
 
-st.markdown("<p class='center-text'>🎨 الموقع مصمم بـ **3 صفحات احترافية** لخدمتك:</p>", unsafe_allow_html=True)
+st.markdown("<p class='center-text'>🎨 الموقع مصمم بـ **4 صفحات احترافية** لخدمتك:</p>", unsafe_allow_html=True)
 
 st.markdown("")
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.subheader("1️⃣ الترتيب الذكي")
@@ -180,42 +180,47 @@ with col1:
 
 with col2:
     st.subheader("2️⃣ الترتيب اليدوي")
+    st.markdown("**(تحكم كامل)**")
     st.write("ليك تحكم كامل! رتب قنواتك قناة قناة حسب ذوقك، واعتمد ترتيبك الخاص.")
     st.write("✅ تحميل ملف مرتب ومحدث")
     st.write("✅ بكل سهولة وبساطة")
 
 with col3:
-    st.subheader("3️⃣ توليد بالذكاء الاصطناعي")
+    st.subheader("3️⃣ توليد بالذكاء")
     st.markdown("**(ميزة حصرية! 🔥)**")
     st.write("لأول مرة، بس اكتب موديل جهازك، بلد البث، وسنة الصنع، والذكاء الاصطناعي هيقوم بتوليد ملف قنوات متوافق مع شاشتك من الصفر!")
+
+with col4:
+    st.subheader("4️⃣ محوّل LG الشامل")
+    st.markdown("**(نقل الترتيب الذكي ⚡)**")
+    st.write("هات أي ملف قنوات عاجبك ترتيبه من النت (قديم، جديد، أي مقاس شاشة)، وارفع معاه ملف شاشتك الأصلي، والموقع هينقل لك نفس الترتيب على ملفك فوراً مع تحديث الترددات وقراءة بيانات الموديل!")
 
 st.markdown("---")
 
 # ─────────────────────────────────────────────
 # الميزات الخارقة للذكاء الاصطناعي
 # ─────────────────────────────────────────────
-st.header("🔥 ميزتان خارقتان للذكاء الاصطناعي داخل الموقع")
+st.header("🔥 ميزات خارقة للذكاء الاصطناعي داخل الموقع")
 
 col_ai1, col_ai2 = st.columns(2)
 
 with col_ai1:
-    st.subheader("📡 تحديث الترددات")
-    st.write("وداعاً للقنوات اللي بتظهر 'بدون إشارة'")
-    st.write("الموقع بيلفظ الترددات الميتة والقديمة ويحدثها أوتوماتيكياً")
+    st.subheader("📡 تحديث الترددات وتوافق الموديلات")
+    st.write("وداعاً للقنوات اللي بتظهر 'بدون إشارة' أو الملفات غير المتوافقة.")
+    st.write("الموقع بيلفظ الترددات الميتة، ويقرأ بيانات موديل شاشتك لضمان تشغيل الملف بنسبة 100%.")
 
 with col_ai2:
     st.subheader("🆕 اكتشاف القنوات الجديدة")
-    st.write("الموقع بيعرفك تلقائياً بالقنوات الحديثة اللي بدأت بثها مؤخراً على القمر الصناعي")
-    st.write("عشان تكون دائماً في قلب الحدث!")
+    st.write("الموقع بيعرفك تلقائياً بالقنوات الحديثة اللي بدأت بثها مؤخراً على القمر الصناعي عشان تكون دائماً في قلب الحدث!")
 
 st.markdown("---")
 
 # ─────────────────────────────────────────────
-# أزرار التنقل للصفحات — link_button للوصول السريع
+# أزرار التنقل للصفحات
 # ─────────────────────────────────────────────
 st.header("🚀 جرب الموقع دلوقتي")
 
-col_btn1, col_btn2, col_btn3 = st.columns(3)
+col_btn1, col_btn2, col_btn3, col_btn4 = st.columns(4)
 
 with col_btn1:
     st.link_button("🧠 الترتيب الذكي (بالفئات)", "https://ramboaitv.streamlit.app/page1_catogary_sorter")
@@ -226,6 +231,9 @@ with col_btn2:
 with col_btn3:
     st.link_button("🤖 توليد بالذكاء الاصطناعي", "https://ramboaitv.streamlit.app/page3_generate_sorter")
 
+with col_btn4:
+    st.link_button("⚡ RAMBO محوّل LG الشامل", "https://ramboaitv.streamlit.app/page4_convert_tv_file")
+
 # ─────────────────────────────────────────────
 # الفوتر
 # ─────────────────────────────────────────────
@@ -234,7 +242,6 @@ st.markdown("---")
 st.markdown("<p class='center-text' style='font-size:22px; color:#ff007f; font-weight:bold;'>🛠️ DEVELOPER ENG: RAFIK NATHAN</p>", unsafe_allow_html=True)
 st.markdown("<p class='center-text'>📱 MOBILE / الموبايل: +</p>", unsafe_allow_html=True)
 st.markdown("<p class='center-text'>✉️ E-MAIL: </p>", unsafe_allow_html=True)
-st.markdown("<p class='center-text'>ملحوظه عند فتح اي صفحه   لكي تري الصفحه بلون اسود مناسب الرجاء الضغط علي الثلاث نقاط فالجهه العلويه اليمين واختيار Dark حتي تري الشاشه بطريقه مناسبه </p>", unsafe_allow_html=True)
 
 whatsapp_url = "https://api.whatsapp.com/send?phone=&text=Hello%20Developer%20Rafik%20Rambo"
 st.link_button("WhatsApp 💬", whatsapp_url)
