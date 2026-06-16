@@ -42,7 +42,7 @@ div.restart-btn>button{{background:linear-gradient(135deg,#636e72,#2d3436)!impor
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🔄 RAMBO — محوّل LG الشامل")
+st.title("🔄 RAMBO — محول ملف القنوات")
 st.markdown("<h3 style='text-align:center;'>⚡ تحديث الترتيب والترددات مع قراءة بيانات الموديلات والقنوات</h3>", unsafe_allow_html=True)
 st.write("---")
 
