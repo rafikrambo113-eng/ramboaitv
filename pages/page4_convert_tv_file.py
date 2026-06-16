@@ -1,3 +1,4 @@
+
 import streamlit as st
 import json
 import re
@@ -122,31 +123,72 @@ def extract_channels(file_bytes):
     return info
 
 # ─────────────────────────────────────────────
-# MATCH
+# HELPERS
 # ─────────────────────────────────────────────
 def normalize(s):
     return re.sub(r'\s+', ' ', s.upper().strip())
 
+def is_junk(name):
+    """قنوات يجب تجاهلها في المطابقة"""
+    n = normalize(name)
+    if not n:
+        return True
+    # قنوات Test أو Spare أو Test HD
+    if re.match(r'^(TEST|SPARE|HUMAX|PDL|OSN TEST|SKYWORTH)(\s|$)', n):
+        return True
+    return False
+
+def is_real_channel(name):
+    """قناة حقيقية لها اسم مفيد"""
+    n = normalize(name)
+    return bool(n) and not is_junk(n)
+
+# ─────────────────────────────────────────────
+# SMART MATCH — 3 مستويات مع تجنب التضارب
+# ─────────────────────────────────────────────
 def smart_match(ref_chs, tar_chs):
-    ref_by_name  = {}
-    ref_by_freq  = {}
+    """
+    مطابقة ذكية بثلاث مستويات:
+    1. اسم مطابق تماماً (لكل قناة مرة واحدة فقط)
+    2. اسم متشابه
+    3. تردد + ترتيب نسبي (لتجنب وضع كل القنوات في نفس المكان)
+    القنوات الجunk والفاضية تُوضع في النهاية
+    """
+    # بناء index من المرجع — كل اسم مرة واحدة
+    ref_by_name  = {}   # name → order
+    ref_by_freq  = {}   # freq → [orders] — قائمة كاملة للتردد
 
     for ch in ref_chs:
         n = normalize(ch['name'])
         f = ch['freq']
         o = ch['order']
-        if n and n not in ref_by_name:
+        if n and not is_junk(n) and n not in ref_by_name:
             ref_by_name[n] = o
-        if f and f not in ref_by_freq:
-            ref_by_freq[f] = o
+        if f:
+            if f not in ref_by_freq:
+                ref_by_freq[f] = []
+            ref_by_freq[f].append(o)
+
+    # عداد استخدام التردد — عشان كل قناة بنفس التردد تاخد ترتيب مختلف
+    freq_usage = {}
 
     results = []
     stats   = {'exact': 0, 'partial': 0, 'freq': 0, 'none': 0}
-    max_ref_order = max((ch['order'] for ch in ref_chs), default=9999)
+    max_ref  = max((ch['order'] for ch in ref_chs), default=9999)
+
+    # عداد للقنوات اللي بتروح للنهاية
+    end_counter = [0]
 
     for tar_idx, ch in enumerate(tar_chs):
         n = normalize(ch['name'])
         f = ch['freq']
+
+        # قنوات junk أو فاضية → النهاية
+        if is_junk(n):
+            end_counter[0] += 1
+            results.append((tar_idx, max_ref + 10000 + end_counter[0], '🗑️ آخر القائمة'))
+            stats['none'] += 1
+            continue
 
         # مستوى 1: اسم مطابق تماماً
         if n in ref_by_name:
@@ -156,7 +198,7 @@ def smart_match(ref_chs, tar_chs):
 
         # مستوى 2: اسم متشابه
         matched = False
-        if n and len(n) > 3:
+        if len(n) > 3:
             for ref_n, ref_o in ref_by_name.items():
                 if (n in ref_n or ref_n in n or
                         (len(n) >= 5 and len(ref_n) >= 5 and n[:5] == ref_n[:5])):
@@ -167,54 +209,56 @@ def smart_match(ref_chs, tar_chs):
         if matched:
             continue
 
-        # مستوى 3: تردد مطابق
+        # مستوى 3: تردد — نأخذ ترتيباً مختلفاً لكل قناة بنفس التردد
         if f and f in ref_by_freq:
-            results.append((tar_idx, ref_by_freq[f], '🔄 تردد مطابق'))
+            orders_for_freq = ref_by_freq[f]
+            used_count = freq_usage.get(f, 0)
+            if used_count < len(orders_for_freq):
+                assigned_order = orders_for_freq[used_count]
+            else:
+                # استنفذنا كل الترتيبات لهذا التردد → نضع بعد آخر واحد
+                assigned_order = orders_for_freq[-1] + used_count - len(orders_for_freq) + 1
+            freq_usage[f] = used_count + 1
+            results.append((tar_idx, assigned_order, '🔄 تردد مطابق'))
             stats['freq'] += 1
             continue
 
-        # لم يُطابَق — يُوضع في النهاية
-        results.append((tar_idx, max_ref_order + tar_idx + 1, '⬜ في النهاية'))
+        # لم يُطابَق → نهاية القائمة
+        end_counter[0] += 1
+        results.append((tar_idx, max_ref + 5000 + end_counter[0], '⬜ في النهاية'))
         stats['none'] += 1
 
     return results, stats
 
 # ─────────────────────────────────────────────
-# APPLY — الترتيب الفعلي بإعادة ترتيب القائمة
+# APPLY ORDER
 # ─────────────────────────────────────────────
 def apply_order(tar_info, matches):
     txt = tar_info['txt']
 
-    # ── Legacy XML ──
     if tar_info['type'] == 'legacy':
-        # أولاً: نرتب الـ ITEMs حسب الترتيب المطلوب
+        # رتّب الـ ITEMs حسب الترتيب المطلوب
         paired = []
         for tar_idx, target_order, mtype in matches:
             if tar_idx < len(tar_info['raw_items']):
                 paired.append((target_order, tar_idx, tar_info['raw_items'][tar_idx]))
 
-        # الترتيب الفعلي
         paired.sort(key=lambda x: x[0])
 
-        # بناء الـ ITEMs بأرقام تسلسلية جديدة
         new_items = []
         for seq_num, (_, tar_idx, item_xml) in enumerate(paired, 1):
-            # تحديث prNum
             item_xml = re.sub(r'<prNum>[^<]+</prNum>',
                               f'<prNum>{seq_num}</prNum>', item_xml)
-            # تفعيل isUserSelCHNo
             if '<isUserSelCHNo>' in item_xml:
                 item_xml = re.sub(r'<isUserSelCHNo>[^<]+</isUserSelCHNo>',
                                   '<isUserSelCHNo>1</isUserSelCHNo>', item_xml)
             else:
                 item_xml = item_xml.replace('</ITEM>', '<isUserSelCHNo>1</isUserSelCHNo></ITEM>')
-            # إظهار القناة
             if '<isInvisable>' in item_xml:
                 item_xml = re.sub(r'<isInvisable>[^<]+</isInvisable>',
                                   '<isInvisable>0</isInvisable>', item_xml)
             new_items.append(item_xml)
 
-        # دمج في الملف
         combined  = '\r\n'.join(new_items)
         first_idx = txt.find('<ITEM>')
         last_idx  = txt.rfind('</ITEM>') + len('</ITEM>')
@@ -225,20 +269,16 @@ def apply_order(tar_info, matches):
 
         return new_txt.encode(tar_info['enc'], errors='ignore')
 
-    # ── Modern JSON ──
     else:
         data    = dict(tar_info['json_data'])
         ch_list = list(data.get('channelList', []))
 
-        # وضع الترتيب المطلوب كـ temp key
         for tar_idx, target_order, _ in matches:
             if tar_idx < len(ch_list):
                 ch_list[tar_idx]['_sort'] = target_order
 
-        # الترتيب الفعلي للقائمة
         ch_list.sort(key=lambda x: x.get('_sort', 999999))
 
-        # تعيين majorNumber تسلسلي بعد الترتيب
         for seq_num, ch in enumerate(ch_list, 1):
             ch['majorNumber']      = seq_num
             ch['userSelCHNo']      = True
@@ -247,7 +287,6 @@ def apply_order(tar_info, matches):
             ch['skipped']          = False
             ch['deleted']          = False
             ch['Invisible']        = False
-            # حذف الـ temp key
             ch.pop('_sort', None)
 
         data['channelList'] = ch_list
@@ -258,7 +297,7 @@ def apply_order(tar_info, matches):
         return new_txt.encode('utf-8')
 
 # ─────────────────────────────────────────────
-# UI — رفع الملفات
+# UI
 # ─────────────────────────────────────────────
 st.markdown(f"## {'1️⃣ ارفع الملفين' if ar else '1️⃣ Upload Both Files'}")
 
@@ -267,7 +306,7 @@ col_r, col_t = st.columns(2)
 with col_r:
     st.markdown("<div class='card-ref'>", unsafe_allow_html=True)
     st.markdown(f"**{'📡 الملف المرجعي المرتب' if ar else '📡 Sorted Reference File'}**")
-    st.caption("الملف المرتب من النت — سنأخذ منه الترتيب فقط" if ar else "Sorted file — order will be taken from it")
+    st.caption("الملف المرتب من النت — سنأخذ منه الترتيب فقط" if ar else "Sorted file — order taken from here")
     up_ref = st.file_uploader("", type=["tll","bak","TLL"],
                               key=f"ref_{st.session_state.ref_key}",
                               label_visibility="collapsed")
@@ -288,7 +327,7 @@ with col_r:
 with col_t:
     st.markdown("<div class='card-tar'>", unsafe_allow_html=True)
     st.markdown(f"**{'📺 ملف شاشتك الشغال' if ar else '📺 Your Working TV File'}**")
-    st.caption("الملف الشغال على شاشتك — سيُحدَّث ترتيبه" if ar else "The file that works — its order will be updated")
+    st.caption("الملف الشغال على شاشتك — سيُحدَّث ترتيبه" if ar else "The file that works — order will be updated")
     up_tar = st.file_uploader("", type=["tll","bak","TLL"],
                               key=f"tar_{st.session_state.tar_key}",
                               label_visibility="collapsed")
@@ -311,7 +350,10 @@ if st.session_state.ref_bytes and st.session_state.tar_bytes:
     ti = extract_channels(st.session_state.tar_bytes)
     rt = 'Modern' if ri['type']=='modern' else 'Legacy'
     tt = 'Modern' if ti['type']=='modern' else 'Legacy'
-    st.info(f"**{rt} ➜ {tt}** | {'المطابقة: اسم دقيق → اسم متشابه → تردد مطابق | القنوات غير المطابقة تُوضع في النهاية' if ar else 'Matching: Exact → Similar → Frequency | Unmatched go to end'}")
+    st.info(
+        f"**{rt} ➜ {tt}** | "
+        f"{'المطابقة: اسم دقيق → اسم متشابه → تردد | قنوات Test والفاضية في النهاية' if ar else 'Matching: Exact name → Similar → Freq | Test & empty channels go to end'}"
+    )
 
 if not st.session_state.ref_bytes or not st.session_state.tar_bytes:
     st.info("⬆️ " + ("ارفع الملفين للبدء." if ar else "Upload both files to start."))
@@ -319,48 +361,36 @@ if not st.session_state.ref_bytes or not st.session_state.tar_bytes:
 
 st.write("---")
 
-# ─────────────────────────────────────────────
-# UI — التحويل
-# ─────────────────────────────────────────────
 st.markdown(f"## {'2️⃣ ابدأ نقل الترتيب' if ar else '2️⃣ Start Transfer'}")
 
 if st.button("✨ " + ("بدء نقل الترتيب الذكي" if ar else "Start Smart Order Transfer"), use_container_width=True):
     progress_bar = st.progress(0)
     status_text  = st.empty()
 
-    status_text.markdown("⏳ **جاري قراءة الملفين... (20%)**" if ar else "⏳ **Reading files... (20%)**")
-    progress_bar.progress(20)
-    time.sleep(0.3)
-
+    status_text.markdown("⏳ **جاري قراءة الملفين... (20%)**")
+    progress_bar.progress(20); time.sleep(0.3)
     ri = extract_channels(st.session_state.ref_bytes)
     ti = extract_channels(st.session_state.tar_bytes)
 
-    status_text.markdown("🔍 **جاري مطابقة القنوات... (55%)**" if ar else "🔍 **Matching channels... (55%)**")
-    progress_bar.progress(55)
-    time.sleep(0.3)
-
+    status_text.markdown("🔍 **جاري مطابقة القنوات... (55%)**")
+    progress_bar.progress(55); time.sleep(0.3)
     matches, stats = smart_match(ri['channels'], ti['channels'])
 
-    status_text.markdown("⚙️ **جاري إعادة ترتيب وبناء الملف... (85%)**" if ar else "⚙️ **Rebuilding file... (85%)**")
-    progress_bar.progress(85)
-    time.sleep(0.3)
-
+    status_text.markdown("⚙️ **جاري إعادة بناء الملف... (85%)**")
+    progress_bar.progress(85); time.sleep(0.3)
     result_bytes = apply_order(ti, matches)
 
-    status_text.markdown("✅ **تم! جاري التجهيز... (100%)**" if ar else "✅ **Done! Finalizing... (100%)**")
-    progress_bar.progress(100)
-    time.sleep(0.2)
+    status_text.markdown("✅ **تم! (100%)**")
+    progress_bar.progress(100); time.sleep(0.2)
+    status_text.empty(); progress_bar.empty()
 
-    status_text.empty()
-    progress_bar.empty()
-
-    # بناء تفاصيل المعاينة بالترتيب الصحيح
-    paired_detail = []
+    # بناء المعاينة بالترتيب الصح
+    paired = []
     for tar_idx, target_order, mtype in matches:
         name = ti['channels'][tar_idx]['name'].title() if tar_idx < len(ti['channels']) else '?'
-        paired_detail.append((target_order, name, mtype))
-    paired_detail.sort(key=lambda x: x[0])
-    detail = [(name, seq+1, mtype) for seq, (_, name, mtype) in enumerate(paired_detail)]
+        paired.append((target_order, name, mtype))
+    paired.sort(key=lambda x: x[0])
+    detail = [(name, seq+1, mtype) for seq, (_, name, mtype) in enumerate(paired)]
 
     st.session_state.result       = result_bytes
     st.session_state.stats        = stats
@@ -368,9 +398,6 @@ if st.button("✨ " + ("بدء نقل الترتيب الذكي" if ar else "Sta
     st.session_state.done         = True
     st.rerun()
 
-# ─────────────────────────────────────────────
-# UI — النتيجة
-# ─────────────────────────────────────────────
 if st.session_state.done and st.session_state.result:
     st.write("---")
     st.markdown(f"## {'3️⃣ النتيجة' if ar else '3️⃣ Result'}")
@@ -384,7 +411,6 @@ if st.session_state.done and st.session_state.result:
     with c4: st.markdown(f"<div class='stat sn'><b style='font-size:1.5rem;'>{stats.get('none',0)}</b><br>{'في النهاية ⬜' if ar else 'End ⬜'}</div>", unsafe_allow_html=True)
 
     st.write("")
-
     detail = st.session_state.match_detail
     if detail:
         with st.expander(f"📋 {'معاينة الترتيب الجديد' if ar else 'Preview New Order'} ({len(detail)})", expanded=False):
