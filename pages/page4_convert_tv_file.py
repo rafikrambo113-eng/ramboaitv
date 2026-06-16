@@ -31,6 +31,8 @@ h2,h3,p,label,.stMarkdown,div[data-testid="stMarkdownContainer"] p{{color:{tc}!i
 div[data-testid="stFileUploader"]{{background:{bb}!important;border:2px solid {bord}!important;box-shadow:0 5px 15px {bsh}!important;border-radius:14px!important;}}
 .stButton>button{{background:linear-gradient(135deg,#ff007f,#aa0055)!important;color:#fff!important;border:2px solid #ff007f!important;border-radius:12px!important;font-weight:bold;width:100%;}}
 .stDownloadButton>button{{background:linear-gradient(135deg,#00b894,#00695c)!important;color:#fff!important;border:none!important;border-radius:12px!important;font-weight:bold;width:100%;}}
+/* ستايل مخصص لزرار الريستارت */
+div.restart-btn>button{{background:linear-gradient(135deg,#636e72,#2d3436)!important;border:1px solid #636e72!important;color:#fff!important;}}
 .card-ref{{background:{bb};border:2px solid #00f0ff;border-radius:14px;padding:18px;margin-bottom:12px;}}
 .card-tar{{background:{bb};border:2px solid #ff007f;border-radius:14px;padding:18px;margin-bottom:12px;}}
 .info-box{{background:rgba(0,240,255,0.07);border:1px solid #00f0ff;border-radius:10px;padding:14px;margin:10px 0;}}
@@ -59,7 +61,6 @@ def extract_channels(file_bytes):
     except: txt = file_bytes.decode('latin-1', errors='ignore'); enc='latin-1'
     info = {'txt':txt,'enc':enc,'raw_items':[],'json_data':{},'channels':[], 'model': 'LG TV (العام)'}
     
-    # محاولة قراءة اسم الموديل الذكي من ملف الـ XML
     m = re.search(r'<ModelName[^>]*>([^<]+)</ModelName>', txt)
     if m:
         info['model'] = m.group(1).strip()
@@ -210,7 +211,6 @@ with col_r:
             st.session_state.ref_bytes = b; st.session_state.ref_name = up_ref.name
             st.session_state.done = False; st.session_state.result = None
         
-        # استخراج وعرض البيانات فوراً بعد الرفع
         ri = extract_channels(st.session_state.ref_bytes)
         st.markdown(f"""
         <div class="file-details">
@@ -231,7 +231,6 @@ with col_t:
             st.session_state.tar_bytes = b; st.session_state.tar_name = up_tar.name
             st.session_state.done = False; st.session_state.result = None
             
-        # استخراج وعرض البيانات فوراً بعد الرفع
         ti = extract_channels(st.session_state.tar_bytes)
         st.markdown(f"""
         <div class="file-details">
@@ -242,10 +241,22 @@ with col_t:
         """, unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
+# ─────────────────────────────────────────────
+# 🔥 إضافة زرار الـ Restart الذكي لتصفير الجلسة
+# ─────────────────────────────────────────────
+if st.session_state.ref_bytes or st.session_state.tar_bytes:
+    st.markdown('<div class="restart-btn">', unsafe_allow_html=True)
+    if st.button("🔄 إعادة تعيين ورفع ملفات جديدة (Restart)"):
+        st.session_state.ref_bytes = None; st.session_state.ref_name = None
+        st.session_state.tar_bytes = None; st.session_state.tar_name = None
+        st.session_state.done = False; st.session_state.result = None
+        st.session_state.ref_key += 1; st.session_state.tar_key += 1
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
 if not st.session_state.ref_bytes or not st.session_state.tar_bytes:
     st.stop()
 
-# احتياطاً للتأكد من جاهزية البيانات لو الـ refresh مأخرش
 if not ri: ri = extract_channels(st.session_state.ref_bytes)
 if not ti: ti = extract_channels(st.session_state.tar_bytes)
 
@@ -269,7 +280,6 @@ if st.button("🚀 ابدأ تحديث الترتيب والترددات معا�
 if st.session_state.done and st.session_state.result:
     st.success("🎉 مبروك يا فنان! تم تجهيز ملفك النهائي المطابق لهاردوير شاشتك بالملي!")
     
-    # الصندوق النهائي بيكتب موديل الشاشة ونوع الملف المتوافق معاه بدقة بناءً على طلبك
     st.markdown(f"""
     <div class='info-box'>
     📋 <b>تفاصيل الملف المتاح للتحميل دلوقتي:</b><br>
