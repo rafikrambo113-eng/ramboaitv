@@ -191,7 +191,7 @@ with col3:
     st.write("لأول مرة، بس اكتب موديل جهازك، بلد البث، وسنة الصنع، والذكاء الاصطناعي هيقوم بتوليد ملف قنوات متوافق مع شاشتك من الصفر!")
 
 with col4:
-    st.subheader("4️⃣ المحول ملف القنوات")
+    st.subheader("4️⃣ محول ملف القنوات")
     st.markdown("**(نقل الترتيب الذكي ⚡)**")
     st.write("هات أي ملف قنوات عاجبك ترتيبه من النت (قديم، جديد، أي مقاس شاشة)، وارفع معاه ملف شاشتك الأصلي، والموقع هينقل لك نفس الترتيب على ملفك فوراً مع تحديث الترددات وقراءة بيانات الموديل!")
 
@@ -232,7 +232,7 @@ with col_btn3:
     st.link_button("🤖 توليد بالذكاء الاصطناعي", "https://ramboaitv.streamlit.app/page3_generate_sorter")
 
 with col_btn4:
-    st.link_button("⚡ المحول ملف القنوات", "https://ramboaitv.streamlit.app/page4_convert_tv_file")
+    st.link_button("⚡ محول ملف القنوات", "https://ramboaitv.streamlit.app/page4_convert_tv_file")
 
 # ─────────────────────────────────────────────
 # الفوتر
