@@ -423,16 +423,29 @@ else:
         st.session_state.p1_last_file_name = uploaded_file.name
 
     file_bytes = uploaded_file.read()
+
+    # ── اكتشاف الـ encoding الصح ──
     try:
         file_text = file_bytes.decode('utf-8')
     except UnicodeDecodeError:
         file_text = file_bytes.decode('latin-1')
 
+    # ── اكتشاف نوع الـ line endings الأصلية ──
+    original_line_ending = '\r\n' if '\r\n' in file_text else '\n'
+
     file_text_cleaned = re.sub(r'^\s+', '', file_text)
+
+    # ── محاولة parse الـ XML ──
     try:
         root = ET.fromstring(file_text_cleaned.encode('utf-8'))
+        file_encoding = 'utf-8'
     except Exception:
-        root = ET.fromstring(file_text_cleaned.encode('latin-1'))
+        try:
+            root = ET.fromstring(file_text_cleaned.encode('latin-1'))
+            file_encoding = 'latin-1'
+        except Exception as e:
+            st.error(f"❌ تعذّر قراءة الملف: {e}")
+            st.stop()
 
     model_setting = root.find(".//ModelName")
     model_name    = model_setting.text if model_setting is not None else "Unknown LG TV"
@@ -651,7 +664,8 @@ else:
 
     # ── Legacy XML ──
     else:
-        item_blocks  = re.findall(r'(<ITEM>.*?</ITEM>)', file_text, re.DOTALL)
+        # ✅ FIX: استخرج الـ ITEM blocks بشكل دقيق مع الحفاظ على المحتوى الكامل
+        item_blocks = re.findall(r'(<ITEM>[\s\S]*?</ITEM>)', file_text)
         freq_patches = st.session_state.get('p1_freq_patches', {})
 
         for item_str in item_blocks:
@@ -751,6 +765,7 @@ else:
         final_xml_bytes = ET.tostring(root, encoding="utf-8")
 
     else:
+        # ✅ FIX: بناء الملف النهائي بطريقة صح للـ Legacy XML
         item_strings_sorted = []
         for index, ch in enumerate(channels_sorted, start=1):
             raw = set_item_prnum(ch["raw_str"], index)
@@ -758,15 +773,29 @@ else:
             text_report += f"No. {index:03d} : {ch['name']:<25} | Freq: {ch['freq']}"
             text_report += " [NEW]\n" if ch["is_injected"] else "\n"
 
-        combined_items_str = "\r\n".join(item_strings_sorted)
-        start_idx = file_text.find("<ITEM>")
-        end_idx   = file_text.rfind("</ITEM>") + len("</ITEM>")
-        final_text_output = (file_text[:start_idx] + combined_items_str + file_text[end_idx:]
-                             if start_idx != -1 else combined_items_str)
+        # ✅ FIX: استبدال الـ ITEM blocks بدقة مع الحفاظ على باقي الـ XML
+        # ابحث عن أول <ITEM> وآخر </ITEM> في الملف الأصلي
+        first_item_match = re.search(r'<ITEM>', file_text)
+        last_item_match  = None
+        for m in re.finditer(r'</ITEM>', file_text):
+            last_item_match = m
+
+        if first_item_match and last_item_match:
+            before_items = file_text[:first_item_match.start()]
+            after_items  = file_text[last_item_match.end():]
+
+            # ✅ FIX: استخدم نفس الـ line endings الأصلية
+            combined_items_str = original_line_ending.join(item_strings_sorted)
+            final_text_output  = before_items + combined_items_str + after_items
+        else:
+            combined_items_str = original_line_ending.join(item_strings_sorted)
+            final_text_output  = combined_items_str
+
+        # ✅ FIX: احتفظ بنفس الـ encoding الأصلي
         try:
-            final_xml_bytes = final_text_output.encode('utf-8')
-        except UnicodeEncodeError:
-            final_xml_bytes = final_text_output.encode('latin-1')
+            final_xml_bytes = final_text_output.encode(file_encoding)
+        except (UnicodeEncodeError, LookupError):
+            final_xml_bytes = final_text_output.encode('utf-8', errors='replace')
 
     # ── Download ──
     st.write("---")
