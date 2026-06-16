@@ -245,3 +245,5 @@ st.markdown("<p class='center-text'>✉️ E-MAIL: </p>", unsafe_allow_html=True
 
 whatsapp_url = "https://api.whatsapp.com/send?phone=&text=Hello%20Developer%20Rafik%20Rambo"
 st.link_button("WhatsApp 💬", whatsapp_url)
+حقوق الطبع و النشر لموقع
+RAMBOAITV 2026
