@@ -12,56 +12,9 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- تصفيف الـ CSS المخصص (Dark / Neon Tech Style) ---
-st.markdown("""
-<style>
-    .stApp {
-        background-color: #0A0E14;
-        color: #E2E8F0;
-    }
-    .hero-title {
-        font-family: 'Courier New', monospace;
-        font-weight: 900;
-        color: #39FF8C;
-        text-shadow: 0 0 10px rgba(57, 255, 140, 0.5);
-        text-align: center;
-        margin-bottom: 5px;
-    }
-    .hero-subtitle {
-        text-align: center;
-        color: #8A99AD;
-        font-size: 1.1rem;
-        margin-bottom: 30px;
-    }
-    .system-card {
-        background: #121824;
-        border: 1px solid #232D3F;
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 20px;
-    }
-    .neon-badge {
-        background-color: rgba(57, 255, 140, 0.1);
-        color: #39FF8C;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.8rem;
-        border: 1px solid rgba(57, 255, 140, 0.3);
-    }
-    .beta-badge {
-        background-color: rgba(255, 176, 32, 0.1);
-        color: #FFB020;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.8rem;
-        border: 1px solid rgba(255, 176, 32, 0.3);
-    }
-</style>
-""", unsafe_allow_index=True)
-
 # --- واجهة المستخدم الرئيسية ---
-st.markdown('<h1 class="hero-title">📡 RAMBO AI TV</h1>', unsafe_allow_index=True)
-st.markdown('<p class="hero-subtitle">⚡ أول موقع ذكي لترتيب وتحويل ملفات قنوات إل جي (LG TLL) بأيدٍ مصرية ودماغ منياوية 🇪🇬</p>', unsafe_allow_index=True)
+st.title("📡 RAMBO AI TV")
+st.subheader("⚡ أول موقع ذكي لترتيب وتحويل ملفات قنوات إل جي (LG TLL) بأيدٍ مصرية ودماغ منياوية 🇪🇬")
 
 # تقسيم الشاشة إلى تابات تمثل الأنظمة الأربعة
 tab1, tab2, tab3, tab4 = st.tabs([
@@ -73,14 +26,14 @@ tab1, tab2, tab3, tab4 = st.tabs([
 
 # --- 1️⃣ الترتيب الذكي بالفئات ---
 with tab1:
-    st.markdown('<div class="system-card"><h3>🤖 نظام الترتيب التلقائي بالفئات</h3><p>ارفع ملف الـ TLL الخاص بشاشتك، وسيقوم النظام بتنظيف الملف وفصل القنوات تلقائياً إلى مجموعات مرتبة (دينية، رياضية، أفلام...) مع إزالة القنوات المحذوفة أو الميتة.</p></div>', unsafe_allow_index=True)
+    st.info("🤖 **نظام الترتيب التلقائي بالفئات:** ارفع ملف الـ TLL الخاص بشاشتك، وسيقوم النظام بتنظيف الملف وفصل القنوات تلقائياً إلى مجموعات مرتبة (دينية، رياضية، أفلام...) مع إزالة القنوات المحذوفة أو الميتة.")
     
     uploaded_file = st.file_uploader("اختر ملف قنوات التليفزيون (.TLL)", type=["tll"], key="smart_sort")
     
     if uploaded_file is not None:
         file_bytes = uploaded_file.read()
         st.success(f"تم رفع الملف بنجاح! حجم الملف: {len(file_bytes)} بايت.")
-        st.markdown('<span class="neon-badge">📊 تقرير الفحص الذكي للـ TLL:</span>', unsafe_allow_index=True)
+        st.write("📊 **تقرير الفحص الذكي للـ TLL:**")
         st.info("تم رصد بنية الملف وتصنيف القنوات بناءً على الكلمات الدلالية المحدثة. يمكنك الآن تحميل الملف المرتب فوراً.")
         
         st.download_button(
@@ -92,7 +45,7 @@ with tab1:
 
 # --- 2️⃣ الترتيب اليدوي ---
 with tab2:
-    st.markdown('<div class="system-card"><h3>🎛️ نظام الترتيب اليدوي والتحكم الكامل</h3><p>عرض كامل لقائمتك، مع إمكانية تعديل الأرقام، نقل قنوات محددة للمقدمة، وعمل المفضلة الخاصة بك بكل سهولة.</p></div>', unsafe_allow_index=True)
+    st.info("🎛️ **نظام الترتيب اليدوي والتحكم الكامل:** عرض كامل لقائمتك، مع إمكانية تعديل الأرقام، نقل قنوات محددة للمقدمة، وعمل المفضلة الخاصة بك بكل سهولة.")
     
     uploaded_file_manual = st.file_uploader("ارفع ملف القنوات لتعديله يدوياً (.TLL)", type=["tll"], key="manual_sort")
     if uploaded_file_manual is not None:
@@ -100,7 +53,7 @@ with tab2:
 
 # --- 3️⃣ التوليد بالذكاء ---
 with tab3:
-    st.markdown('<div class="system-card"><h3>🧠 توليد ملف متوافق من الصفر <span class="beta-badge">خاصية تجريبية | Beta</span></h3><p>بسبب طبيعة ملفات LG الصارمة وتغير الترددات، يتطلب هذا النظام اختيار موديل الشاشة وسنة الصنع ليقوم بمطابقتها مع ملف مرجعي حقيقي موثوق بدلاً من اختراع أرقام وهمية تسبب انقطاع الإشارة.</p></div>', unsafe_allow_index=True)
+    st.info("🧠 **توليد ملف متوافق من الصفر (خاصية تجريبية | Beta):** بسبب طبيعة ملفات LG الصارمة وتغير الترددات، يتطلب هذا النظام اختيار موديل الشاشة وسنة الصنع ليقوم بمطابقتها مع ملف مرجعي حقيقي موثوق بدلاً من اختراع أرقام وهمية تسبب انقطاع الإشارة.")
     
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -118,7 +71,7 @@ with tab3:
 
 # --- 4️⃣ محول ومزامنة الملفات ---
 with tab4:
-    st.markdown('<div class="system-card"><h3>⚡ محول ملف القنوات (نقل الترتيب الذكي)</h3><p>هل أعجبك ترتيب ملف قنوات من الإنترنت لكنه لا يشتغل على شاشتك أو موديلك مختلف؟ ارفع الملف الذي يعجبك ترتيبه + ملف شاشتك الأصلي، وسيقوم المحرك بنقل الترتيب بدقة على شاشتك فوراً!</p></div>', unsafe_allow_index=True)
+    st.info("⚡ **محول ملف القنوات (نقل الترتيب الذكي):** هل أعجبك ترتيب ملف قنوات من الإنترنت لكنه لا يشتغل على شاشتك أو موديلك مختلف؟ ارفع الملف الذي يعجبك ترتيبه + ملف شاشتك الأصلي، وسيقوم المحرك بنقل الترتيب بدقة على شاشتك فوراً!")
     
     col_file1, col_file2 = st.columns(2)
     with col_file1:
