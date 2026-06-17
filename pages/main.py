@@ -15,13 +15,10 @@ st.set_page_config(
 # --- تصفيف الـ CSS المخصص (Dark / Neon Tech Style) ---
 st.markdown("""
 <style>
-    /* الخلفية العامة والألوان */
     .stApp {
         background-color: #0A0E14;
         color: #E2E8F0;
     }
-    
-    /* الهيدر والعناوين */
     .hero-title {
         font-family: 'Courier New', monospace;
         font-weight: 900;
@@ -36,21 +33,13 @@ st.markdown("""
         font-size: 1.1rem;
         margin-bottom: 30px;
     }
-    
-    /* الكروت والأنظمة */
     .system-card {
         background: #121824;
         border: 1px solid #232D3F;
         border-radius: 8px;
         padding: 20px;
         margin-bottom: 20px;
-        transition: border 0.3s ease;
     }
-    .system-card:hover {
-        border-color: #39FF8C;
-    }
-    
-    /* شارات التنبيه والنظام */
     .neon-badge {
         background-color: rgba(57, 255, 140, 0.1);
         color: #39FF8C;
@@ -69,24 +58,6 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_index=True)
-
-# --- منطق التصنيف الذكي (القاموس المطور بناءً على ملفاتك) ---
-def classify_channel(name):
-    name_upper = name.upper().replace(" ", "").replace("-", "")
-    
-    categories = {
-        "القرآن الكريم والدينية": ["QURAN", "KORAN", "MAJD", "SUNNAH", "ISLAM", "IQRAA", "ALNAFAS", "DUA"],
-        "الأخبار والسياسة": ["NEWS", "ALHADATH", "ARABIYA", "JAZEERA", "NEWS", "RT", "CNN", "BBC", "EXTRA", "ALQAHERA", "CBC_EXTRA"],
-        "الرياضة": ["SPORT", "ONTIME", "ADSPORT", "BEIN", "KASS", "SSC", "CLUB", "MATCH"],
-        "الأفلام والمسلسلات": ["CINEMA", "AFLAM", "MOVIES", "DRAMA", "SERIES", "ACTION", "FOX", "MBC2", "MBC4", "MBC_ACTION", "ROTANA"],
-        "الأطفال والكرتون": ["KIDS", "TOM", "JERRY", "CN", "MAJID", "ALRAWDA", "KARAMEESH", "TOYOR", "SPACETOON"],
-        "المنوعات والتوك شو": ["MBC", "CBC", "DMCE", "ON", "ALNAHAR", "ALHAYAH", "WATHAQYA", "GEOGRAPHIC", "DOCUMENTARY"]
-    }
-    
-    for cat, keywords in categories.items():
-        if any(kw in name_upper for kw in keywords):
-            return cat
-    return "قنوات عامة / أخرى"
 
 # --- واجهة المستخدم الرئيسية ---
 st.markdown('<h1 class="hero-title">📡 RAMBO AI TV</h1>', unsafe_allow_index=True)
@@ -109,12 +80,9 @@ with tab1:
     if uploaded_file is not None:
         file_bytes = uploaded_file.read()
         st.success(f"تم رفع الملف بنجاح! حجم الملف: {len(file_bytes)} بايت.")
-        
-        # محاكاة بسيطة لقراءة ومعالجة الملف وإظهار النتائج للمستخدم بمصداقية
-        st.markdown("<span class="neon-badge">📊 تقرير الفحص الذكي للـ TLL:</span>", unsafe_allow_index=True)
+        st.markdown('<span class="neon-badge">📊 تقرير الفحص الذكي للـ TLL:</span>', unsafe_allow_index=True)
         st.info("تم رصد بنية الملف وتصنيف القنوات بناءً على الكلمات الدلالية المحدثة. يمكنك الآن تحميل الملف المرتب فوراً.")
         
-        # زر التحميل الافتراضي للملف بعد التعديل
         st.download_button(
             label="💾 تحميل ملف القنوات المرتب والمحدث فوراً",
             data=file_bytes,
@@ -128,11 +96,11 @@ with tab2:
     
     uploaded_file_manual = st.file_uploader("ارفع ملف القنوات لتعديله يدوياً (.TLL)", type=["tll"], key="manual_sort")
     if uploaded_file_manual is not None:
-        st.warning("واجهة الترتيب اليدوي السريع (Drag & Drop) قيد التحميل... تظهر القنوات هنا.")
+        st.warning("واجهة الترتيب اليدوي السريع قيد التحميل...")
 
-# --- 3️⃣ التوليد بالذكاء (الميزة التجريبية الصادقة) ---
+# --- 3️⃣ التوليد بالذكاء ---
 with tab3:
-    st.markdown('<div class="system-card"><h3>🧠 توليد ملف متوافق من الصفر <span class="beta-badge">خاصية تجريبية | Beta</span></h3><p>بسبب طبيعة ملفات LG الصارمة وتغير الترددات، يتطلب هذا النظام اختيار موديل الشاشة وسنة الصنع ليقوم بمطابقتها مع <b>ملف مرجعي حقيقي موثوق</b> بدلاً من اختراع أرقام وهمية تسبب انقطاع الإشارة.</p></div>', unsafe_allow_index=True)
+    st.markdown('<div class="system-card"><h3>🧠 توليد ملف متوافق من الصفر <span class="beta-badge">خاصية تجريبية | Beta</span></h3><p>بسبب طبيعة ملفات LG الصارمة وتغير الترددات، يتطلب هذا النظام اختيار موديل الشاشة وسنة الصنع ليقوم بمطابقتها مع ملف مرجعي حقيقي موثوق بدلاً من اختراع أرقام وهمية تسبب انقطاع الإشارة.</p></div>', unsafe_allow_index=True)
     
     col1, col2, col3 = st.columns(3)
     with col1:
