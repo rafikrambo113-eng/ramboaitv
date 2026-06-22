@@ -240,5 +240,5 @@ with col_btn4:
 st.markdown("---")
 
 st.markdown("<p class='center-text' style='font-size:22px; color:#ff007f; font-weight:bold;'>🛠️ DEVELOPER ENG: RAFIK NATHAN</p>", unsafe_allow_html=True)
-st.markdown("<p class='center-text' style='font-size:22px; color:#ff007f; font-weight:bold;'>للعلم بيتم عمل تحديثات للموقع يوميا  لمواكبه التحديثات  التكنولوجيه الجديده/p>", unsafe_allow_html=True)
+st.markdown("<p class='center-text' style='font-size:22px; color:#ff008f; font-weight:bold;'>للعلم بيتم عمل تحديثات للموقع يوميا  لمواكبه التحديثات  التكنولوجيه الجديده", unsafe_allow_html=True)
 
