@@ -240,9 +240,5 @@ with col_btn4:
 st.markdown("---")
 
 st.markdown("<p class='center-text' style='font-size:22px; color:#ff007f; font-weight:bold;'>🛠️ DEVELOPER ENG: RAFIK NATHAN</p>", unsafe_allow_html=True)
-st.markdown("<p class='center-text'>📱 MOBILE / الموبايل: +</p>", unsafe_allow_html=True)
-st.markdown("<p class='center-text'>✉️ E-MAIL: </p>", unsafe_allow_html=True)
-
-whatsapp_url = "https://api.whatsapp.com/send?phone=&text=Hello%20Developer%20Rafik%20Rambo"
-st.link_button("WhatsApp 💬", whatsapp_url)
+st.markdown("<p class='center-text' style='font-size:22px; color:#ff007f; font-weight:bold;'>للعلم بيتم عمل تحديثات للموقع يوميا  لمواكبه التحديثات  التكنولوجيه الجديده/p>", unsafe_allow_html=True)
 
