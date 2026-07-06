@@ -1,68 +1,74 @@
-import os
 import streamlit as st
-from google import genai
-from google.genai import types
+import requests
+from bs4 import BeautifulSoup
+import re
 
-# إعدادات واجهة التطبيق
-st.set_page_config(page_title="مشغل القنوات الذكي", page_icon="📺", layout="centered")
+st.set_page_config(page_title="مستخرج ومضمن الروابط الذكي", page_icon="⚽", layout="wide")
 
-st.title("📺 مشغل القنوات الذكي بالذكاء الاصطناعي")
-st.write("اكتب اسم القناة أو الحدث الرياضي، وسيقوم الذكاء الاصطناعي بالبحث عن روابط البث بجميع الامتدادات وتشغيلها فوراً.")
+st.title("⚽ أداة سحب وتضمين روابط البث والمشغلات")
+st.write("هذه الأداة تحاكي مواقع الرياضة عبر فحص المواقع وجلب روابط التشغيل (Embed/Iframe) وعرضها مباشرة.")
 
-# إدخال اسم القناة من المستخدم
-search_query = st.text_input("اكتب اسم القناة أو الحدث (مثلاً: بي ان سبورت 1، قناة الجزيرة):", placeholder="ابحث هنا...")
+# قائمة بالمواقع المستهدفة (يمكنك تعديلها بمواقع تبث المباريات أو الأفلام)
+TARGET_SITES = {
+    "موقع بث تجريبي 1": "https://example-sports-site.com",
+    "مدونة بث مفتوحة": "https://free-live-stream-blog.blogspot.com"
+}
 
-if search_query:
-    # 🔴 حط المفتاح بتاعك هنا مباشرة بين علامات التنصيص بدلاً من الـ Secrets
-    api_key = "هنا_حط_المفتاح_بتاعك"
-    
-    if api_key == "هنا_حط_المفتاح_بتاعك" or not api_key:
-        st.error("⚠️ من فضلك اكتب مفتاح الـ API الحقيقي داخل الكود لتفعيل البحث.")
+# خانة إدخال الرابط المباشر للمباراة أو الصفحة المراد فحصها
+page_url = st.text_input("أدخل رابط صفحة المباراة/القناة المراد سحب المشغل منها:")
+
+if st.button("🔍 سحب وتضمين الرابط الآن"):
+    if not page_url:
+        st.warning("من فضلك أدخل رابطاً أولاً.")
     else:
-        # إنشاء عميل الذكاء الاصطناعي
-        client = genai.Client(api_key=api_key)
-
-        # صياغة أمر البحث الشامل لجميع الامتدادات
-        prompt = (
-            f"ابحث في الإنترنت حالياً عن رابط بث مباشر أو ملف قنوات لـ '{search_query}'. "
-            "أريد استخراج الروابط المباشرة فقط بجميع الامتدادات المتاحة مثل: (m3u8, mpd, ts, mp4, m3u). "
-            "أعطني الرابط المباشر الشغال فوراً في أول سطر من إجابتك دون أي مقدمات أو شرح."
-        )
-
-        with st.spinner("🤖 الذكاء الاصطناعي يبحث في الويب عن روابط البث الآن..."):
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        }
+        
+        with st.spinner("جاري فحص الصفحة وسحب الروابط والمشغلات..."):
             try:
-                # استدعاء نموذج Gemini مع تفعيل ميزة البحث الحي في جوجل
-                response = client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=prompt,
-                    config=types.GenerateContentConfig(
-                        tools=[types.Tool(google_search=types.GoogleSearch())],
-                        temperature=0.2
-                    )
-                )
-
-                ai_output = response.text.strip()
-                lines = ai_output.split('\n')
-                
-                # استخراج أول رابط متوفر في النتيجة
-                stream_url = None
-                for line in lines:
-                    if "http" in line:
-                        start_idx = line.find("http")
-                        stream_url = line[start_idx:].split()[0].replace('`', '').replace(')', '')
-                        break
-
-                if stream_url:
-                    st.success(f"✅ تم العثور على رابط البث!")
+                response = requests.get(page_url, headers=headers, timeout=10)
+                if response.status_code == 200:
+                    soup = BeautifulSoup(response.text, 'html.parser')
                     
-                    # عرض الرابط للمستخدم في حال أراد نسخه للمشغلات الخارجية
-                    st.text_input("رابط البث المستخرج:", stream_url)
+                    found_embeds = []
                     
-                    # تشغيل الفيديو مباشرة داخل المتصفح عبر Streamlit
-                    st.video(stream_url)
+                    # 1. البحث عن وسوم الـ iframe (وهي الطريقة الأشهر لتضمين المشغلات في مواقع الكورة)
+                    iframes = soup.find_all('iframe')
+                    for iframe in iframes:
+                        src = iframe.get('src')
+                        if src and src.startswith('http'):
+                            found_embeds.append(("Iframe Player", src))
+                    
+                    # 2. البحث عن روابط البث المباشر (m3u8) المخفية في أكواد السكربت
+                    scripts = soup.find_all('script')
+                    for script in scripts:
+                        if script.string:
+                            # البحث عن روابط m3u8 داخل ملفات الجافا سكربت
+                            m3u8_links = re.findall(r'(https?://[^\s"\']+\.m3u8[^\s"\']*)', script.string)
+                            for link in m3u8_links:
+                                found_embeds.append(("M3U8 Stream", link))
+                    
+                    # عرض النتائج وتضمينها
+                    if found_embeds:
+                        st.success(f"🎉 تم العثور على {len(found_embeds)} مشغلات وروابط بث!")
+                        
+                        # إزالة التكرار
+                        found_embeds = list(set(found_embeds))
+                        
+                        for index, (source_type, link) in enumerate(found_embeds):
+                            st.subheader(f"📺 مشغل رقم {index+1} ({source_type})")
+                            st.code(link, language="text")
+                            
+                            if source_type == "Iframe Player":
+                                # تضمين الـ iframe داخل الـ Streamlit كـ HTML
+                                st.components.v1.iframe(link, height=450, scrolling=True)
+                            elif source_type == "M3U8 Stream":
+                                # تشغيل رابط الـ m3u8 المباشر
+                                st.video(link)
+                    else:
+                        st.warning("لم يتم العثور على روابط تضمين (Iframe) أو روابط m3u8 مباشرة في هذه الصفحة. قد تكون المحتويات محمية أو تعتمد على جافا سكربت معقد.")
                 else:
-                    st.warning("❌ لم يتم العثور على رابط مباشر واضح، إليك رد الذكاء الاصطناعي بالكامل للتحقق:")
-                    st.code(ai_output, language="text")
-
+                    st.error(f"فشل الاتصال بالموقع. كود الاستجابة: {response.status_code}")
             except Exception as e:
-                st.error(f"حدث خطأ أثناء الاتصال بالذكاء الاصطناعي: {e}")
+                st.error(f"حدث خطأ أثناء السحب: {e}")
