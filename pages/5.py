@@ -3,28 +3,35 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
+# إعدادات واجهة التطبيق
+st.set_page_config(page_title="مشغل القنوات الذكي", page_icon="📺", layout="centered")
+
 st.title("📺 مشغل القنوات الذكي بالذكاء الاصطناعي")
+st.write("اكتب اسم القناة أو الحدث الرياضي، وسيقوم الذكاء الاصطناعي بالبحث عن روابط البث بجميع الامتدادات وتشغيلها فوراً.")
 
 # إدخال اسم القناة من المستخدم
-search_query = st.text_input("اكتب اسم القناة أو الحدث (مثلاً: بي ان سبورت 1):")
+search_query = st.text_input("اكتب اسم القناة أو الحدث (مثلاً: بي ان سبورت 1، قناة الجزيرة):", placeholder="ابحث هنا...")
 
 if search_query:
-    # إعداد عميل Gemini API (يفضل وضعه في الـ Secrets في Streamlit Cloud)
+    # جلب مفتاح الـ API من إعدادات الـ Secrets الخاصة بـ Streamlit
     api_key = os.environ.get("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
     
     if not api_key:
-        st.error("⚠️ من فضلك أضف مفتاح الـ GEMINI_API_KEY في إعدادات الـ Secrets الخاصة بالتطبيق.")
+        st.error("⚠️ من فضلك أضف مفتاح الـ GEMINI_API_KEY في إعدادات الـ Secrets الخاصة بالتطبيق لتفعيل البحث.")
     else:
+        # إنشاء عميل الذكاء الاصطناعي
         client = genai.Client(api_key=api_key)
 
+        # صياغة أمر البحث الشامل لجميع الامتدادات
         prompt = (
             f"ابحث في الإنترنت حالياً عن رابط بث مباشر أو ملف قنوات لـ '{search_query}'. "
-            "أريد استخراج الروابط المباشرة فقط بجميع الامتدادات المتاحة مثل: (m3u8, mpd, ts, mp4). "
+            "أريد استخراج الروابط المباشرة فقط بجميع الامتدادات المتاحة مثل: (m3u8, mpd, ts, mp4, m3u). "
             "أعطني الرابط المباشر الشغال فوراً في أول سطر من إجابتك دون أي مقدمات أو شرح."
         )
 
-        with st.spinner("🤖 الذكاء الاصطناعي يبحث عن روابط البث الآن..."):
+        with st.spinner("🤖 الذكاء الاصطناعي يبحث في الويب عن روابط البث الآن..."):
             try:
+                # استدعاء نموذج Gemini مع تفعيل ميزة البحث الحي في جوجل
                 response = client.models.generate_content(
                     model='gemini-2.5-flash',
                     contents=prompt,
@@ -37,6 +44,7 @@ if search_query:
                 ai_output = response.text.strip()
                 lines = ai_output.split('\n')
                 
+                # استخراج أول رابط متوفر في النتيجة
                 stream_url = None
                 for line in lines:
                     if "http" in line:
@@ -46,14 +54,15 @@ if search_query:
 
                 if stream_url:
                     st.success(f"✅ تم العثور على رابط البث!")
-                    st.code(stream_url, language="text")
                     
-                    # تشغيل الفيديو مباشرة داخل صفحة الويب في Streamlit
-                    # ملاحظة: st.video يدعم روابط m3u8 و mp4 مباشرة في معظم المتصفحات
+                    # عرض الرابط للمستخدم في حال أراد نسخه للمشغلات الخارجية
+                    st.text_input("رابط البث المستخرج:", stream_url)
+                    
+                    # تشغيل الفيديو مباشرة داخل المتصفح عبر Streamlit
                     st.video(stream_url)
                 else:
-                    st.warning("❌ لم يتم العثور على رابط مباشر واضح، إليك رد الذكاء الاصطناعي:")
-                    st.write(ai_output)
+                    st.warning("❌ لم يتم العثور على رابط مباشر واضح، إليك رد الذكاء الاصطناعي بالكامل للتحقق:")
+                    st.code(ai_output, language="text")
 
             except Exception as e:
-                st.error(f"حدث خطأ أثناء البحث: {e}")
+                st.error(f"حدث خطأ أثناء الاتصال بالذكاء الاصطناعي: {e}")
