@@ -1,76 +1,63 @@
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
 
 st.set_page_config(page_title="جدول مباريات اليوم", page_icon="⚽", layout="wide")
 
 st.title("⚽ جدول مباريات اليوم التلقائي")
-st.write("الصفحة دي بتدخل تسحب الماتشات الملعوبة النهاردة ومواعيدها من يلا كورة بشكل حي وتلقائي.")
+st.write("الصفحة دي بتدخل تسحب الماتشات الملعوبة النهاردة ومواعيدها بشكل حي وتلقائي.")
 
-# رابط صفحة المباريات في موقع يلا كورة
-YALLAKORA_URL = "https://www.yallakora.com/match-center/%D9%85%D8%B1%D9%83%D8%B2-%D8%A7%D9%84%D9%85%D8%A8%D8%A7%D8%B1%D9%8A%D8%A7%D8%AA"
+# السحب من موقع كورة المستقر
+KOOORA_URL = "https://www.kooora.com/?c=0"
 
 headers = {
-    'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept-Language': 'ar,en-US;q=0.7,en;q=0.3'
 }
 
-with st.spinner("🔄 جاري سحب جدول مباريات اليوم من يلا كورة..."):
+with st.spinner("🔄 جاري تحديث جدول المباريات الآن..."):
     try:
-        response = requests.get(YALLAKORA_URL, headers=headers, timeout=10)
+        response = requests.get(KOOORA_URL, headers=headers, timeout=10)
+        response.encoding = 'utf-8' # لضمان قراءة اللغة العربية بشكل صحيح
         
         if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'html.parser')
+            soup = BeautifulSoup(response.text, 'html.parser')
             
-            # البحث عن أجزاء المباريات في الصفحة
-            match_cards = soup.find_all('div', class_='matchCard')
+            # البحث عن جدول المباريات في موقع كورة
+            match_rows = soup.find_all('tr', class_='match_row')
             
-            matches_list = []
-            
-            for card in match_cards:
-                # اسم البطولة
-                tournament = card.find('div', class_='title').text.strip() if card.find('div', class_='title') else "بطولة غير محددة"
+            if match_rows:
+                st.success(f"📅 تم تحديث الجدول! تم العثور على مباريات جارية اليوم.")
                 
-                # تفاصيل الماتشات جوه البطولة
-                all_matches = card.find_all('div', class_='allMatchs')
-                for match in all_matches:
-                    team_a = match.find('div', class_='teamA').text.strip() if match.find('div', class_='teamA') else ""
-                    team_b = match.find('div', class_='teamB').text.strip() if match.find('div', class_='teamB') else ""
-                    match_time = match.find('span', class_='matchTime').text.strip() if match.find('span', class_='matchTime') else "غير محدد"
-                    match_status = match.find('div', class_='matchStatus').text.strip() if match.find('div', class_='matchStatus') else ""
+                for row in match_rows:
+                    # استخراج أسماء الفرق والموعد
+                    team_a = row.find('td', class_='team_a').text.strip() if row.find('td', class_='team_a') else ""
+                    team_b = row.find('td', class_='team_b').text.strip() if row.find('td', class_='team_b') else ""
+                    match_time = row.find('td', class_='match_time').text.strip() if row.find('td', class_='match_time') else "غير محدد"
+                    tournament = row.find_previous('tr', class_='tournament_title').text.strip() if row.find_previous('tr', class_='tournament_title') else "بطولة يومية"
                     
                     if team_a and team_b:
-                        matches_list.append({
-                            "البطولة": tournament,
-                            "المباراة": f"{team_a} 🆚 {team_b}",
-                            "الموعد": match_time,
-                            "الحالة": match_status if match_status else "لم تبدأ بعد"
-                        })
-            
-            if matches_list:
-                st.success(f"📅 تم تحديث الجدول بنجاح! تم العثور على {len(matches_list)} مباراة اليوم.")
-                
-                # عرض الماتشات بشكل منظم
-                for index, match_item in enumerate(matches_list):
-                    with st.container():
-                        col1, col2, col3 = st.columns([2, 4, 2])
-                        
-                        with col1:
-                            st.caption(f"🏆 {match_item['البطولة']}")
-                        with col2:
-                            st.markdown(f"### {match_item['المباراة']}")
-                            st.write(f"⏰ الموعد: **{match_item['الموعد']}** | الحالة: `{match_item['الحالة']}`")
-                        with col3:
-                            # زرار ذكي ينقلك لجوجل يبحث لك عن البث المباشر للماتش ده فوراً بضغطة واحدة
-                            search_url = f"https://www.google.com/search?q=بث+مباشر+{match_item['المباراة'].replace('🆚', 'ضد')}+يلا+شوت"
-                            st.link_button("📺 شاهد البث الآن", search_url, use_container_width=True)
-                        
-                        st.markdown("---")
+                        with st.container():
+                            col1, col2, col3 = st.columns([2, 4, 2])
+                            
+                            with col1:
+                                st.caption(f"🏆 {tournament}")
+                            with col2:
+                                match_name = f"{team_a} ضد {team_b}"
+                                st.markdown(f"### {team_a} 🆚 {team_b}")
+                                st.write(f"⏰ الموعد: **{match_time}**")
+                            with col3:
+                                # الزرار الذكي للمشاهدة
+                                search_url = f"https://www.google.com/search?q=بث+مباشر+{team_a}+و+{team_b}+يلا+شوت"
+                                st.link_button("📺 شاهد البث الآن", search_url, use_container_width=True)
+                            
+                            st.markdown("---")
             else:
-                st.warning("⚠️ مفيش ماتشات متاح سحبها حالياً في هذه اللحظة، جرب وقت الماتشات.")
-                
+                # حل بديل إذا كانت الحماية نشطة
+                st.warning("⚠️ الموقع في وضع الحماية أو لا توجد مباريات نشطة حالياً. يمكنك استخدام الزر بالأسفل للانتقال لصفحة البث مباشرة:")
+                st.link_button("🌐 فتح موقع يلا شوت للبث المباشر فوراً", "https://yallashoot.com", use_container_width=True)
         else:
-            st.error("الموقع رافض السحب حالياً، جرب كمان دقيقة.")
+            st.error("الموقع حالياً لا يستجيب، جرب بعد قليل.")
             
     except Exception as e:
-        st.error(f"حصلت مشكلة بسيطة أثناء جلب البيانات: {e}")
+        st.error(f"حدث خطأ بسيط أثناء الاتصال: {e}")
