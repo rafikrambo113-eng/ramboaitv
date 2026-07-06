@@ -13,11 +13,11 @@ st.write("اكتب اسم القناة أو الحدث الرياضي، وسيق
 search_query = st.text_input("اكتب اسم القناة أو الحدث (مثلاً: بي ان سبورت 1، قناة الجزيرة):", placeholder="ابحث هنا...")
 
 if search_query:
-    # جلب مفتاح الـ API من إعدادات الـ Secrets الخاصة بـ Streamlit
-    api_key = os.environ.get("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
+    # 🔴 حط المفتاح بتاعك هنا مباشرة بين علامات التنصيص بدلاً من الـ Secrets
+    api_key = "هنا_حط_المفتاح_بتاعك"
     
-    if not api_key:
-        st.error("⚠️ من فضلك أضف مفتاح الـ GEMINI_API_KEY في إعدادات الـ Secrets الخاصة بالتطبيق لتفعيل البحث.")
+    if api_key == "هنا_حط_المفتاح_بتاعك" or not api_key:
+        st.error("⚠️ من فضلك اكتب مفتاح الـ API الحقيقي داخل الكود لتفعيل البحث.")
     else:
         # إنشاء عميل الذكاء الاصطناعي
         client = genai.Client(api_key=api_key)
