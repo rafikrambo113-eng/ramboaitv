@@ -1,86 +1,76 @@
-import os
 import streamlit as st
-from google import genai
-from google.genai import types
+import requests
+from bs4 import BeautifulSoup
+import pandas as pd
 
-st.set_page_config(page_title="جدول مباريات اليوم والبث المباشر", page_icon="⚽", layout="wide")
+st.set_page_config(page_title="جدول مباريات اليوم", page_icon="⚽", layout="wide")
 
-st.title("⚽ جدول مباريات اليوم والبث المباشر الذكي")
-st.write("يتم الآن جلب مباريات اليوم المباشرة وتجهيز أزرار التشغيل تلقائياً بدون الحاجة للبحث يدوياً.")
+st.title("⚽ جدول مباريات اليوم التلقائي")
+st.write("الصفحة دي بتدخل تسحب الماتشات الملعوبة النهاردة ومواعيدها من يلا كورة بشكل حي وتلقائي.")
 
-# 🔴 حط المفتاح بتاعك هنا مباشرة بين علامات التنصيص
-api_key = "هنا_حط_المفتاح_بتاعك"
+# رابط صفحة المباريات في موقع يلا كورة
+YALLAKORA_URL = "https://www.yallakora.com/match-center/%D9%85%D8%B1%D9%83%D8%B2-%D8%A7%D9%84%D9%85%D8%A8%D8%A7%D8%B1%D9%8A%D8%A7%D8%AA"
 
-if api_key == "هنا_حط_المفتاح_بتاعك" or not api_key:
-    st.error("⚠️ من فضلك اكتب مفتاح الـ API الحقيقي داخل الكود (مكان: هنا_حط_المفتاح_بتاعك) ليشتغل التطبيق تلقائياً.")
-else:
-    client = genai.Client(api_key=api_key)
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36'
+}
 
-    # أمر برمجت فيه الـ AI يدور على مباريات اليوم ومواعيدها وسيرفراتها لوحده
-    prompt = (
-        "ابحث في الإنترنت حالياً عن جدول مباريات كرة القدم الجارية أو الملعوبة اليوم ومواعيدها، "
-        "واستخرج روابط البث المباشر أو المشغلات (iframe أو m3u8) المتاحة لها من مواقع البث (مثل يلا شوت، كورة لايف، الأسطورة). "
-        "أعطني النتيجة في أسطر واضحة ومحددة بهذا الشكل فقط دون أي كلام آخر:\n"
-        "اسم المباراة ووقتها | الرابط المباشر\n"
-        "مثال:\n"
-        "البرتغال ضد فرنسا (9:00 مساءً) | https://example.com/embed/stream1\n"
-        "إسبانيا ضد ألمانيا (6:00 مساءً) | https://example.com/live.m3u8"
-    )
-
-    # حفظ حالة السيرفر المختار في الـ Session State لمنع اختفاء الفيديو عند الضغط
-    if 'selected_url' not in st.session_state:
-        st.session_state.selected_url = None
-    if 'selected_match' not in st.session_state:
-        st.session_state.selected_match = None
-
-    # تشغيل البحث التلقائي بمجرد فتح الصفحة
-    with st.spinner("🔄 جاري سحب جدول مباريات اليوم وسيرفرات البث الحية..."):
-        try:
-            response = client.models.generate_content(
-                model='gemini-2.5-flash',
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    tools=[types.Tool(google_search=types.GoogleSearch())],
-                    temperature=0.2
-                )
-            )
-
-            ai_output = response.text.strip()
-            lines = ai_output.split('\n')
+with st.spinner("🔄 جاري سحب جدول مباريات اليوم من يلا كورة..."):
+    try:
+        response = requests.get(YALLAKORA_URL, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.content, 'html.parser')
             
-            matches_found = []
-            for line in lines:
-                if "|" in line and "http" in line:
-                    parts = line.split("|")
-                    match_info = parts[0].strip().replace("-", "").replace("*", "")
-                    url = parts[1].strip().replace('`', '').replace(')', '')
-                    matches_found.append((match_info, url))
-
-            if matches_found:
-                st.success(f"📅 تم العثور على {len(matches_found)} مباريات متاحة اليوم!")
+            # البحث عن أجزاء المباريات في الصفحة
+            match_cards = soup.find_all('div', class_='matchCard')
+            
+            matches_list = []
+            
+            for card in match_cards:
+                # اسم البطولة
+                tournament = card.find('div', class_='title').text.strip() if card.find('div', class_='title') else "بطولة غير محددة"
                 
-                st.write("### 📺 اضغط على المباراة لمشاهدة البث المباشر:")
-                
-                # إنشاء زرار لكل مباراة تحت بعضها بشكل منظم
-                for idx, (match_info, url) in enumerate(matches_found):
-                    if st.button(f"⚽ {match_info}", key=f"match_{idx}", use_container_width=True):
-                        st.session_state.selected_url = url
-                        st.session_state.selected_match = match_info
-
-                # إذا ضغط المستخدم على أي مباراة، يفتح المشغل هنا فوراً
-                if st.session_state.selected_url:
-                    st.markdown("---")
-                    st.subheader(f"🎬 مشغل البث الحالي: {st.session_state.selected_match}")
+                # تفاصيل الماتشات جوه البطولة
+                all_matches = card.find_all('div', class_='allMatchs')
+                for match in all_matches:
+                    team_a = match.find('div', class_='teamA').text.strip() if match.find('div', class_='teamA') else ""
+                    team_b = match.find('div', class_='teamB').text.strip() if match.find('div', class_='teamB') else ""
+                    match_time = match.find('span', class_='matchTime').text.strip() if match.find('span', class_='matchTime') else "غير محدد"
+                    match_status = match.find('div', class_='matchStatus').text.strip() if match.find('div', class_='matchStatus') else ""
                     
-                    # التضمين الذكي للمشغل حسب نوع الرابط المستخرج
-                    if ".m3u8" in st.session_state.selected_url or ".mp4" in st.session_state.selected_url:
-                        st.video(st.session_state.selected_url)
-                    else:
-                        st.components.v1.iframe(st.session_state.selected_url, height=550, scrolling=True)
+                    if team_a and team_b:
+                        matches_list.append({
+                            "البطولة": tournament,
+                            "المباراة": f"{team_a} 🆚 {team_b}",
+                            "الموعد": match_time,
+                            "الحالة": match_status if match_status else "لم تبدأ بعد"
+                        })
+            
+            if matches_list:
+                st.success(f"📅 تم تحديث الجدول بنجاح! تم العثور على {len(matches_list)} مباراة اليوم.")
+                
+                # عرض الماتشات بشكل منظم
+                for index, match_item in enumerate(matches_list):
+                    with st.container():
+                        col1, col2, col3 = st.columns([2, 4, 2])
+                        
+                        with col1:
+                            st.caption(f"🏆 {match_item['البطولة']}")
+                        with col2:
+                            st.markdown(f"### {match_item['المباراة']}")
+                            st.write(f"⏰ الموعد: **{match_item['الموعد']}** | الحالة: `{match_item['الحالة']}`")
+                        with col3:
+                            # زرار ذكي ينقلك لجوجل يبحث لك عن البث المباشر للماتش ده فوراً بضغطة واحدة
+                            search_url = f"https://www.google.com/search?q=بث+مباشر+{match_item['المباراة'].replace('🆚', 'ضد')}+يلا+شوت"
+                            st.link_button("📺 شاهد البث الآن", search_url, use_container_width=True)
+                        
+                        st.markdown("---")
             else:
-                st.warning("⚠️ لم يعثر الذكاء الاصطناعي على مباريات بث مباشر نشطة في هذه اللحظة، قد يكون الجدول فارغاً الآن.")
-                with st.expander("بيانات جلب الصفحة (للتحقق):"):
-                    st.write(ai_output)
-
-        except Exception as e:
-            st.error(f"حدث خطأ أثناء جلب البيانات التلقائي: {e}")
+                st.warning("⚠️ مفيش ماتشات متاح سحبها حالياً في هذه اللحظة، جرب وقت الماتشات.")
+                
+        else:
+            st.error("الموقع رافض السحب حالياً، جرب كمان دقيقة.")
+            
+    except Exception as e:
+        st.error(f"حصلت مشكلة بسيطة أثناء جلب البيانات: {e}")
