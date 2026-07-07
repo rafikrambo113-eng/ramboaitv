@@ -3,60 +3,70 @@ import requests
 from bs4 import BeautifulSoup
 import re
 
-st.set_page_config(page_title="مستخرج القنوات التلقائي", page_icon="📺", layout="wide")
+st.set_page_config(page_title="مستخرج القنوات الاحترافي", page_icon="📺", layout="wide")
 
-st.title("📺 مستخرج روابط البث التلقائي بضغطة واحدة")
-st.write("اختر القناة أو اكتب اسمها، وسيقوم البرنامج بالبحث تلقائياً عن سيرفرات البث الحية وسحبها.")
+st.title("📺 مستخرج روابط البث التلقائي (نسخة تخطي الحماية)")
+st.write("اختر القناة، وسيقوم البرنامج بمحاكاة متصفح حقيقي لجلب سيرفرات البث الحية المتاحة الآن.")
 
-# قائمة قنوات سريعة جاهزة للاختيار
+# قائمة القنوات
 channels = ["بي ان سبورت 1", "بي ان سبورت 2", "قناة الكأس", "قناة اون تايم سبورت", "اكتب اسم قناة أخرى..."]
-selected_channel = st.selectbox("اختر القناة المراد سحب البث لها:", channels)
+selected_channel = st.selectbox("اختر القناة:", channels)
 
-# لو اختار يكتب اسم قناة بنفسه
 if selected_channel == "اكتب اسم قناة أخرى...":
-    search_query = st.text_input("اكتب اسم القناة بالتفصيل (مثال: بي ان سبورت بريميوم 1):")
+    search_query = st.text_input("اكتب اسم القناة بالتفصيل:")
 else:
     search_query = selected_channel
 
-if st.button("🚀 اسحب البث تلقائياً الآن"):
+if st.button("🚀 سحب البث تلقائياً"):
     if not search_query:
-        st.warning("من فضلك اختر أو اكتب اسم القناة أولاً.")
+        st.warning("من فضلك حدد القناة أولاً.")
     else:
-        with st.spinner(f"🔄 جاري اختراق حمايات المواقع وسحب بث ({search_query}) تلقائياً..."):
+        with st.spinner(f"🔄 جاري فحص شبكات البث وتخطي الحمايات لـ ({search_query})..."):
             try:
-                # خطوة 1: البحث في محركات البحث المفتوحة عن صفحات البث الحية للقناة
-                search_url = f"https://html.duckduckgo.com/html/?q=بث+مباشر+{search_query}+يلا+شوت"
-                headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+                # استخدام محرك بحث بديل يعطي نتائج مباشرة بدون حماية كابتشا
+                search_url = f"https://html.duckduckgo.com/html/?q=بث+مباشر+{search_query}+live"
+                
+                # إرسال طلب بحزمة بيانات (Headers) متكاملة تحاكي متصفح كروم حديث تماماً
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                    'Accept-Language': 'ar,en-US;q=0.7,en;q=0.3',
+                    'Connection': 'keep-alive'
+                }
                 
                 search_response = requests.get(search_url, headers=headers, timeout=10)
                 soup = BeautifulSoup(search_response.text, 'html.parser')
                 
-                # استخراج أول 3 روابط لمواقع بث حقيقية ظهرت في البحث
                 links = []
                 for a in soup.find_all('a', class_='result__url', href=True):
                     href = a['href']
-                    if "yalla" in href or "kora" in href or "live" in href:
+                    # تصفية الروابط للوصول لمواقع البث الرياضية فقط
+                    if any(keyword in href for keyword in ["yalla", "kora", "live", "match", "shoot", "tv"]):
                         links.append(href)
                 
+                # إذا لم يجد نتائج في البحث، يتوجه مباشرة لأشهر خوادم البث المفتوحة حالياً كخطة بديلة
                 if not links:
-                    # روابط احتياطية عامة لو البحث مطلعش نتيجة سريعة
-                    links = ["https://yalla-shoot.io/", "https://live.kooora4live.com/"]
+                    links = [
+                        "https://yalla-shoot.io/",
+                        "https://live.kooora4live.com/",
+                        "https://live.livehd7.club/"
+                    ]
 
-                # خطوة 2: الدخول على المواقع دي وسحب الروابط المخفية (Iframe أو M3U8)
                 found_streams = []
                 
-                for target_url in links[:3]: # فحص أول 3 مواقع لسرعة الأداء
+                # فحص المواقع المستخرجة بعمق أكبر
+                for target_url in links[:3]:
                     try:
                         page_res = requests.get(target_url, headers=headers, timeout=5)
                         page_soup = BeautifulSoup(page_res.text, 'html.parser')
                         
-                        # سحب أي إيفريم (مشغل مدمج)
+                        # 1. سحب وسوم التضمين (Iframes)
                         for iframe in page_soup.find_all('iframe'):
-                            src = iframe.get('src') or iframe.get('data-src')
-                            if src and "http" in src and not "facebook" in src and not "twitter" in src:
-                                found_streams.append(("سيرفر مشغل مدمج", src))
+                            src = iframe.get('src') or iframe.get('data-src') or iframe.get('content')
+                            if src and "http" in src and not any(x in src for x in ["facebook", "twitter", "instagram", "google"]):
+                                found_streams.append(("سيرفر مشغل تلقائي", src))
                         
-                        # سحب روابط m3u8 المباشرة من الأكواد
+                        # 2. البحث عن روابط البث الخام (m3u8) المستضافة في أكواد الجافا سكربت
                         scripts = page_soup.find_all('script')
                         for script in scripts:
                             if script.string:
@@ -64,30 +74,32 @@ if st.button("🚀 اسحب البث تلقائياً الآن"):
                                 for m3u8 in m3u8_links:
                                     found_streams.append(("رابط بث مباشر M3U8", m3u8))
                     except:
-                        continue # لو موقع معلق يدخل على اللي بعده
+                        continue
 
-                # خطوة 3: عرض النتيجة وتشغيلها أوتوماتيك
                 if found_streams:
-                    # إزالة التكرار
-                    found_streams = list(set(found_streams))
-                    st.success(f"🎉 نجح السحب التلقائي! تم العثور على {len(found_streams)} سيرفرات شغالة.")
+                    found_streams = list(set(found_streams)) # إزالة الروابط المكررة
+                    st.success(f"🎉 تم اختراق الحماية بنجاح والعثور على {len(found_streams)} سيرفر!")
                     
-                    # تشغيل أول سيرفر تم سحبه تلقائياً كعينة
+                    # تشغيل أول سيرفر تم العثور عليه تلقائياً
                     best_stream = found_streams[0][1]
-                    st.subheader("📺 مشغل البث التلقائي:")
+                    st.subheader("🎬 شاشة العرض التلقائية:")
                     
                     if ".m3u8" in best_stream:
                         st.video(best_stream)
                     else:
-                        st.components.v1.iframe(best_stream, height=500, scrolling=True)
+                        st.components.v1.iframe(best_stream, height=550, scrolling=True)
                         
-                    # عرض باقي السيرفرات لو حابب تبدل بينهم
-                    with st.expander("🔗 عرض باقي الروابط المستخرجة يدويًا:"):
+                    # عرض باقي السيرفرات المتاحة للاختيار بينها
+                    with st.expander("🔗 عرض الروابط المستخرجة الأخرى يدويًا:"):
                         for title, url in found_streams:
                             st.write(f"**{title}:**")
                             st.code(url, language="text")
                 else:
-                    st.warning("⚠️ المواقع قافلة السحب التلقائي حالياً بسبب الحماية الزائدة، جرب قناة أخرى أو أعد المحاولة وقت المباراة.")
+                    # حل أوتوماتيكي أخير: توجيه المستخدم لصفحة البث المباشر المفتوحة للمباراة مباشرة
+                    st.warning("⚠️ حماية الموقع قوية جداً في هذه اللحظة لمنع تشغيل الفيديو مدمجاً.")
+                    st.write("اضغط على الزر بالأسفل لفتح صفحة البث المباشر التلقائية للقناة مباشرة لتجنب الحماية:")
+                    direct_view_url = links[0] if links else "https://yalla-shoot.io/"
+                    st.link_button(f"🌐 فتح بث {search_query} في صفحة مستقلة فوراً", direct_view_url, use_container_width=True)
                     
             except Exception as e:
-                st.error(f"حدث خطأ أثناء السحب التلقائي: {e}")
+                st.error(f"حدث خطأ أثناء الاتصال التلقائي: {e}")
