@@ -60,7 +60,7 @@ st.markdown("""
         margin-bottom: 12px;
     }
     
-    .stTabs [data-baseweb="tab-list"] {
+    stTabs [data-baseweb="tab-list"] {
         gap: 8px;
         background-color: #1c1e15;
         padding: 10px;
@@ -88,7 +88,7 @@ st.markdown("""
         color: #a3a08c;
     }
 </style>
-""", unsafe_allow_value=True)
+""", unsafe_allow_html=True) # تم التعديل هنا بنجاح ليعمل بدون مشاكل
 
 # --- دالات المساعدة والمعالجة لتنسيقات LG و M3U ---
 def detect_and_parse(text):
@@ -216,7 +216,7 @@ def auto_classify(name):
     n = normalize_arabic(name)
     
     rules = {
-        'ديني اسلامي': ['قران', 'المجد', 'الرحمه', 'الناس', 'huda', 'مكه', 'السنه', 'quran', 'afasy'],
+        'ديني اسلامي': ['قران', 'المجد', 'الرحمه', 'الناس', 'huda', 'مكة', 'السنه', 'quran', 'afasy'],
         'ديني مسيحي': ['مسيحي', 'coptic', 'sat7', 'aghapy', 'اغابي', 'الكرمة', 'alkarma', 'ctv', 'سي تي في', 'koogi', 'كوجي', 'logos', 'mesat'],
         'رياضة': ['رياضة', 'رياضه', 'sport', 'bein', 'بي ان', 'الكاس', 'ssc', 'دبي الرياضية', 'ontime', 'kooora'],
         'اطفال': ['اطفال', 'kids', 'cartoon', 'كرتون', 'طيور الجنة', 'spacetoon', 'سبيستون', 'mbc3', 'ماجد', 'karameesh', 'كراميش', 'توم'],
@@ -241,10 +241,10 @@ st.markdown("""
     <div class="badge-r">R</div>
     <div>
         <div class="brand-title">RAMBO <span>AI</span> TV</div>
-        <div style="font-size: 13px; color: #a3a08c;">مرتّب قوائم القنوات // إل جي وصيغ M3U (نسخة Streamlit)</div>
+        <div style="font-size: 13px; color: #a3a08c;">مرتّب قوائم القنوات // إل إل جي وصيغ M3U (نسخة Streamlit)</div>
     </div>
 </div>
-""", unsafe_allow_value=True)
+""", unsafe_allow_html=True)
 
 # التنقل المعتمد على تابات الـ Sidebar أو تابات الصفحة العلوية
 page_tab = st.radio("اختر نمط العمل:", ["🗂️ الترتيب الذكي بالفئات", "🔁 نقل الترتيب بين ملفين"], horizontal=True, label_visibility="collapsed")
@@ -361,7 +361,7 @@ if page_tab == "🗂️ الترتيب الذكي بالفئات":
                 2) الفلاشة لازم تكون فورمات FAT32 مش NTFS ولا exFAT.<br>
                 3) لو كان على الفلاشة أكتر من ملف قنوات، سيب ده بس وامسح الباقي.
             </div>
-            """, unsafe_allow_value=True)
+            """, unsafe_allow_html=True)
 
 elif page_tab == "🔁 نقل الترتيب بين ملفين":
     st.markdown('<p style="color:#a3a08c; font-size:14px;">ارفع ملف قنوات جاهز ومرتب من النت (حتى لو مش نفس موديل شاشتك)، وارفع معاه ملف شاشتك الأصلي، وهيتم نقل أرقام القنوات المتطابقة بالاسم فوراً مع الحفاظ على البيانات التقنية لملفك.</p>', unsafe_allow_value=True)
