@@ -88,7 +88,7 @@ st.markdown("""
         color: #a3a08c;
     }
 </style>
-""", unsafe_allow_html=True) # تم التعديل هنا بنجاح ليعمل بدون مشاكل
+""", unsafe_allow_html=True) # تم تصليحها هنا
 
 # --- دالات المساعدة والمعالجة لتنسيقات LG و M3U ---
 def detect_and_parse(text):
@@ -250,7 +250,7 @@ st.markdown("""
 page_tab = st.radio("اختر نمط العمل:", ["🗂️ الترتيب الذكي بالفئات", "🔁 نقل الترتيب بين ملفين"], horizontal=True, label_visibility="collapsed")
 
 if page_tab == "🗂️ الترتيب الذكي بالفئات":
-    st.markdown('<p style="color:#a3a08c; font-size:14px;">ارفع ملف قنواتك وهنصنّفها تلقائيًا حسب المحتوى بناءً على اسم كل قناة. كل المعالجة أمنة تماماً ومحلية داخل التطبيق.</p>', unsafe_allow_value=True)
+    st.markdown('<p style="color:#a3a08c; font-size:14px;">ارفع ملف قنواتك وهنصنّفها تلقائيًا حسب المحتوى بناءً على اسم كل قناة. كل المعالجة أمنة تماماً ومحلية داخل التطبيق.</p>', unsafe_allow_html=True) # تم تصليحها هنا (السطر 253 سابقاً)
     
     uploaded_file = st.file_uploader("اسحب ملف القنوات هنا أو اختر من جهازك", type=["tll", "xml", "json", "m3u", "m3u8", "txt"])
     
@@ -361,10 +361,10 @@ if page_tab == "🗂️ الترتيب الذكي بالفئات":
                 2) الفلاشة لازم تكون فورمات FAT32 مش NTFS ولا exFAT.<br>
                 3) لو كان على الفلاشة أكتر من ملف قنوات، سيب ده بس وامسح الباقي.
             </div>
-            """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True) # تم تصليحها هنا أيضاً احتياطياً
 
 elif page_tab == "🔁 نقل الترتيب بين ملفين":
-    st.markdown('<p style="color:#a3a08c; font-size:14px;">ارفع ملف قنوات جاهز ومرتب من النت (حتى لو مش نفس موديل شاشتك)، وارفع معاه ملف شاشتك الأصلي، وهيتم نقل أرقام القنوات المتطابقة بالاسم فوراً مع الحفاظ على البيانات التقنية لملفك.</p>', unsafe_allow_value=True)
+    st.markdown('<p style="color:#a3a08c; font-size:14px;">ارفع ملف قنوات جاهز ومرتب من النت (حتى لو مش نفس موديل شاشتك)، وارفع معاه ملف شاشتك الأصلي، وهيتم نقل أرقام القنوات المتطابقة بالاسم فوراً مع الحفاظ على البيانات التقنية لملفك.</p>', unsafe_allow_html=True) # تم تصليحها هنا
     
     col1, col2 = st.columns(2)
     
