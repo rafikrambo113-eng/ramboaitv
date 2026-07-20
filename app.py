@@ -1,19 +1,6 @@
 import streamlit as st
 
-# ─────────────────────────────────────────────
-# تهيئة الجلسة (Session State)
-# ─────────────────────────────────────────────
-if 'lang' not in st.session_state:
-    st.session_state.lang = 'ar'
-if 'theme' not in st.session_state:
-    st.session_state.theme = 'dark'
-if 'page' not in st.session_state:
-    st.session_state.page = 'home'
-
-# ─────────────────────────────────────────────
-# إعداد الصفحة + CSS مستقبلي
-# ─────────────────────────────────────────────
-st.set_page_config(page_title="Rambo_ AI_ TV — مرتب القنوات الذكي", page_icon="📺", layout="wide")
+st.set_page_config(page_title="Rambo AI TV — مرتب القنوات الذكي", page_icon="📺", layout="wide")
 
 st.markdown("""
 <style>
@@ -162,56 +149,28 @@ st.info("**الموقع الأول من نوعه** \"بأيدٍ مصرية ود�
 st.markdown("---")
 
 # ─────────────────────────────────────────────
-# ليه تختار RamboAITV؟ (4 أعمدة)
+# ليه تختار RamboAITV؟ (عمودين بس)
 # ─────────────────────────────────────────────
 st.header("🌟 ليه تختار Rambo AI TV؟")
 
-st.markdown("<p class='center-text'>🎨 الموقع مصمم بـ **4 صفحات احترافية** لخدمتك:</p>", unsafe_allow_html=True)
+st.markdown("<p class='center-text'>🎨 الموقع مصمم بصفحتين احترافيتين لخدمتك:</p>", unsafe_allow_html=True)
 
 st.markdown("")
-col1, col2, col3, col4 = st.columns(4)
+col1, col2 = st.columns(2)
 
 with col1:
-    st.subheader("1️⃣ الترتيب الذكي")
-    st.markdown("**(بالفئات/Categories)**")
-    st.write("ارفع ملف قنواتك اللي سحبته على الفلاشة، والموقع هيقوم أوتوماتيكياً بترتيبه لك حسب الفئات (رياضة، أفلام، أخبار.. إلخ).")
-    st.write("✅ تحميل ملف Text للترتيب")
-    st.write("✅ ملف القنوات المحدث جاهز للتشغيل")
+    st.subheader("1️⃣ الترتيب الذكي بالفئات")
+    st.markdown("**(ترتيب تلقائي كامل)**")
+    st.write("ارفع ملف قنواتك اللي سحبته من شاشتك، والموقع هيقوم أوتوماتيكياً بترتيبه لك حسب الفئات (رياضة، أفلام، أخبار.. إلخ) بالأولوية اللي تحددها.")
+    st.write("✅ ترتيب كل القنوات في ثواني")
+    st.write("✅ ملف القنوات المحدث جاهز للتحميل والتشغيل على شاشتك على طول")
 
 with col2:
-    st.subheader("2️⃣ الترتيب اليدوي")
-    st.markdown("**(تحكم كامل)**")
-    st.write("ليك تحكم كامل! رتب قنواتك قناة قناة حسب ذوقك، واعتمد ترتيبك الخاص.")
-    st.write("✅ تحميل ملف مرتب ومحدث")
-    st.write("✅ بكل سهولة وبساطة")
-
-with col3:
-    st.subheader("3️⃣ توليد بالذكاء")
-    st.markdown("**(ميزة حصرية! 🔥)**")
-    st.write("لأول مرة، بس اكتب موديل جهازك، بلد البث، وسنة الصنع، والذكاء الاصطناعي هيقوم بتوليد ملف قنوات متوافق مع شاشتك من الصفر!")
-
-with col4:
-    st.subheader("4️⃣ محول ملف القنوات")
+    st.subheader("2️⃣ نقل الترتيب بين ملفين")
     st.markdown("**(نقل الترتيب الذكي ⚡)**")
-    st.write("هات أي ملف قنوات عاجبك ترتيبه من النت (قديم، جديد، أي مقاس شاشة او اي موديل)، وارفع معاه ملف شاشتك الأصلي، والموقع هينقل لك نفس الترتيب على ملفك فوراً مع تحديث الترددات وقراءة بيانات الموديل!")
-
-st.markdown("---")
-
-# ─────────────────────────────────────────────
-# الميزات الخارقة للذكاء الاصطناعي
-# ─────────────────────────────────────────────
-st.header("🔥 ميزات خارقة للذكاء الاصطناعي داخل الموقع")
-
-col_ai1, col_ai2 = st.columns(2)
-
-with col_ai1:
-    st.subheader("📡 تحديث الترددات وتوافق الموديلات")
-    st.write("وداعاً للقنوات اللي بتظهر 'بدون إشارة' أو الملفات غير المتوافقة.")
-    st.write("الموقع بيلفظ الترددات الميتة، ويقرأ بيانات موديل شاشتك لضمان تشغيل الملف بنسبة 100%.")
-
-with col_ai2:
-    st.subheader("🆕 اكتشاف القنوات الجديدة")
-    st.write("الموقع بيعرفك تلقائياً بالقنوات الحديثة اللي بدأت بثها مؤخراً على القمر الصناعي عشان تكون دائماً في قلب الحدث!")
+    st.write("هات أي ملف قنوات عاجبك ترتيبه (قديم أو جاي من أي مقاس شاشة أو موديل)، وارفع معاه ملف شاشتك الحالي، والموقع هينقل لك نفس الترتيب على ملفك فورًا — كل قناة بتاخد رقمها من الملف المرجعي وبيادها.")
+    st.write("✅ مطابقة تلقائية للقنوات بالاسم")
+    st.write("✅ تقرير فوري بعدد القنوات اللي اتنقل لها الترتيب والقنوات الجديدة")
 
 st.markdown("---")
 
@@ -220,19 +179,13 @@ st.markdown("---")
 # ─────────────────────────────────────────────
 st.header("🚀 جرب الموقع دلوقتي")
 
-col_btn1, col_btn2, col_btn3, col_btn4 = st.columns(4)
+col_btn1, col_btn2 = st.columns(2)
 
 with col_btn1:
-    st.link_button("🧠 الترتيب الذكي (بالفئات)", "https://ramboaitv.streamlit.app/page1_catogary_sorter")
+    st.page_link("pages/1_🧠_الترتيب_الذكي.py", label="🧠 الترتيب الذكي بالفئات", icon="🧠")
 
 with col_btn2:
-    st.link_button("✋ الترتيب اليدوي", "https://ramboaitv.streamlit.app/page2_manual_sorter")
-
-with col_btn3:
-    st.link_button("🤖 توليد بالذكاء الاصطناعي", "https://ramboaitv.streamlit.app/page3_generate_sorter")
-
-with col_btn4:
-    st.link_button("⚡ محول ملف القنوات", "https://ramboaitv.streamlit.app/page4_convert_tv_file")
+    st.page_link("pages/1_🧠_الترتيب_الذكي.py", label="⚡ نقل الترتيب بين ملفين", icon="⚡")
 
 # ─────────────────────────────────────────────
 # الفوتر
@@ -240,5 +193,4 @@ with col_btn4:
 st.markdown("---")
 
 st.markdown("<p class='center-text' style='font-size:22px; color:#ff007f; font-weight:bold;'>🛠️ DEVELOPER ENG: RAFIK NATHAN</p>", unsafe_allow_html=True)
-st.markdown("<p class='center-text' style='font-size:22px; color:#ff008R; font-weight:bold;'>للعلم بيتم عمل تحديثات للموقع يوميا  لمواكبه التحديثات  التكنولوجيه الجديده", unsafe_allow_html=True)
-
+st.markdown("<p class='center-text' style='font-size:22px; color:#00f0ff; font-weight:bold;'>للعلم بيتم عمل تحديثات للموقع يوميًا لمواكبة التحديثات التكنولوجية الجديدة</p>", unsafe_allow_html=True)
