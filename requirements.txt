@@ -3,3 +3,4 @@ beautifulsoup4
 requests
 google-genai
 streamlit
+streamlit>=1.35
