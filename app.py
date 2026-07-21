@@ -1749,6 +1749,17 @@ st.radio(
 
 active = st.session_state.active_tab
 
+# ترجيع الصفحة لأولها كل مرة نتنقل بين التابات (سواء بالزرار أو بالتاب نفسه)
+components.html(
+    f"""
+    <script>
+    window.parent.scrollTo(0, 0);
+    </script>
+    <!-- {active} -->
+    """,
+    height=0,
+)
+
 # ===================== الصفحة الترحيبية =====================
 if active == HOME_LABEL:
     hero_html = """
