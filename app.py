@@ -1749,11 +1749,31 @@ st.radio(
 
 active = st.session_state.active_tab
 
-# ترجيع الصفحة لأولها كل مرة نتنقل بين التابات (سواء بالزرار أو بالتاب نفسه)
+# ترجيع الصفحة لأولها كل مرة نتنقل بين التابات (بمحاولات متكررة عشان نضمن
+# إنها تنفّذ بعد ما Streamlit يخلص يرسم الصفحة الجديدة بالكامل)
 components.html(
     f"""
     <script>
-    window.parent.scrollTo(0, 0);
+    function scrollAppToTop() {{
+        try {{
+            var doc = window.parent.document;
+            var containers = [
+                doc.querySelector('[data-testid="stAppViewContainer"]'),
+                doc.querySelector('[data-testid="stMain"]'),
+                doc.querySelector('section.main'),
+                doc.documentElement,
+                doc.body
+            ];
+            containers.forEach(function(el) {{
+                if (el) {{ el.scrollTop = 0; }}
+            }});
+            window.parent.scrollTo(0, 0);
+        }} catch (e) {{}}
+    }}
+    scrollAppToTop();
+    [0, 50, 150, 300, 500, 800].forEach(function(t) {{
+        setTimeout(scrollAppToTop, t);
+    }});
     </script>
     <!-- {active} -->
     """,
