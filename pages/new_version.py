@@ -1,37 +1,17 @@
+import base64
 import streamlit as st
 import streamlit.components.v1 as components
-import base64
 
 st.set_page_config(
-    page_title="Rambo AI TV — مرتّب قنوات التليفزيون",
+    page_title="Rambo AI TV",
     page_icon="📺",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-st.markdown(
-    """
-    <style>
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        header {visibility: hidden;}
-        .block-container {
-            padding-top: 0rem;
-            padding-bottom: 0rem;
-            padding-left: 0rem;
-            padding-right: 0rem;
-            max-width: 100%;
-        }
-        iframe {
-            width: 100%;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# The full tool (HTML/CSS/JS) is embedded below as base64 so this file has
-# zero external dependencies — nothing else to upload, nothing to forget.
+# ─────────────────────────────────────────────
+# الأداة (HTML/CSS/JS) مضمّنة بالكامل كـ base64 — ملف واحد بدون أي اعتمادات خارجية
+# ─────────────────────────────────────────────
 _HTML_B64 = (
 "PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImFyIiBkaXI9InJ0bCI+CjxoZWFkPgo8bWV0YSBjaGFyc2V0PSJVVEYtOCI+Cjxt"
 "ZXRhIG5hbWU9InZpZXdwb3J0IiBjb250ZW50PSJ3aWR0aD1kZXZpY2Utd2lkdGgsIGluaXRpYWwtc2NhbGU9MS4wIj4KPHRpdGxl"
@@ -1340,8 +1320,719 @@ _HTML_B64 = (
 "KTsKICAgIH0gY2F0Y2goZXJyKXsKICAgICAgY29uc29sZS5lcnJvcihlcnIpOwogICAgICB0b2FzdCgn2K7Yt9ijINmB2Yog2K3Z"
 "gdi4INin2YTZhdmE2YE6ICcgKyBlcnIubWVzc2FnZSwgdHJ1ZSk7CiAgICB9CiAgfSk7CgogIHRvYXN0KCfYqtmFINmG2YLZhCDY"
 "p9mE2KrYsdiq2YrYqCDZhNmAICcgKyBtYXRjaGVkICsgJyDZgtmG2KfYqScpOwp9KTsKPC9zY3JpcHQ+CjwvYm9keT4KPC9odG1s"
-"Pgo="
+"Pgo=")
+
+
+def _decode_html():
+    return base64.b64decode(_HTML_B64).decode("utf-8")
+
+
+def get_tool_html(default_page="smart"):
+    """رجّع كود الأداة بعد إخفاء شريط التنقل الداخلي بتاعها، وإظهار القسم
+    المطلوب بس ("smart" أو "transfer") بشكل افتراضي، لأن التبويب اللي فوق
+    هو اللي بيتحكم في التنقل دلوقتي مش الأداة نفسها."""
+    html = _decode_html()
+
+    html = html.replace(
+        '<nav id="pageNav">',
+        '<nav id="pageNav" style="display:none">'
+    )
+
+    if default_page == "transfer":
+        html = html.replace(
+            '<section id="page-single" class="page">',
+            '<section id="page-single" class="page" style="display:none">'
+        )
+        html = html.replace(
+            '<section id="page-transfer" class="page" style="display:none">',
+            '<section id="page-transfer" class="page">'
+        )
+
+    # نفس ألوان الشاشة الترحيبية (بنفسجي غامق + وردي نيون + سماوي) بدل
+    # الألوان الأصلية بتاعة الأداة (زيتوني/كهرماني)، عشان كل الموقع يبقى متناسق
+    color_override = """
+<style>
+:root{
+  --bg: #05020d !important;
+  --bg-panel: #170f2e !important;
+  --bg-panel-2: #1f1440 !important;
+  --line: #3a2a5c !important;
+  --olive: #ff007f !important;
+  --olive-dim: #aa0055 !important;
+  --amber: #00f0ff !important;
+  --amber-dim: #0a8fa0 !important;
+  --text: #e8e6f5 !important;
+  --text-dim: #9fb0c9 !important;
+}
+</style>
+"""
+    html = html.replace("</head>", color_override + "</head>")
+
+    return html
+
+
+# لوجو الموقع (RAMBO AI TV) مضمّن كـ base64 — نفس الصورة اللي بعتها بالظبط
+_LOGO_B64 = (
+"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"
+"L483uZsFQXs5ThYcAA=="
 )
 
-html_content = base64.b64decode(_HTML_B64).decode("utf-8")
-components.html(html_content, height=2200, scrolling=True)
+
+# ─────────────────────────────────────────────
+# ستايل عام: هوية الموقع + إخفاء شريط Streamlit + فرض RTL في كل حتة
+# ─────────────────────────────────────────────
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Cairo:wght@400;600;700;900&display=swap');
+
+header[data-testid="stHeader"] { display: none !important; }
+#MainMenu { display: none !important; }
+div[data-testid="stToolbar"] { display: none !important; }
+div[data-testid="stDecoration"] { display: none !important; }
+div[data-testid="stStatusWidget"] { display: none !important; }
+footer { display: none !important; }
+
+/* إخفاء السايدبار بالكامل ولينك التنقل التلقائي بتاعه (مش مستخدمين سايدبار خالص) */
+section[data-testid="stSidebar"] { display: none !important; }
+div[data-testid="stSidebarNav"] { display: none !important; }
+div[data-testid="collapsedControl"] { display: none !important; }
+
+html, body,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewBlockContainer"],
+[data-testid="stMainBlockContainer"],
+section.main,
+.main,
+.block-container,
+[data-testid="block-container"],
+div.stApp,
+.stApp {
+    background: radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%) !important;
+    background-color: #05020d !important;
+}
+
+/* ── فرض اتجاه RTL على كل عناصر الصفحة، عشان ميحصلش تشتت بين
+      العربي والإنجليزي (الترتيب البصري بيبقى صح تلقائي مع RTL) ── */
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewBlockContainer"],
+.block-container {
+    direction: rtl !important;
+}
+
+[data-testid="stAppViewContainer"] p,
+[data-testid="stAppViewContainer"] li,
+[data-testid="stAppViewContainer"] span,
+[data-testid="stAppViewContainer"] label,
+[data-testid="stAppViewContainer"] h1,
+[data-testid="stAppViewContainer"] h2,
+[data-testid="stAppViewContainer"] h3,
+[data-testid="stAppViewContainer"] h4,
+[data-testid="stAppViewContainer"] div[data-testid="stMarkdownContainer"] {
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+/* أعمدة st.columns بتتقلب تلقائي عشان أول عنصر يفضل جهة اليمين */
+div[data-testid="stHorizontalBlock"] {
+    direction: rtl !important;
+}
+div[data-testid="stHorizontalBlock"] > div {
+    direction: rtl !important;
+}
+
+.main {
+    font-family: 'Cairo', sans-serif !important;
+}
+
+.block-container {
+    padding-top: 0.5rem !important;
+    max-width: 100% !important;
+}
+
+h2 {
+    color: #00f0ff !important;
+    text-shadow: 0 0 5px #00f0ff !important;
+    font-family: 'Orbitron', 'Cairo' !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+}
+
+h3, h4 {
+    color: #00f0ff !important;
+    font-family: 'Cairo' !important;
+    font-weight: 700 !important;
+}
+
+p, label, .stMarkdown, .stBody {
+    color: #e0e0e0 !important;
+    font-size: 18px !important;
+    line-height: 1.9 !important;
+}
+
+.center-text,
+[data-testid="stAppViewContainer"] .center-text,
+[data-testid="stAppViewContainer"] h3.center-text,
+[data-testid="stAppViewContainer"] p.center-text {
+    text-align: center !important;
+}
+
+hr { border-color: #00f0ff !important; opacity: 0.5 !important; }
+
+/* أزرار عادية (زي "روح لصفحة كذا") */
+div[data-testid="stButton"] > button {
+    background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important;
+    color: #ffffff !important;
+    border: 2px solid #ff007f !important;
+    border-radius: 14px !important;
+    font-weight: bold !important;
+    font-size: 17px !important;
+    padding: 12px 20px !important;
+    box-shadow: 0 0 15px rgba(255,0,127,0.4) !important;
+    font-family: 'Cairo' !important;
+    width: 100%;
+}
+
+/* ── شريط التبويب العلوي (مبني بـ st.radio عشان نقدر نتحكم فيه
+      برمجيًا من أي زرار تاني، وشكله زي التابات بالظبط) ── */
+div[data-testid="stRadio"] > div[role="radiogroup"] {
+    display: flex;
+    flex-direction: row-reverse;
+    gap: 10px;
+    justify-content: center;
+    border-bottom: 2px solid rgba(0,240,255,0.25);
+    padding-bottom: 14px;
+    margin-bottom: 6px;
+}
+div[data-testid="stRadio"] label {
+    background: rgba(255,255,255,0.04);
+    border: 2px solid rgba(0,240,255,0.35);
+    border-radius: 12px 12px 0 0;
+    padding: 10px 20px !important;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+div[data-testid="stRadio"] label:hover {
+    border-color: #ff007f;
+}
+div[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 800 !important;
+    font-size: 17px !important;
+    color: #9fe8ef !important;
+    margin: 0 !important;
+}
+div[data-testid="stRadio"] label[data-checked="true"],
+div[data-testid="stRadio"] label:has(input:checked) {
+    background: rgba(255,0,127,0.14);
+    border-color: #ff007f;
+    box-shadow: 0 0 14px rgba(255,0,127,0.35);
+}
+div[data-testid="stRadio"] label:has(input:checked) div[data-testid="stMarkdownContainer"] p {
+    color: #ff007f !important;
+    text-shadow: 0 0 8px rgba(255,0,127,0.5);
+}
+/* اخفاء دوائر الراديو الافتراضية عشان يبقى شكله زي تابات مش راديو */
+div[data-testid="stRadio"] label > div:first-child {
+    display: none;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
+# شريط التابات الثلاثة (مبني بحيث أي زرار في الصفحة يقدر يودّي له مباشرة)
+# ─────────────────────────────────────────────
+HOME_LABEL = "🏠 الصفحة الترحيبية"
+SMART_LABEL = "🗂️ الترتيب الذكي بالفئات"
+TRANSFER_LABEL = "🔁 نقل الترتيب بين ملفين"
+
+if "active_tab" not in st.session_state:
+    st.session_state.active_tab = HOME_LABEL
+
+
+def go_to(label):
+    st.session_state.active_tab = label
+
+
+st.radio(
+    "التنقل بين الصفحات",
+    [HOME_LABEL, SMART_LABEL, TRANSFER_LABEL],
+    horizontal=True,
+    key="active_tab",
+    label_visibility="collapsed",
+)
+
+active = st.session_state.active_tab
+
+# ترجيع الصفحة لأولها كل مرة نتنقل بين التابات (بمحاولات متكررة عشان نضمن
+# إنها تنفّذ بعد ما Streamlit يخلص يرسم الصفحة الجديدة بالكامل)
+components.html(
+    f"""
+    <script>
+    function scrollAppToTop() {{
+        try {{
+            var doc = window.parent.document;
+            var containers = [
+                doc.querySelector('[data-testid="stAppViewContainer"]'),
+                doc.querySelector('[data-testid="stMain"]'),
+                doc.querySelector('section.main'),
+                doc.documentElement,
+                doc.body
+            ];
+            containers.forEach(function(el) {{
+                if (el) {{ el.scrollTop = 0; }}
+            }});
+            window.parent.scrollTo(0, 0);
+        }} catch (e) {{}}
+    }}
+    scrollAppToTop();
+    [0, 50, 150, 300, 500, 800].forEach(function(t) {{
+        setTimeout(scrollAppToTop, t);
+    }});
+    </script>
+    <!-- {active} -->
+    """,
+    height=0,
+)
+
+# ===================== الصفحة الترحيبية =====================
+if active == HOME_LABEL:
+    hero_html = """
+    <div style="width:100%; display:flex; justify-content:center; background:transparent;">
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Cairo:wght@700;900&display=swap');
+
+    .rambo-hero {
+        position: relative;
+        width: 100%;
+        max-width: 820px;
+        padding: 34px 20px 26px;
+        text-align: center;
+        font-family: 'Cairo', sans-serif;
+        overflow: visible;
+        direction: rtl;
+    }
+
+    .logo-wrap {
+        position: relative;
+        width: 210px;
+        height: 210px;
+        margin: 0 auto 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .ring {
+        position: absolute;
+        top: 50%; left: 50%;
+        width: 100px; height: 100px;
+        border-radius: 50%;
+        border: 2px solid #00f0ff;
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 0;
+        animation: ringPulse 3s ease-out infinite;
+    }
+    .ring:nth-child(2) { animation-delay: 1s; border-color: #ff007f; }
+    .ring:nth-child(3) { animation-delay: 2s; }
+
+    @keyframes ringPulse {
+        0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0.9; }
+        70%  { opacity: 0.15; }
+        100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+    }
+
+    .logo-frame {
+        position: relative;
+        z-index: 2;
+        width: 140px; height: 140px;
+        border-radius: 32px;
+        overflow: hidden;
+        border: 3px solid #ff007f;
+        box-shadow: 0 0 20px rgba(255,0,127,0.65), 0 0 45px rgba(0,240,255,0.35);
+        animation: badgeGlow 2.4s ease-in-out infinite, tvPowerOn 1.6s ease-out 1;
+        transform-origin: center center;
+    }
+
+    .logo-frame img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .logo-frame::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+            to bottom,
+            rgba(255,255,255,0.07) 0px,
+            rgba(255,255,255,0.07) 1px,
+            transparent 2px,
+            transparent 4px
+        );
+        animation: scanMove 4.5s linear infinite;
+        pointer-events: none;
+        mix-blend-mode: overlay;
+    }
+
+    @keyframes scanMove {
+        0%   { transform: translateY(0); }
+        100% { transform: translateY(8px); }
+    }
+
+    @keyframes tvPowerOn {
+        0%   { transform: scaleY(0.02) scaleX(1.35); filter: brightness(6) saturate(0); opacity: 0; }
+        6%   { opacity: 1; }
+        12%  { transform: scaleY(1) scaleX(1); filter: brightness(4) saturate(0.4); }
+        22%  { transform: scaleY(0.94) scaleX(1.02); filter: brightness(1.6) saturate(1); }
+        32%  { transform: scaleY(1) scaleX(1); filter: brightness(1); }
+        100% { transform: scaleY(1) scaleX(1); filter: brightness(1); }
+    }
+
+    @keyframes badgeGlow {
+        0%, 100% { box-shadow: 0 0 20px rgba(255,0,127,0.55), 0 0 40px rgba(0,240,255,0.30); }
+        50%      { box-shadow: 0 0 32px rgba(255,0,127,0.9), 0 0 60px rgba(0,240,255,0.55); }
+    }
+
+    .particle {
+        position: absolute;
+        font-size: 20px;
+        opacity: 0;
+        animation: floatUp 5s ease-in infinite;
+    }
+    .particle.p1 { left: 8%;  top: 70%; animation-delay: 0s; }
+    .particle.p2 { left: 82%; top: 68%; animation-delay: 1.4s; }
+    .particle.p3 { left: 20%; top: 10%; animation-delay: 2.6s; }
+    .particle.p4 { left: 74%; top: 8%;  animation-delay: 3.6s; }
+
+    @keyframes floatUp {
+        0%   { transform: translateY(0) scale(0.8); opacity: 0; }
+        15%  { opacity: 0.9; }
+        100% { transform: translateY(-70px) scale(1.1); opacity: 0; }
+    }
+
+    .rambo-title {
+        font-family: 'Orbitron', 'Cairo', sans-serif;
+        font-weight: 900;
+        font-size: 46px;
+        letter-spacing: 1px;
+        color: #ffffff;
+        margin: 6px 0 2px;
+        animation: flicker 4.5s linear infinite;
+        text-shadow: 0 0 10px #ff007f, 0 0 24px rgba(255,0,127,0.55), 0 0 40px rgba(0,240,255,0.25);
+    }
+
+    @keyframes flicker {
+        0%, 92%, 100% { opacity: 1; }
+        93% { opacity: 0.55; }
+        94% { opacity: 1; }
+        95% { opacity: 0.7; }
+        96% { opacity: 1; }
+    }
+
+    .rambo-slogan {
+        font-family: 'Cairo', sans-serif;
+        font-weight: 900;
+        font-size: 24px;
+        color: #ff9ecb;
+        margin: 6px 0 4px;
+        text-shadow: 0 0 12px rgba(255,0,127,0.6);
+        animation: sloganGlow 2.4s ease-in-out infinite;
+    }
+
+    @keyframes sloganGlow {
+        0%, 100% { text-shadow: 0 0 8px rgba(255,0,127,0.45); }
+        50%      { text-shadow: 0 0 20px rgba(255,0,127,0.95), 0 0 30px rgba(0,240,255,0.4); }
+    }
+
+    .rambo-sub {
+        font-size: 17px;
+        color: #9fe8ef;
+        margin-top: 2px;
+    }
+    </style>
+
+    <div class="rambo-hero">
+      <div class="logo-wrap">
+        <div class="ring"></div>
+        <div class="ring"></div>
+        <div class="ring"></div>
+        <div class="logo-frame">
+          <img src="data:image/webp;base64,__LOGO_B64_PLACEHOLDER__" alt="Rambo AI TV" />
+        </div>
+        <div class="particle p1">📡</div>
+        <div class="particle p2">🎬</div>
+        <div class="particle p3">✨</div>
+        <div class="particle p4">🔁</div>
+      </div>
+      <div class="rambo-sub">⚡ أول موقع مصري ذكي لترتيب قنوات إل جي بالذكاء الاصطناعي</div>
+      <div class="rambo-slogan">مع رامبو خلصانة في ثانية الا ثانية ⚡</div>
+    </div>
+    </div>
+    """
+    hero_html = hero_html.replace("__LOGO_B64_PLACEHOLDER__", _LOGO_B64)
+    components.html(hero_html, height=430, scrolling=False)
+
+    st.markdown("---")
+
+    st.header("🎯 عن الموقع")
+    st.markdown(
+        "<p class='center-text'>Rambo AI TV هو أول موقع مصري بيستخدم الذكاء الاصطناعي عشان يحل مشكلة فوضى ترتيب قنوات شاشات إل جي "
+        "بضغطة زر، من غير ما تحتاج خبرة تقنية أو تدوّر يدويًا على كل قناة.</p>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<p class='center-text' style='color:#ff9ecb; font-weight:800; font-size:20px;'>"
+        "🇪🇬 معمول بإيد مصرية ودماغ منياوية</p>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<p class='center-text' style='color:#ff007f; font-weight:700;'>🛠️ تصميم وتطوير: المهندس رفيق ناثان</p>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("---")
+
+    st.header("🌟 وظيفة كل صفحة في الموقع")
+
+    col_smart, col_transfer = st.columns(2)
+
+    with col_smart:
+        st.markdown(
+            "<h3 class='center-text'>🗂️ الترتيب الذكي بالفئات</h3>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            "<p class='center-text'>ارفع ملف قنواتك، والموقع بيحللها ويصنّفها تلقائيًا حسب المحتوى "
+            "(ديني، رياضة، أفلام، مسلسلات، أطفال، أخبار...) وبيرتبها حسب الأولوية اللي تحددها انت. "
+            "تقدر تعدّل أي تصنيف يدوي، وتشوف النتيجة أول بأول قبل ما تنزّل الملف الجاهز للتشغيل.</p>",
+            unsafe_allow_html=True,
+        )
+        st.button(
+            "🗂️ روح لصفحة الترتيب الذكي",
+            key="btn_go_smart",
+            on_click=go_to,
+            args=(SMART_LABEL,),
+            use_container_width=True,
+        )
+
+    with col_transfer:
+        st.markdown(
+            "<h3 class='center-text'>🔁 نقل الترتيب بين ملفين</h3>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            "<p class='center-text'>عندك ملف قنوات لقيته على النت وعجبك ترتيبه؟ ارفعه مع ملف قنوات شاشتك الحالي، "
+            "والموقع هيدوّر على القنوات المشتركة بالاسم وينقل لك نفس الترتيب على ملفك فورًا — "
+            "من غير ما يلمس الترددات أو أي بيانات تقنية تانية.</p>",
+            unsafe_allow_html=True,
+        )
+        st.button(
+            "🔁 روح لصفحة نقل الترتيب",
+            key="btn_go_transfer",
+            on_click=go_to,
+            args=(TRANSFER_LABEL,),
+            use_container_width=True,
+        )
+
+    st.markdown("---")
+    st.markdown(
+        "<p class='center-text' style='color:#00f0ff; font-size:15px;'>"
+        "للعلم بيتم عمل تحديثات للموقع يوميًا لمواكبة التحديثات التكنولوجية الجديدة</p>",
+        unsafe_allow_html=True,
+    )
+
+# ===================== الترتيب الذكي بالفئات =====================
+elif active == SMART_LABEL:
+    components.html(get_tool_html(default_page="smart"), height=2200, scrolling=True)
+
+# ===================== نقل الترتيب بين ملفين =====================
+elif active == TRANSFER_LABEL:
+    components.html(get_tool_html(default_page="transfer"), height=2200, scrolling=True)
