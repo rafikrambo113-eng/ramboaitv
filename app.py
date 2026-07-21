@@ -1329,8 +1329,8 @@ def _decode_html():
 
 def get_tool_html(default_page="smart"):
     """رجّع كود الأداة بعد إخفاء شريط التنقل الداخلي بتاعها، وإظهار القسم
-    المطلوب بس ("smart" أو "transfer") بشكل افتراضي، لأن Streamlit هو
-    اللي هيتحكم في التنقل بين التابات دلوقتي مش الأداة نفسها."""
+    المطلوب بس ("smart" أو "transfer") بشكل افتراضي، لأن التبويب اللي فوق
+    هو اللي بيتحكم في التنقل دلوقتي مش الأداة نفسها."""
     html = _decode_html()
 
     html = html.replace(
@@ -1352,7 +1352,7 @@ def get_tool_html(default_page="smart"):
 
 
 # ─────────────────────────────────────────────
-# ستايل عام (نفس هوية الموقع + إخفاء شريط Streamlit)
+# ستايل عام: هوية الموقع + إخفاء شريط Streamlit + فرض RTL في كل حتة
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
@@ -1379,10 +1379,37 @@ div.stApp,
     background-color: #05020d !important;
 }
 
-.main {
-    font-family: 'Cairo', sans-serif !important;
+/* ── فرض اتجاه RTL على كل عناصر الصفحة، عشان ميحصلش تشتت بين
+      العربي والإنجليزي (الترتيب البصري بيبقى صح تلقائي مع RTL) ── */
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewBlockContainer"],
+.block-container {
+    direction: rtl !important;
+}
+
+[data-testid="stAppViewContainer"] p,
+[data-testid="stAppViewContainer"] li,
+[data-testid="stAppViewContainer"] span,
+[data-testid="stAppViewContainer"] label,
+[data-testid="stAppViewContainer"] h1,
+[data-testid="stAppViewContainer"] h2,
+[data-testid="stAppViewContainer"] h3,
+[data-testid="stAppViewContainer"] h4,
+[data-testid="stAppViewContainer"] div[data-testid="stMarkdownContainer"] {
     direction: rtl !important;
     text-align: right !important;
+}
+
+/* أعمدة st.columns بتتقلب تلقائي عشان أول عنصر يفضل جهة اليمين */
+div[data-testid="stHorizontalBlock"] {
+    direction: rtl !important;
+}
+div[data-testid="stHorizontalBlock"] > div {
+    direction: rtl !important;
+}
+
+.main {
+    font-family: 'Cairo', sans-serif !important;
 }
 
 .block-container {
@@ -1408,42 +1435,99 @@ p, label, .stMarkdown, .stBody {
     color: #e0e0e0 !important;
     font-size: 18px !important;
     line-height: 1.9 !important;
-    direction: rtl !important;
-    text-align: right !important;
 }
 
-.center-text { text-align: center !important; direction: rtl !important; }
+.center-text { text-align: center !important; }
 
 hr { border-color: #00f0ff !important; opacity: 0.5 !important; }
 
-/* شكل التابات الثلاثة */
-div[data-testid="stTabs"] button[data-baseweb="tab"] {
+/* أزرار عادية (زي "روح لصفحة كذا") */
+div[data-testid="stButton"] > button {
+    background: linear-gradient(135deg, #ff007f 0%, #aa0055 100%) !important;
+    color: #ffffff !important;
+    border: 2px solid #ff007f !important;
+    border-radius: 14px !important;
+    font-weight: bold !important;
+    font-size: 17px !important;
+    padding: 12px 20px !important;
+    box-shadow: 0 0 15px rgba(255,0,127,0.4) !important;
+    font-family: 'Cairo' !important;
+    width: 100%;
+}
+
+/* ── شريط التبويب العلوي (مبني بـ st.radio عشان نقدر نتحكم فيه
+      برمجيًا من أي زرار تاني، وشكله زي التابات بالظبط) ── */
+div[data-testid="stRadio"] > div[role="radiogroup"] {
+    display: flex;
+    flex-direction: row-reverse;
+    gap: 10px;
+    justify-content: center;
+    border-bottom: 2px solid rgba(0,240,255,0.25);
+    padding-bottom: 14px;
+    margin-bottom: 6px;
+}
+div[data-testid="stRadio"] label {
+    background: rgba(255,255,255,0.04);
+    border: 2px solid rgba(0,240,255,0.35);
+    border-radius: 12px 12px 0 0;
+    padding: 10px 20px !important;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+div[data-testid="stRadio"] label:hover {
+    border-color: #ff007f;
+}
+div[data-testid="stRadio"] label div[data-testid="stMarkdownContainer"] p {
     font-family: 'Cairo', sans-serif !important;
     font-weight: 800 !important;
     font-size: 17px !important;
     color: #9fe8ef !important;
+    margin: 0 !important;
 }
-div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] {
+div[data-testid="stRadio"] label[data-checked="true"],
+div[data-testid="stRadio"] label:has(input:checked) {
+    background: rgba(255,0,127,0.14);
+    border-color: #ff007f;
+    box-shadow: 0 0 14px rgba(255,0,127,0.35);
+}
+div[data-testid="stRadio"] label:has(input:checked) div[data-testid="stMarkdownContainer"] p {
     color: #ff007f !important;
-    text-shadow: 0 0 8px rgba(255,0,127,0.6) !important;
+    text-shadow: 0 0 8px rgba(255,0,127,0.5);
 }
-div[data-testid="stTabs"] div[data-baseweb="tab-highlight"] {
-    background-color: #ff007f !important;
+/* اخفاء دوائر الراديو الافتراضية عشان يبقى شكله زي تابات مش راديو */
+div[data-testid="stRadio"] label > div:first-child {
+    display: none;
 }
 </style>
 """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
-# التابات الثلاثة
+# شريط التابات الثلاثة (مبني بحيث أي زرار في الصفحة يقدر يودّي له مباشرة)
 # ─────────────────────────────────────────────
-tab_home, tab_smart, tab_transfer = st.tabs([
-    "🏠 الصفحة الترحيبية",
-    "🗂️ الترتيب الذكي بالفئات",
-    "🔁 نقل الترتيب بين ملفين",
-])
+HOME_LABEL = "🏠 الصفحة الترحيبية"
+SMART_LABEL = "🗂️ الترتيب الذكي بالفئات"
+TRANSFER_LABEL = "🔁 نقل الترتيب بين ملفين"
 
-# ===================== تاب 1: الصفحة الترحيبية =====================
-with tab_home:
+if "active_tab" not in st.session_state:
+    st.session_state.active_tab = HOME_LABEL
+
+
+def go_to(label):
+    st.session_state.active_tab = label
+
+
+st.radio(
+    "التنقل بين الصفحات",
+    [HOME_LABEL, SMART_LABEL, TRANSFER_LABEL],
+    horizontal=True,
+    key="active_tab",
+    label_visibility="collapsed",
+)
+
+active = st.session_state.active_tab
+
+# ===================== الصفحة الترحيبية =====================
+if active == HOME_LABEL:
     hero_html = """
     <div style="width:100%; display:flex; justify-content:center; background:transparent;">
     <style>
@@ -1457,6 +1541,7 @@ with tab_home:
         text-align: center;
         font-family: 'Cairo', sans-serif;
         overflow: visible;
+        direction: rtl;
     }
 
     .logo-wrap {
@@ -1529,7 +1614,6 @@ with tab_home:
         font-size: 46px;
         letter-spacing: 1px;
         color: #ffffff;
-        direction: ltr;
         margin: 6px 0 2px;
         animation: flicker 4.5s linear infinite;
         text-shadow: 0 0 10px #ff007f, 0 0 24px rgba(255,0,127,0.55), 0 0 40px rgba(0,240,255,0.25);
@@ -1604,22 +1688,36 @@ with tab_home:
 
     st.markdown("---")
 
-    st.header("🌟 وظيفة كل تاب في الموقع")
+    st.header("🌟 وظيفة كل صفحة في الموقع")
 
-    col1, col2 = st.columns(2)
-    with col1:
+    col_smart, col_transfer = st.columns(2)
+
+    with col_smart:
         st.subheader("🗂️ الترتيب الذكي بالفئات")
         st.write(
             "ارفع ملف قنواتك، والموقع بيحللها ويصنّفها تلقائيًا حسب المحتوى "
             "(ديني، رياضة، أفلام، مسلسلات، أطفال، أخبار...) وبيرتبها حسب الأولوية اللي تحددها انت. "
             "تقدر تعدّل أي تصنيف يدوي، وتشوف النتيجة أول بأول قبل ما تنزّل الملف الجاهز للتشغيل."
         )
-    with col2:
+        st.button(
+            "🗂️ روح لصفحة الترتيب الذكي",
+            key="btn_go_smart",
+            on_click=go_to,
+            args=(SMART_LABEL,),
+        )
+
+    with col_transfer:
         st.subheader("🔁 نقل الترتيب بين ملفين")
         st.write(
             "عندك ملف قنوات لقيته على النت وعجبك ترتيبه؟ ارفعه مع ملف قنوات شاشتك الحالي، "
             "والموقع هيدوّر على القنوات المشتركة بالاسم وينقل لك نفس الترتيب على ملفك فورًا — "
             "من غير ما يلمس الترددات أو أي بيانات تقنية تانية."
+        )
+        st.button(
+            "🔁 روح لصفحة نقل الترتيب",
+            key="btn_go_transfer",
+            on_click=go_to,
+            args=(TRANSFER_LABEL,),
         )
 
     st.markdown("---")
@@ -1629,10 +1727,10 @@ with tab_home:
         unsafe_allow_html=True,
     )
 
-# ===================== تاب 2: الترتيب الذكي بالفئات =====================
-with tab_smart:
+# ===================== الترتيب الذكي بالفئات =====================
+elif active == SMART_LABEL:
     components.html(get_tool_html(default_page="smart"), height=2200, scrolling=True)
 
-# ===================== تاب 3: نقل الترتيب بين ملفين =====================
-with tab_transfer:
+# ===================== نقل الترتيب بين ملفين =====================
+elif active == TRANSFER_LABEL:
     components.html(get_tool_html(default_page="transfer"), height=2200, scrolling=True)
