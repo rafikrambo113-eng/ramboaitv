@@ -1962,7 +1962,7 @@ if active == HOME_LABEL:
 
     st.markdown("---")
 
-    st.header("🎯 عن الموقع")
+                                           st.header("🎯 عن الموقع")
     st.markdown(
         "<p class='center-text'>Rambo AI TV هو أول موقع مصري بيستخدم الذكاء الاصطناعي عشان يحل مشكلة فوضى ملف قنوات الرسيفرات الداخليه للشاشات "
         "بضغطة زر، من غير ما تحتاج خبرة تقنية أو تدوّر يدويًا على كل قناة.</p>",
@@ -1980,7 +1980,7 @@ if active == HOME_LABEL:
 
     st.markdown("---")
 
-    st.header("🌟 وظيفة كل صفحة في الموقع")
+                                   st.header("🌟 وظيفة كل صفحة في الموقع")
 
     col_smart, col_transfer = st.columns(2)
 
