@@ -1348,6 +1348,26 @@ def get_tool_html(default_page="smart"):
             '<section id="page-transfer" class="page">'
         )
 
+    # نفس ألوان الشاشة الترحيبية (بنفسجي غامق + وردي نيون + سماوي) بدل
+    # الألوان الأصلية بتاعة الأداة (زيتوني/كهرماني)، عشان كل الموقع يبقى متناسق
+    color_override = """
+<style>
+:root{
+  --bg: #05020d !important;
+  --bg-panel: #170f2e !important;
+  --bg-panel-2: #1f1440 !important;
+  --line: #3a2a5c !important;
+  --olive: #ff007f !important;
+  --olive-dim: #aa0055 !important;
+  --amber: #00f0ff !important;
+  --amber-dim: #0a8fa0 !important;
+  --text: #e8e6f5 !important;
+  --text-dim: #9fb0c9 !important;
+}
+</style>
+"""
+    html = html.replace("</head>", color_override + "</head>")
+
     return html
 
 
@@ -1557,6 +1577,11 @@ div[data-testid="stToolbar"] { display: none !important; }
 div[data-testid="stDecoration"] { display: none !important; }
 div[data-testid="stStatusWidget"] { display: none !important; }
 footer { display: none !important; }
+
+/* إخفاء السايدبار بالكامل ولينك التنقل التلقائي بتاعه (مش مستخدمين سايدبار خالص) */
+section[data-testid="stSidebar"] { display: none !important; }
+div[data-testid="stSidebarNav"] { display: none !important; }
+div[data-testid="collapsedControl"] { display: none !important; }
 
 html, body,
 [data-testid="stAppViewContainer"],
