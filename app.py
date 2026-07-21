@@ -1,37 +1,17 @@
+import base64
 import streamlit as st
 import streamlit.components.v1 as components
-import base64
 
 st.set_page_config(
-    page_title="Rambo AI TV — مرتّب قنوات التليفزيون",
+    page_title="Rambo AI TV",
     page_icon="📺",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
-st.markdown(
-    """
-    <style>
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        header {visibility: hidden;}
-        .block-container {
-            padding-top: 0rem;
-            padding-bottom: 0rem;
-            padding-left: 0rem;
-            padding-right: 0rem;
-            max-width: 100%;
-        }
-        iframe {
-            width: 100%;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-# The full tool (HTML/CSS/JS) is embedded below as base64 so this file has
-# zero external dependencies — nothing else to upload, nothing to forget.
+# ─────────────────────────────────────────────
+# الأداة (HTML/CSS/JS) مضمّنة بالكامل كـ base64 — ملف واحد بدون أي اعتمادات خارجية
+# ─────────────────────────────────────────────
 _HTML_B64 = (
 "PCFET0NUWVBFIGh0bWw+CjxodG1sIGxhbmc9ImFyIiBkaXI9InJ0bCI+CjxoZWFkPgo8bWV0YSBjaGFyc2V0PSJVVEYtOCI+Cjxt"
 "ZXRhIG5hbWU9InZpZXdwb3J0IiBjb250ZW50PSJ3aWR0aD1kZXZpY2Utd2lkdGgsIGluaXRpYWwtc2NhbGU9MS4wIj4KPHRpdGxl"
@@ -1340,8 +1320,319 @@ _HTML_B64 = (
 "KTsKICAgIH0gY2F0Y2goZXJyKXsKICAgICAgY29uc29sZS5lcnJvcihlcnIpOwogICAgICB0b2FzdCgn2K7Yt9ijINmB2Yog2K3Z"
 "gdi4INin2YTZhdmE2YE6ICcgKyBlcnIubWVzc2FnZSwgdHJ1ZSk7CiAgICB9CiAgfSk7CgogIHRvYXN0KCfYqtmFINmG2YLZhCDY"
 "p9mE2KrYsdiq2YrYqCDZhNmAICcgKyBtYXRjaGVkICsgJyDZgtmG2KfYqScpOwp9KTsKPC9zY3JpcHQ+CjwvYm9keT4KPC9odG1s"
-"Pgo="
-)
+"Pgo=")
 
-html_content = base64.b64decode(_HTML_B64).decode("utf-8")
-components.html(html_content, height=2200, scrolling=True)
+
+def _decode_html():
+    return base64.b64decode(_HTML_B64).decode("utf-8")
+
+
+def get_tool_html(default_page="smart"):
+    """رجّع كود الأداة بعد إخفاء شريط التنقل الداخلي بتاعها، وإظهار القسم
+    المطلوب بس ("smart" أو "transfer") بشكل افتراضي، لأن Streamlit هو
+    اللي هيتحكم في التنقل بين التابات دلوقتي مش الأداة نفسها."""
+    html = _decode_html()
+
+    html = html.replace(
+        '<nav id="pageNav">',
+        '<nav id="pageNav" style="display:none">'
+    )
+
+    if default_page == "transfer":
+        html = html.replace(
+            '<section id="page-single" class="page">',
+            '<section id="page-single" class="page" style="display:none">'
+        )
+        html = html.replace(
+            '<section id="page-transfer" class="page" style="display:none">',
+            '<section id="page-transfer" class="page">'
+        )
+
+    return html
+
+
+# ─────────────────────────────────────────────
+# ستايل عام (نفس هوية الموقع + إخفاء شريط Streamlit)
+# ─────────────────────────────────────────────
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Cairo:wght@400;600;700;900&display=swap');
+
+header[data-testid="stHeader"] { display: none !important; }
+#MainMenu { display: none !important; }
+div[data-testid="stToolbar"] { display: none !important; }
+div[data-testid="stDecoration"] { display: none !important; }
+div[data-testid="stStatusWidget"] { display: none !important; }
+footer { display: none !important; }
+
+html, body,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewBlockContainer"],
+[data-testid="stMainBlockContainer"],
+section.main,
+.main,
+.block-container,
+[data-testid="block-container"],
+div.stApp,
+.stApp {
+    background: radial-gradient(circle at 50% 50%, #110926 0%, #05020d 100%) !important;
+    background-color: #05020d !important;
+}
+
+.main {
+    font-family: 'Cairo', sans-serif !important;
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+.block-container {
+    padding-top: 0.5rem !important;
+    max-width: 100% !important;
+}
+
+h2 {
+    color: #00f0ff !important;
+    text-shadow: 0 0 5px #00f0ff !important;
+    font-family: 'Orbitron', 'Cairo' !important;
+    font-weight: 700 !important;
+    text-align: center !important;
+}
+
+h3, h4 {
+    color: #00f0ff !important;
+    font-family: 'Cairo' !important;
+    font-weight: 700 !important;
+}
+
+p, label, .stMarkdown, .stBody {
+    color: #e0e0e0 !important;
+    font-size: 18px !important;
+    line-height: 1.9 !important;
+    direction: rtl !important;
+    text-align: right !important;
+}
+
+.center-text { text-align: center !important; direction: rtl !important; }
+
+hr { border-color: #00f0ff !important; opacity: 0.5 !important; }
+
+/* شكل التابات الثلاثة */
+div[data-testid="stTabs"] button[data-baseweb="tab"] {
+    font-family: 'Cairo', sans-serif !important;
+    font-weight: 800 !important;
+    font-size: 17px !important;
+    color: #9fe8ef !important;
+}
+div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] {
+    color: #ff007f !important;
+    text-shadow: 0 0 8px rgba(255,0,127,0.6) !important;
+}
+div[data-testid="stTabs"] div[data-baseweb="tab-highlight"] {
+    background-color: #ff007f !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# ─────────────────────────────────────────────
+# التابات الثلاثة
+# ─────────────────────────────────────────────
+tab_home, tab_smart, tab_transfer = st.tabs([
+    "🏠 الصفحة الترحيبية",
+    "🗂️ الترتيب الذكي بالفئات",
+    "🔁 نقل الترتيب بين ملفين",
+])
+
+# ===================== تاب 1: الصفحة الترحيبية =====================
+with tab_home:
+    hero_html = """
+    <div style="width:100%; display:flex; justify-content:center; background:transparent;">
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Cairo:wght@700;900&display=swap');
+
+    .rambo-hero {
+        position: relative;
+        width: 100%;
+        max-width: 820px;
+        padding: 34px 20px 26px;
+        text-align: center;
+        font-family: 'Cairo', sans-serif;
+        overflow: visible;
+    }
+
+    .logo-wrap {
+        position: relative;
+        width: 190px;
+        height: 190px;
+        margin: 0 auto 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .ring {
+        position: absolute;
+        top: 50%; left: 50%;
+        width: 100px; height: 100px;
+        border-radius: 50%;
+        border: 2px solid #00f0ff;
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 0;
+        animation: ringPulse 3s ease-out infinite;
+    }
+    .ring:nth-child(2) { animation-delay: 1s; border-color: #ff007f; }
+    .ring:nth-child(3) { animation-delay: 2s; }
+
+    @keyframes ringPulse {
+        0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0.9; }
+        70%  { opacity: 0.15; }
+        100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
+    }
+
+    .logo-badge {
+        position: relative;
+        z-index: 2;
+        width: 108px; height: 108px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 30%, #1c0e38, #05020d 75%);
+        border: 3px solid #ff007f;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 52px;
+        box-shadow: 0 0 20px rgba(255,0,127,0.65), 0 0 45px rgba(0,240,255,0.35), inset 0 0 18px rgba(0,240,255,0.25);
+        animation: badgeGlow 2.4s ease-in-out infinite;
+    }
+
+    @keyframes badgeGlow {
+        0%, 100% { box-shadow: 0 0 20px rgba(255,0,127,0.55), 0 0 40px rgba(0,240,255,0.30), inset 0 0 16px rgba(0,240,255,0.2); }
+        50%      { box-shadow: 0 0 32px rgba(255,0,127,0.9), 0 0 60px rgba(0,240,255,0.55), inset 0 0 22px rgba(0,240,255,0.4); }
+    }
+
+    .particle {
+        position: absolute;
+        font-size: 20px;
+        opacity: 0;
+        animation: floatUp 5s ease-in infinite;
+    }
+    .particle.p1 { left: 8%;  top: 70%; animation-delay: 0s; }
+    .particle.p2 { left: 82%; top: 68%; animation-delay: 1.4s; }
+    .particle.p3 { left: 20%; top: 10%; animation-delay: 2.6s; }
+    .particle.p4 { left: 74%; top: 8%;  animation-delay: 3.6s; }
+
+    @keyframes floatUp {
+        0%   { transform: translateY(0) scale(0.8); opacity: 0; }
+        15%  { opacity: 0.9; }
+        100% { transform: translateY(-70px) scale(1.1); opacity: 0; }
+    }
+
+    .rambo-title {
+        font-family: 'Orbitron', 'Cairo', sans-serif;
+        font-weight: 900;
+        font-size: 46px;
+        letter-spacing: 1px;
+        color: #ffffff;
+        direction: ltr;
+        margin: 6px 0 2px;
+        animation: flicker 4.5s linear infinite;
+        text-shadow: 0 0 10px #ff007f, 0 0 24px rgba(255,0,127,0.55), 0 0 40px rgba(0,240,255,0.25);
+    }
+
+    @keyframes flicker {
+        0%, 92%, 100% { opacity: 1; }
+        93% { opacity: 0.55; }
+        94% { opacity: 1; }
+        95% { opacity: 0.7; }
+        96% { opacity: 1; }
+    }
+
+    .rambo-slogan {
+        font-family: 'Cairo', sans-serif;
+        font-weight: 900;
+        font-size: 24px;
+        color: #ff9ecb;
+        margin: 6px 0 4px;
+        text-shadow: 0 0 12px rgba(255,0,127,0.6);
+        animation: sloganGlow 2.4s ease-in-out infinite;
+    }
+
+    @keyframes sloganGlow {
+        0%, 100% { text-shadow: 0 0 8px rgba(255,0,127,0.45); }
+        50%      { text-shadow: 0 0 20px rgba(255,0,127,0.95), 0 0 30px rgba(0,240,255,0.4); }
+    }
+
+    .rambo-sub {
+        font-size: 17px;
+        color: #9fe8ef;
+        margin-top: 2px;
+    }
+    </style>
+
+    <div class="rambo-hero">
+      <div class="logo-wrap">
+        <div class="ring"></div>
+        <div class="ring"></div>
+        <div class="ring"></div>
+        <div class="logo-badge">📺</div>
+        <div class="particle p1">📡</div>
+        <div class="particle p2">🎬</div>
+        <div class="particle p3">✨</div>
+        <div class="particle p4">🔁</div>
+      </div>
+      <div class="rambo-title">RAMBO AI TV</div>
+      <div class="rambo-sub">⚡ أول موقع مصري ذكي لترتيب قنوات إل جي بالذكاء الاصطناعي</div>
+      <div class="rambo-slogan">مع رامبو خلصانة في ثانية الا ثانية ⚡</div>
+    </div>
+    </div>
+    """
+    components.html(hero_html, height=420, scrolling=False)
+
+    st.markdown("---")
+
+    st.header("🎯 عن الموقع")
+    st.markdown(
+        "<p class='center-text'>Rambo AI TV هو أول موقع مصري بيستخدم الذكاء الاصطناعي عشان يحل مشكلة فوضى ترتيب قنوات شاشات إل جي "
+        "بضغطة زر، من غير ما تحتاج خبرة تقنية أو تدوّر يدويًا على كل قناة.</p>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<p class='center-text' style='color:#ff9ecb; font-weight:800; font-size:20px;'>"
+        "🇪🇬 معمول بإيد مصرية ودماغ منياوية</p>",
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        "<p class='center-text' style='color:#ff007f; font-weight:700;'>🛠️ تصميم وتطوير: المهندس رفيق ناثان</p>",
+        unsafe_allow_html=True,
+    )
+
+    st.markdown("---")
+
+    st.header("🌟 وظيفة كل تاب في الموقع")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.subheader("🗂️ الترتيب الذكي بالفئات")
+        st.write(
+            "ارفع ملف قنواتك، والموقع بيحللها ويصنّفها تلقائيًا حسب المحتوى "
+            "(ديني، رياضة، أفلام، مسلسلات، أطفال، أخبار...) وبيرتبها حسب الأولوية اللي تحددها انت. "
+            "تقدر تعدّل أي تصنيف يدوي، وتشوف النتيجة أول بأول قبل ما تنزّل الملف الجاهز للتشغيل."
+        )
+    with col2:
+        st.subheader("🔁 نقل الترتيب بين ملفين")
+        st.write(
+            "عندك ملف قنوات لقيته على النت وعجبك ترتيبه؟ ارفعه مع ملف قنوات شاشتك الحالي، "
+            "والموقع هيدوّر على القنوات المشتركة بالاسم وينقل لك نفس الترتيب على ملفك فورًا — "
+            "من غير ما يلمس الترددات أو أي بيانات تقنية تانية."
+        )
+
+    st.markdown("---")
+    st.markdown(
+        "<p class='center-text' style='color:#00f0ff; font-size:15px;'>"
+        "للعلم بيتم عمل تحديثات للموقع يوميًا لمواكبة التحديثات التكنولوجية الجديدة</p>",
+        unsafe_allow_html=True,
+    )
+
+# ===================== تاب 2: الترتيب الذكي بالفئات =====================
+with tab_smart:
+    components.html(get_tool_html(default_page="smart"), height=2200, scrolling=True)
+
+# ===================== تاب 3: نقل الترتيب بين ملفين =====================
+with tab_transfer:
+    components.html(get_tool_html(default_page="transfer"), height=2200, scrolling=True)
