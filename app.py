@@ -1437,7 +1437,12 @@ p, label, .stMarkdown, .stBody {
     line-height: 1.9 !important;
 }
 
-.center-text { text-align: center !important; }
+.center-text,
+[data-testid="stAppViewContainer"] .center-text,
+[data-testid="stAppViewContainer"] h3.center-text,
+[data-testid="stAppViewContainer"] p.center-text {
+    text-align: center !important;
+}
 
 hr { border-color: #00f0ff !important; opacity: 0.5 !important; }
 
@@ -1693,31 +1698,41 @@ if active == HOME_LABEL:
     col_smart, col_transfer = st.columns(2)
 
     with col_smart:
-        st.subheader("🗂️ الترتيب الذكي بالفئات")
-        st.write(
-            "ارفع ملف قنواتك، والموقع بيحللها ويصنّفها تلقائيًا حسب المحتوى "
+        st.markdown(
+            "<h3 class='center-text'>🗂️ الترتيب الذكي بالفئات</h3>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            "<p class='center-text'>ارفع ملف قنواتك، والموقع بيحللها ويصنّفها تلقائيًا حسب المحتوى "
             "(ديني، رياضة، أفلام، مسلسلات، أطفال، أخبار...) وبيرتبها حسب الأولوية اللي تحددها انت. "
-            "تقدر تعدّل أي تصنيف يدوي، وتشوف النتيجة أول بأول قبل ما تنزّل الملف الجاهز للتشغيل."
+            "تقدر تعدّل أي تصنيف يدوي، وتشوف النتيجة أول بأول قبل ما تنزّل الملف الجاهز للتشغيل.</p>",
+            unsafe_allow_html=True,
         )
         st.button(
             "🗂️ روح لصفحة الترتيب الذكي",
             key="btn_go_smart",
             on_click=go_to,
             args=(SMART_LABEL,),
+            use_container_width=True,
         )
 
     with col_transfer:
-        st.subheader("🔁 نقل الترتيب بين ملفين")
-        st.write(
-            "عندك ملف قنوات لقيته على النت وعجبك ترتيبه؟ ارفعه مع ملف قنوات شاشتك الحالي، "
+        st.markdown(
+            "<h3 class='center-text'>🔁 نقل الترتيب بين ملفين</h3>",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            "<p class='center-text'>عندك ملف قنوات لقيته على النت وعجبك ترتيبه؟ ارفعه مع ملف قنوات شاشتك الحالي، "
             "والموقع هيدوّر على القنوات المشتركة بالاسم وينقل لك نفس الترتيب على ملفك فورًا — "
-            "من غير ما يلمس الترددات أو أي بيانات تقنية تانية."
+            "من غير ما يلمس الترددات أو أي بيانات تقنية تانية.</p>",
+            unsafe_allow_html=True,
         )
         st.button(
             "🔁 روح لصفحة نقل الترتيب",
             key="btn_go_transfer",
             on_click=go_to,
             args=(TRANSFER_LABEL,),
+            use_container_width=True,
         )
 
     st.markdown("---")
