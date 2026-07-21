@@ -1952,7 +1952,7 @@ if active == HOME_LABEL:
         <div class="particle p3">✨</div>
         <div class="particle p4">🔁</div>
       </div>
-      <div class="rambo-sub">⚡ أول موقع مصري ذكي لترتيب قنوات إل جي بالذكاء الاصطناعي</div>
+      <div class="rambo-sub">⚡ أول موقع مصري ذكي لترتيب ملف قنوات الرسيفرات الداخليه للشاشات بالذكاء الاصطناعي</div>
       <div class="rambo-slogan">مع رامبو خلصانة في ثانية الا ثانية ⚡</div>
     </div>
     </div>
@@ -1964,7 +1964,7 @@ if active == HOME_LABEL:
 
     st.header("🎯 عن الموقع")
     st.markdown(
-        "<p class='center-text'>Rambo AI TV هو أول موقع مصري بيستخدم الذكاء الاصطناعي عشان يحل مشكلة فوضى ترتيب قنوات شاشات إل جي "
+        "<p class='center-text'>Rambo AI TV هو أول موقع مصري بيستخدم الذكاء الاصطناعي عشان يحل مشكلة فوضى ملف قنوات الرسيفرات الداخليه للشاشات "
         "بضغطة زر، من غير ما تحتاج خبرة تقنية أو تدوّر يدويًا على كل قناة.</p>",
         unsafe_allow_html=True,
     )
