@@ -2325,6 +2325,203 @@ _LOGO_B64 = (
 
 
 # ─────────────────────────────────────────────
+# اللوجو المتحرك (نسخة زرقاء) + اسم RAMBO AI TV تحته
+# قابل لإعادة الاستخدام في كل صفحة (الترحيبية + الترتيب الذكي + النقل)
+# ─────────────────────────────────────────────
+def render_rambo_logo(compact=False, show_tagline=True):
+    size = 92 if compact else 140
+    wrap = 140 if compact else 210
+    title_size = 22 if compact else 46
+    pad = "16px 20px 10px" if compact else "34px 20px 26px"
+
+    particles_html = "" if compact else """
+        <div class="particle p1">📡</div>
+        <div class="particle p2">🎬</div>
+        <div class="particle p3">✨</div>
+        <div class="particle p4">🔁</div>
+    """
+
+    tagline_html = "" if not show_tagline else """
+      <div class="rambo-sub">⚡ أول موقع مصري ذكي لترتيب ملف قنوات الرسيفرات الداخليه للشاشات بالذكاء الاصطناعي</div>
+      <div class="rambo-slogan">مع رامبو خلصانة في ثانية الا ثانية ⚡</div>
+    """
+
+    logo_html = f"""
+    <div style="width:100%; display:flex; justify-content:center; background:transparent;">
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Cairo:wght@700;900&display=swap');
+
+    .rambo-hero {{
+        position: relative;
+        width: 100%;
+        max-width: 820px;
+        padding: {pad};
+        text-align: center;
+        font-family: 'Cairo', sans-serif;
+        overflow: visible;
+        direction: rtl;
+    }}
+
+    .logo-wrap {{
+        position: relative;
+        width: {wrap}px;
+        height: {wrap}px;
+        margin: 0 auto 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }}
+
+    .ring {{
+        position: absolute;
+        top: 50%; left: 50%;
+        width: {size}px; height: {size}px;
+        border-radius: 50%;
+        border: 2px solid #29b6ff;
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 0;
+        animation: ringPulse 3s ease-out infinite;
+    }}
+    .ring:nth-child(2) {{ animation-delay: 1s; border-color: #0066ff; }}
+    .ring:nth-child(3) {{ animation-delay: 2s; }}
+
+    @keyframes ringPulse {{
+        0%   {{ transform: translate(-50%, -50%) scale(0.5); opacity: 0.9; }}
+        70%  {{ opacity: 0.15; }}
+        100% {{ transform: translate(-50%, -50%) scale(2.6); opacity: 0; }}
+    }}
+
+    .logo-frame {{
+        position: relative;
+        z-index: 2;
+        width: {size}px; height: {size}px;
+        border-radius: 32px;
+        overflow: hidden;
+        border: 3px solid #0099ff;
+        box-shadow: 0 0 20px rgba(0,153,255,0.65), 0 0 45px rgba(41,182,255,0.35);
+        animation: badgeGlow 2.4s ease-in-out infinite, tvPowerOn 1.6s ease-out 1;
+        transform-origin: center center;
+    }}
+
+    .logo-frame img {{
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }}
+
+    .logo-frame::after {{
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+            to bottom,
+            rgba(255,255,255,0.07) 0px,
+            rgba(255,255,255,0.07) 1px,
+            transparent 2px,
+            transparent 4px
+        );
+        animation: scanMove 4.5s linear infinite;
+        pointer-events: none;
+        mix-blend-mode: overlay;
+    }}
+
+    @keyframes scanMove {{
+        0%   {{ transform: translateY(0); }}
+        100% {{ transform: translateY(8px); }}
+    }}
+
+    @keyframes tvPowerOn {{
+        0%   {{ transform: scaleY(0.02) scaleX(1.35); filter: brightness(6) saturate(0); opacity: 0; }}
+        6%   {{ opacity: 1; }}
+        12%  {{ transform: scaleY(1) scaleX(1); filter: brightness(4) saturate(0.4); }}
+        22%  {{ transform: scaleY(0.94) scaleX(1.02); filter: brightness(1.6) saturate(1); }}
+        32%  {{ transform: scaleY(1) scaleX(1); filter: brightness(1); }}
+        100% {{ transform: scaleY(1) scaleX(1); filter: brightness(1); }}
+    }}
+
+    @keyframes badgeGlow {{
+        0%, 100% {{ box-shadow: 0 0 20px rgba(0,153,255,0.55), 0 0 40px rgba(41,182,255,0.30); }}
+        50%      {{ box-shadow: 0 0 32px rgba(0,153,255,0.9), 0 0 60px rgba(41,182,255,0.55); }}
+    }}
+
+    .particle {{
+        position: absolute;
+        font-size: 18px;
+        opacity: 0;
+        animation: floatUp 5s ease-in infinite;
+    }}
+    .particle.p1 {{ left: 8%;  top: 70%; animation-delay: 0s; }}
+    .particle.p2 {{ left: 82%; top: 68%; animation-delay: 1.4s; }}
+    .particle.p3 {{ left: 20%; top: 10%; animation-delay: 2.6s; }}
+    .particle.p4 {{ left: 74%; top: 8%;  animation-delay: 3.6s; }}
+
+    @keyframes floatUp {{
+        0%   {{ transform: translateY(0) scale(0.8); opacity: 0; }}
+        15%  {{ opacity: 0.9; }}
+        100% {{ transform: translateY(-70px) scale(1.1); opacity: 0; }}
+    }}
+
+    .rambo-title {{
+        font-family: 'Orbitron', 'Cairo', sans-serif;
+        font-weight: 900;
+        font-size: {title_size}px;
+        letter-spacing: 1px;
+        color: #eaf6ff;
+        margin: 6px 0 2px;
+        animation: flicker 4.5s linear infinite;
+        text-shadow: 0 0 10px #0099ff, 0 0 24px rgba(0,153,255,0.55), 0 0 40px rgba(41,182,255,0.35);
+    }}
+
+    @keyframes flicker {{
+        0%, 92%, 100% {{ opacity: 1; }}
+        93% {{ opacity: 0.55; }}
+        94% {{ opacity: 1; }}
+        95% {{ opacity: 0.7; }}
+        96% {{ opacity: 1; }}
+    }}
+
+    .rambo-sub {{
+        font-size: 17px;
+        color: #8fd6ff;
+        margin-top: 2px;
+    }}
+
+    .rambo-slogan {{
+        font-family: 'Cairo', sans-serif;
+        font-weight: 900;
+        font-size: 24px;
+        color: #66c9ff;
+        margin: 6px 0 4px;
+        text-shadow: 0 0 12px rgba(0,153,255,0.6);
+        animation: sloganGlow 2.4s ease-in-out infinite;
+    }}
+
+    @keyframes sloganGlow {{
+        0%, 100% {{ text-shadow: 0 0 8px rgba(0,153,255,0.45); }}
+        50%      {{ text-shadow: 0 0 20px rgba(0,153,255,0.95), 0 0 30px rgba(41,182,255,0.4); }}
+    }}
+    </style>
+
+    <div class="rambo-hero">
+      <div class="logo-wrap">
+        <div class="ring"></div>
+        <div class="ring"></div>
+        <div class="ring"></div>
+        <div class="logo-frame">
+          <img src="data:image/webp;base64,__LOGO_B64_PLACEHOLDER__" alt="Rambo AI TV" />
+        </div>
+        {particles_html}
+      </div>
+      <div class="rambo-title">RAMBO AI TV</div>
+      {tagline_html}
+    </div>
+    </div>
+    """
+    return logo_html.replace("__LOGO_B64_PLACEHOLDER__", _LOGO_B64)
+
+
+# ─────────────────────────────────────────────
 # ستايل عام: هوية الموقع + إخفاء شريط Streamlit + فرض RTL في كل حتة
 # ─────────────────────────────────────────────
 st.markdown("""
@@ -2542,183 +2739,7 @@ components.html(
 
 # ===================== الصفحة الترحيبية =====================
 if active == HOME_LABEL:
-    hero_html = """
-    <div style="width:100%; display:flex; justify-content:center; background:transparent;">
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Cairo:wght@700;900&display=swap');
-
-    .rambo-hero {
-        position: relative;
-        width: 100%;
-        max-width: 820px;
-        padding: 34px 20px 26px;
-        text-align: center;
-        font-family: 'Cairo', sans-serif;
-        overflow: visible;
-        direction: rtl;
-    }
-
-    .logo-wrap {
-        position: relative;
-        width: 210px;
-        height: 210px;
-        margin: 0 auto 18px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .ring {
-        position: absolute;
-        top: 50%; left: 50%;
-        width: 100px; height: 100px;
-        border-radius: 50%;
-        border: 2px solid #00f0ff;
-        transform: translate(-50%, -50%) scale(0.5);
-        opacity: 0;
-        animation: ringPulse 3s ease-out infinite;
-    }
-    .ring:nth-child(2) { animation-delay: 1s; border-color: #ff007f; }
-    .ring:nth-child(3) { animation-delay: 2s; }
-
-    @keyframes ringPulse {
-        0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0.9; }
-        70%  { opacity: 0.15; }
-        100% { transform: translate(-50%, -50%) scale(2.6); opacity: 0; }
-    }
-
-    .logo-frame {
-        position: relative;
-        z-index: 2;
-        width: 140px; height: 140px;
-        border-radius: 32px;
-        overflow: hidden;
-        border: 3px solid #ff007f;
-        box-shadow: 0 0 20px rgba(255,0,127,0.65), 0 0 45px rgba(0,240,255,0.35);
-        animation: badgeGlow 2.4s ease-in-out infinite, tvPowerOn 1.6s ease-out 1;
-        transform-origin: center center;
-    }
-
-    .logo-frame img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-    }
-
-    .logo-frame::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: repeating-linear-gradient(
-            to bottom,
-            rgba(255,255,255,0.07) 0px,
-            rgba(255,255,255,0.07) 1px,
-            transparent 2px,
-            transparent 4px
-        );
-        animation: scanMove 4.5s linear infinite;
-        pointer-events: none;
-        mix-blend-mode: overlay;
-    }
-
-    @keyframes scanMove {
-        0%   { transform: translateY(0); }
-        100% { transform: translateY(8px); }
-    }
-
-    @keyframes tvPowerOn {
-        0%   { transform: scaleY(0.02) scaleX(1.35); filter: brightness(6) saturate(0); opacity: 0; }
-        6%   { opacity: 1; }
-        12%  { transform: scaleY(1) scaleX(1); filter: brightness(4) saturate(0.4); }
-        22%  { transform: scaleY(0.94) scaleX(1.02); filter: brightness(1.6) saturate(1); }
-        32%  { transform: scaleY(1) scaleX(1); filter: brightness(1); }
-        100% { transform: scaleY(1) scaleX(1); filter: brightness(1); }
-    }
-
-    @keyframes badgeGlow {
-        0%, 100% { box-shadow: 0 0 20px rgba(255,0,127,0.55), 0 0 40px rgba(0,240,255,0.30); }
-        50%      { box-shadow: 0 0 32px rgba(255,0,127,0.9), 0 0 60px rgba(0,240,255,0.55); }
-    }
-
-    .particle {
-        position: absolute;
-        font-size: 20px;
-        opacity: 0;
-        animation: floatUp 5s ease-in infinite;
-    }
-    .particle.p1 { left: 8%;  top: 70%; animation-delay: 0s; }
-    .particle.p2 { left: 82%; top: 68%; animation-delay: 1.4s; }
-    .particle.p3 { left: 20%; top: 10%; animation-delay: 2.6s; }
-    .particle.p4 { left: 74%; top: 8%;  animation-delay: 3.6s; }
-
-    @keyframes floatUp {
-        0%   { transform: translateY(0) scale(0.8); opacity: 0; }
-        15%  { opacity: 0.9; }
-        100% { transform: translateY(-70px) scale(1.1); opacity: 0; }
-    }
-
-    .rambo-title {
-        font-family: 'Orbitron', 'Cairo', sans-serif;
-        font-weight: 900;
-        font-size: 46px;
-        letter-spacing: 1px;
-        color: #ffffff;
-        margin: 6px 0 2px;
-        animation: flicker 4.5s linear infinite;
-        text-shadow: 0 0 10px #ff007f, 0 0 24px rgba(255,0,127,0.55), 0 0 40px rgba(0,240,255,0.25);
-    }
-
-    @keyframes flicker {
-        0%, 92%, 100% { opacity: 1; }
-        93% { opacity: 0.55; }
-        94% { opacity: 1; }
-        95% { opacity: 0.7; }
-        96% { opacity: 1; }
-    }
-
-    .rambo-slogan {
-        font-family: 'Cairo', sans-serif;
-        font-weight: 900;
-        font-size: 24px;
-        color: #ff9ecb;
-        margin: 6px 0 4px;
-        text-shadow: 0 0 12px rgba(255,0,127,0.6);
-        animation: sloganGlow 2.4s ease-in-out infinite;
-    }
-
-    @keyframes sloganGlow {
-        0%, 100% { text-shadow: 0 0 8px rgba(255,0,127,0.45); }
-        50%      { text-shadow: 0 0 20px rgba(255,0,127,0.95), 0 0 30px rgba(0,240,255,0.4); }
-    }
-
-    .rambo-sub {
-        font-size: 17px;
-        color: #9fe8ef;
-        margin-top: 2px;
-    }
-    </style>
-
-    <div class="rambo-hero">
-      <div class="logo-wrap">
-        <div class="ring"></div>
-        <div class="ring"></div>
-        <div class="ring"></div>
-        <div class="logo-frame">
-          <img src="data:image/webp;base64,__LOGO_B64_PLACEHOLDER__" alt="Rambo AI TV" />
-        </div>
-        <div class="particle p1">📡</div>
-        <div class="particle p2">🎬</div>
-        <div class="particle p3">✨</div>
-        <div class="particle p4">🔁</div>
-      </div>
-      <div class="rambo-sub">⚡ أول موقع مصري ذكي لترتيب ملف قنوات الرسيفرات الداخليه للشاشات بالذكاء الاصطناعي</div>
-      <div class="rambo-slogan">مع رامبو خلصانة في ثانية الا ثانية ⚡</div>
-    </div>
-    </div>
-    """
-    hero_html = hero_html.replace("__LOGO_B64_PLACEHOLDER__", _LOGO_B64)
-    components.html(hero_html, height=430, scrolling=False)
+    components.html(render_rambo_logo(compact=False, show_tagline=True), height=430, scrolling=False)
 
     st.markdown("---")
 
@@ -2791,8 +2812,10 @@ if active == HOME_LABEL:
 
 # ===================== الترتيب الذكي بالفئات =====================
 elif active == SMART_LABEL:
+    components.html(render_rambo_logo(compact=True, show_tagline=False), height=170, scrolling=False)
     components.html(get_tool_html(default_page="smart"), height=2200, scrolling=True)
 
 # ===================== نقل الترتيب بين ملفين =====================
 elif active == TRANSFER_LABEL:
+    components.html(render_rambo_logo(compact=True, show_tagline=False), height=170, scrolling=False)
     components.html(get_tool_html(default_page="transfer"), height=2200, scrolling=True)
