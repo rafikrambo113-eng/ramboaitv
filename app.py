@@ -5186,8 +5186,8 @@ if active == HOME_LABEL:
         unsafe_allow_html=True,
     )
     st.markdown(
-        "<p class='center-text'>مش لازم تدوس على قائمة الفئة وتختار — تقدر بكل بساطة تدوس على القناة "
-        "وتسحبها بالماوس فوق اسم الفئة التانية وتسيبها، والقناة هتتنقل هناك على طول.</p>",
+        "<p class='center-text'>تقدر بكل بساطة تدوس على الفئه "
+        "وتسحبها بالماوس لتحديد اولويه االفئات.</p>",
         unsafe_allow_html=True,
     )
     components.html(render_dragdrop_demo(), height=420, scrolling=False)
