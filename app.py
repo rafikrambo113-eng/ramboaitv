@@ -4697,7 +4697,7 @@ def render_rambo_logo(compact=False, show_tagline=True):
 # ─────────────────────────────────────────────
 def render_dragdrop_demo():
     return """
-<h2 class="sr-only">ديمو متحرك: الأخبار بتتنقل للمكان الأول بدل الديني المسيحي، وبعدين الراديو بتتنقل جمب الأخبار في المكان الثاني</h2>
+<h2 class="sr-only"></h2>
 <div style="background:#160f22; border-radius:12px; padding:1.5rem;">
   <div style="color:#c9a3ff; font-size:14px; margin-bottom:1rem; text-align:right; direction:rtl;">اسحب الفئة لمكانها الجديد — الترقيم بيتحدّث تلقائي</div>
   <div id="pills" style="position:relative; width:100%; height:280px;"></div>
